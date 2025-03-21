@@ -72,6 +72,11 @@ def enableProguardInReleaseBuilds = false
  */
 def jscFlavor = 'io.github.react-native-community:jsc-android:2026004.+'
 
+// Add Vector Icons configuration
+project.ext.vectoricons = [
+    iconFontNames: ['Feather.ttf']
+]
+
 android {
     ndkVersion rootProject.ext.ndkVersion
     buildToolsVersion rootProject.ext.buildToolsVersion
@@ -117,3 +122,6 @@ dependencies {
         implementation jscFlavor
     }
 }
+
+// Apply Vector Icons Gradle file
+apply from: "../../node_modules/react-native-vector-icons/fonts.gradle"
