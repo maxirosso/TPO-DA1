@@ -1,13 +1,13 @@
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext, useRef } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
   ScrollView,
-  Image,
   KeyboardAvoidingView,
   Platform,
+  Keyboard,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
@@ -25,9 +25,15 @@ const LoginScreen = ({ navigation }) => {
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   
+  // Create refs for the input fields
+  const emailInputRef = useRef(null);
+  const passwordInputRef = useRef(null);
+  
   const { signIn } = useContext(AuthContext);
   
   const handleSignIn = async () => {
+    Keyboard.dismiss(); // Close keyboard when submitting
+    
     if (!email || !password) {
       // You could add validation feedback here
       return;
@@ -52,6 +58,7 @@ const LoginScreen = ({ navigation }) => {
   const renderSignInTab = () => (
     <>
       <Input
+        ref={emailInputRef}
         label="Email Address"
         value={email}
         onChangeText={setEmail}
@@ -59,16 +66,22 @@ const LoginScreen = ({ navigation }) => {
         keyboardType="email-address"
         leftIcon="mail"
         autoCapitalize="none"
+        returnKeyType="next"
+        blurOnSubmit={false}
+        onSubmitEditing={() => passwordInputRef.current?.focus()}
       />
       
       <Input
+        ref={passwordInputRef}
         label="Password"
         value={password}
         onChangeText={setPassword}
         placeholder="••••••••"
         secureTextEntry
         leftIcon="lock"
-        labelStyle={styles.passwordLabel}
+        returnKeyType="done"
+        blurOnSubmit={true}
+        onSubmitEditing={handleSignIn}
         rightComponent={
           <TouchableOpacity 
             onPress={() => navigation.navigate('ForgotPassword')}
@@ -114,18 +127,23 @@ const LoginScreen = ({ navigation }) => {
       <KeyboardAvoidingView
         style={styles.keyboardAvoidingView}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}
+        enabled
       >
         <ScrollView
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled" // Important for keyboard handling
         >
           <LinearGradient
             colors={[Colors.gradientStart, Colors.gradientEnd]}
             style={styles.headerContainer}
           >
             <View style={styles.headerContent}>
-              <TouchableOpacity style={styles.backButton}>
+              <TouchableOpacity 
+                style={styles.backButton}
+                onPress={() => navigation.goBack()}
+              >
                 <Icon name="chevron-left" size={24} color={Colors.textDark} />
               </TouchableOpacity>
               <Text style={styles.headerTitle}>Account</Text>
@@ -282,9 +300,6 @@ const styles = StyleSheet.create({
   },
   formContainer: {
     paddingHorizontal: Metrics.largeSpacing,
-  },
-  passwordLabel: {
-    flex: 1,
   },
   forgotPasswordButton: {
     paddingVertical: Metrics.smallSpacing,

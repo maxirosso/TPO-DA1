@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { forwardRef } from 'react';
 import {
   View,
   TextInput,
@@ -11,80 +11,39 @@ import Icon from 'react-native-vector-icons/Feather';
 import Colors from '../../themes/colors';
 import Metrics from '../../themes/metrics';
 
-const Input = ({
-  label,
-  value,
-  onChangeText,
-  placeholder,
-  secureTextEntry = false,
-  keyboardType = 'default',
-  autoCapitalize = 'none',
-  error,
-  helper,
-  leftIcon,
-  rightIcon,
-  onRightIconPress,
-  style,
-  inputStyle,
-  labelStyle,
-  multiline = false,
-  numberOfLines = 1,
-  editable = true,
-  onBlur,
-  onFocus,
-  rightComponent,
-  ...rest
-}) => {
-  const [isFocused, setIsFocused] = useState(false);
-  const [isSecureVisible, setIsSecureVisible] = useState(!secureTextEntry);
+// Using forwardRef for proper ref passing
+const Input = forwardRef((props, ref) => {
+  const {
+    label,
+    value,
+    onChangeText,
+    placeholder,
+    secureTextEntry = false,
+    keyboardType = 'default',
+    autoCapitalize = 'none',
+    error,
+    helper,
+    leftIcon,
+    rightIcon,
+    onRightIconPress,
+    style,
+    inputStyle,
+    labelStyle,
+    multiline = false,
+    numberOfLines = 1,
+    editable = true,
+    onBlur,
+    onFocus,
+    rightComponent,
+    ...rest
+  } = props;
 
-  const handleFocus = () => {
-    setIsFocused(true);
-    if (onFocus) onFocus();
-  };
-
-  const handleBlur = () => {
-    setIsFocused(false);
-    if (onBlur) onBlur();
-  };
-
-  const toggleSecureEntry = () => {
-    setIsSecureVisible(!isSecureVisible);
-  };
-
-  const renderLeftIcon = () => {
-    if (!leftIcon) return null;
-
-    return (
-      <View style={styles.leftIconContainer}>
-        <Icon name={leftIcon} size={20} color={Colors.textMedium} />
-      </View>
-    );
-  };
-
+  // Simplifying security toggle for troubleshooting
   const renderRightIcon = () => {
-    // For custom right component (like a "forgot password" link)
     if (rightComponent) {
       return rightComponent;
     }
     
-    // For password visibility toggle
-    if (secureTextEntry) {
-      return (
-        <TouchableOpacity 
-          style={styles.rightIconContainer} 
-          onPress={toggleSecureEntry}
-        >
-          <Icon 
-            name={isSecureVisible ? 'eye-off' : 'eye'} 
-            size={20} 
-            color={Colors.textMedium} 
-          />
-        </TouchableOpacity>
-      );
-    }
-
-    // For custom right icon
     if (!rightIcon) return null;
 
     return (
@@ -108,16 +67,20 @@ const Input = ({
         style={[
           styles.inputContainer,
           leftIcon && styles.withLeftIcon,
-          (rightIcon || secureTextEntry || rightComponent) && styles.withRightIcon,
-          isFocused && styles.focusedInput,
+          (rightIcon || rightComponent) && styles.withRightIcon,
           error && styles.errorInput,
           !editable && styles.disabledInput,
           multiline && styles.multilineInput,
         ]}
       >
-        {renderLeftIcon()}
+        {leftIcon && (
+          <View style={styles.leftIconContainer}>
+            <Icon name={leftIcon} size={20} color={Colors.textMedium} />
+          </View>
+        )}
         
         <TextInput
+          ref={ref}
           style={[
             styles.input,
             multiline && { height: numberOfLines * 20 },
@@ -127,14 +90,25 @@ const Input = ({
           onChangeText={onChangeText}
           placeholder={placeholder}
           placeholderTextColor={Colors.textLight}
-          secureTextEntry={secureTextEntry && !isSecureVisible}
+          secureTextEntry={secureTextEntry}
           keyboardType={keyboardType}
           autoCapitalize={autoCapitalize}
           multiline={multiline}
           numberOfLines={multiline ? numberOfLines : 1}
           editable={editable}
-          onFocus={handleFocus}
-          onBlur={handleBlur}
+          onBlur={onBlur}
+          onFocus={onFocus}
+          // Ensuring these key keyboard properties are set
+          autoCorrect={false}
+          spellCheck={false}
+          caretHidden={false}
+          contextMenuHidden={false}
+          selectTextOnFocus={false}
+          // Providing default keyboard behavior
+          returnKeyType={rest.returnKeyType || "next"}
+          blurOnSubmit={rest.blurOnSubmit || false}
+          // Debug trace helpers (uncomment these if needed to debug)
+          // onKeyPress={(e) => console.log('Key pressed:', e.nativeEvent.key)}
           {...rest}
         />
         
@@ -153,7 +127,7 @@ const Input = ({
       )}
     </View>
   );
-};
+});
 
 const styles = StyleSheet.create({
   container: {
@@ -181,14 +155,6 @@ const styles = StyleSheet.create({
   withRightIcon: {
     paddingRight: Metrics.baseSpacing,
   },
-  focusedInput: {
-    borderColor: Colors.primary,
-    shadowColor: Colors.primary,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-  },
   errorInput: {
     borderColor: Colors.error,
   },
@@ -206,6 +172,9 @@ const styles = StyleSheet.create({
     fontSize: Metrics.baseFontSize,
     color: Colors.textDark,
     paddingVertical: Metrics.baseSpacing,
+    // Ensuring no competing padding issues
+    paddingTop: 0,
+    paddingBottom: 0,
   },
   leftIconContainer: {
     marginRight: Metrics.baseSpacing,
@@ -223,5 +192,8 @@ const styles = StyleSheet.create({
     color: Colors.error,
   },
 });
+
+// Set display name for debugging purposes
+Input.displayName = 'Input';
 
 export default Input;

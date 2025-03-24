@@ -1,4 +1,4 @@
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext, useRef } from 'react';
 import {
   View,
   Text,
@@ -7,6 +7,7 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
+  Keyboard,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
@@ -25,9 +26,15 @@ const SignupScreen = ({ navigation }) => {
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   
+  // Create refs for the input fields
+  const emailInputRef = useRef(null);
+  const usernameInputRef = useRef(null);
+  
   const { signUp } = useContext(AuthContext);
   
   const handleSignUp = async () => {
+    Keyboard.dismiss(); // Close keyboard when submitting
+    
     if (!email || !username || !termsAccepted) {
       // Add validation feedback
       return;
@@ -50,11 +57,13 @@ const SignupScreen = ({ navigation }) => {
       <KeyboardAvoidingView
         style={styles.keyboardAvoidingView}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}
+        enabled
       >
         <ScrollView
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled" // Important for keyboard handling
         >
           <LinearGradient
             colors={[Colors.gradientStart, Colors.gradientEnd]}
@@ -117,26 +126,35 @@ const SignupScreen = ({ navigation }) => {
             
             <View style={styles.formContainer}>
               <Input
+                ref={emailInputRef}
                 label="Email Address"
                 value={email}
                 onChangeText={setEmail}
                 placeholder="your@email.com"
                 keyboardType="email-address"
                 autoCapitalize="none"
+                returnKeyType="next"
+                blurOnSubmit={false}
+                onSubmitEditing={() => usernameInputRef.current?.focus()}
               />
               
               <Input
+                ref={usernameInputRef}
                 label="Username / Alias"
                 value={username}
                 onChangeText={setUsername}
                 placeholder="Choose a unique username"
                 autoCapitalize="none"
+                returnKeyType="done"
+                blurOnSubmit={true}
+                onSubmitEditing={handleSignUp}
               />
               
               <View style={styles.termsContainer}>
                 <TouchableOpacity
                   style={styles.checkbox}
                   onPress={() => setTermsAccepted(!termsAccepted)}
+                  activeOpacity={0.7}
                 >
                   {termsAccepted ? (
                     <View style={styles.checkedBox}>
