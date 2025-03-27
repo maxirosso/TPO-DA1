@@ -139,16 +139,19 @@ const HomeScreen = ({ navigation }) => {
           </TouchableOpacity>
         </View>
         
-        <View style={styles.searchContainer}>
+        <TouchableOpacity 
+          style={styles.searchContainer}
+          onPress={() => navigation.navigate('RecipeSearch')}
+          activeOpacity={0.8}
+        >
           <Icon name="search" size={20} color={Colors.textMedium} style={styles.searchIcon} />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Buscar recetas, ingredientes..."
-            placeholderTextColor={Colors.textMedium}
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-          />
-        </View>
+          <Text 
+            style={[styles.searchInput, { color: Colors.textMedium }]}
+            numberOfLines={1}
+          >
+            Buscar recetas, ingredientes...
+          </Text>
+        </TouchableOpacity>
         
         <FlatList
           data={categories}
@@ -166,7 +169,7 @@ const HomeScreen = ({ navigation }) => {
       >
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Recetas Populares</Text>
-          <TouchableOpacity>
+          <TouchableOpacity onPress={() => navigation.navigate('RecipeSearch')}>
             <Text style={styles.seeAllText}>Ver todas</Text>
           </TouchableOpacity>
         </View>
@@ -235,15 +238,14 @@ const styles = StyleSheet.create({
     borderRadius: Metrics.roundedFull,
     paddingHorizontal: Metrics.mediumSpacing,
     marginBottom: Metrics.mediumSpacing,
+    paddingVertical: Metrics.mediumSpacing,
   },
   searchIcon: {
     marginRight: Metrics.baseSpacing,
   },
   searchInput: {
     flex: 1,
-    paddingVertical: Metrics.mediumSpacing,
     fontSize: Metrics.baseFontSize,
-    color: Colors.textDark,
   },
   categoriesContainer: {
     paddingRight: Metrics.mediumSpacing,

@@ -3,13 +3,21 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
 import Icon from 'react-native-vector-icons/Feather';
 
-// Screens
+// Main Screens
 import HomeScreen from '../screens/main/HomeScreen';
 import CourseScreen from '../screens/main/CourseScreen';
 import AddRecipeScreen from '../screens/main/AddRecipeScreen';
 import SavedScreen from '../screens/main/SavedScreen';
 import ProfileScreen from '../screens/main/ProfileScreen';
+import MyCoursesScreen from '../screens/main/MyCoursesScreen';
+import CourseDetailScreen from '../screens/main/CourseDetailScreen';
+import CourseEnrollmentScreen from '../screens/main/CourseEnrollmentScreen';
+import QRScannerScreen from '../screens/main/QRScannerScreen';
+
+// Recipe Screens
 import RecipeDetailScreen from '../screens/recipe/RecipeDetailScreen';
+import RecipeSearchScreen from '../screens/recipe/RecipeSearchScreen';
+import SavedScaledRecipesScreen from '../screens/recipe/SavedScaledRecipesScreen';
 
 // Theme
 import Colors from '../themes/colors';
@@ -27,6 +35,7 @@ const HomeStackScreen = () => (
     }}>
     <HomeStack.Screen name="Home" component={HomeScreen} />
     <HomeStack.Screen name="RecipeDetail" component={RecipeDetailScreen} />
+    <HomeStack.Screen name="RecipeSearch" component={RecipeSearchScreen} />
   </HomeStack.Navigator>
 );
 
@@ -36,6 +45,10 @@ const CourseStackScreen = () => (
       headerShown: false,
     }}>
     <CourseStack.Screen name="Courses" component={CourseScreen} />
+    <CourseStack.Screen name="CourseDetail" component={CourseDetailScreen} />
+    <CourseStack.Screen name="CourseEnrollment" component={CourseEnrollmentScreen} />
+    <CourseStack.Screen name="MyCourses" component={MyCoursesScreen} />
+    <CourseStack.Screen name="QRScannerScreen" component={QRScannerScreen} />
   </CourseStack.Navigator>
 );
 
@@ -46,6 +59,7 @@ const SavedStackScreen = () => (
     }}>
     <SavedStack.Screen name="Saved" component={SavedScreen} />
     <SavedStack.Screen name="RecipeDetail" component={RecipeDetailScreen} />
+    <SavedStack.Screen name="SavedScaledRecipes" component={SavedScaledRecipesScreen} />
   </SavedStack.Navigator>
 );
 
@@ -55,6 +69,8 @@ const ProfileStackScreen = () => (
       headerShown: false,
     }}>
     <ProfileStack.Screen name="ProfileHome" component={ProfileScreen} />
+    <ProfileStack.Screen name="MyCourses" component={MyCoursesScreen} />
+    <ProfileStack.Screen name="SavedScaledRecipes" component={SavedScaledRecipesScreen} />
   </ProfileStack.Navigator>
 );
 

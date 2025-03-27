@@ -50,6 +50,12 @@ const ProfileScreen = ({ navigation }) => {
       description: 'Recetas que has guardado para después',
     },
     {
+      id: 'saved_scaled_recipes',
+      icon: 'sliders',
+      title: 'Recetas Escaladas',
+      description: 'Recetas con cantidades personalizadas',
+    },
+    {
       id: 'shopping_list',
       icon: 'shopping-cart',
       title: 'Lista de Compras',
@@ -74,6 +80,12 @@ const ProfileScreen = ({ navigation }) => {
       navigation.navigate('SavedTab');
     } else if (id === 'settings') {
       // Navegar a Configuración
+    } else if (id === 'my_courses') {
+      // Navigate to My Courses screen
+      navigation.navigate('MyCourses');
+    } else if (id === 'saved_scaled_recipes') {
+      // Navigate to Saved Scaled Recipes screen
+      navigation.navigate('SavedScaledRecipes');
     }
   };
 

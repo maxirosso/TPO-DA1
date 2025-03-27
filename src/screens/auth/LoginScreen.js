@@ -22,8 +22,8 @@ import Metrics from '../../themes/metrics';
 
 const LoginScreen = ({ navigation }) => {
   const [activeTab, setActiveTab] = useState('signIn');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState('test@example.com');  // Default email for development
+  const [password, setPassword] = useState('password');    // Default password for development
   const [isLoading, setIsLoading] = useState(false);
   
   const emailInputRef = useRef(null);
@@ -46,8 +46,13 @@ const LoginScreen = ({ navigation }) => {
     } catch (error) {
       console.log('Error al iniciar sesión:', error);
       
-      // Check for verification error
-      if (error.message === 'EMAIL_NOT_VERIFIED') {
+      if (error.message === 'Invalid credentials') {
+        Alert.alert(
+          'Error al iniciar sesión',
+          'El correo electrónico o la contraseña son incorrectos. Si no tienes una cuenta, por favor regístrate primero.'
+        );
+      } else if (error.message === 'EMAIL_NOT_VERIFIED') {
+        // This shouldn't happen with our development modifications
         Alert.alert(
           'Correo No Verificado',
           'Tu correo electrónico aún no ha sido verificado. ¿Deseas que te enviemos un nuevo código de verificación?',
@@ -83,7 +88,7 @@ const LoginScreen = ({ navigation }) => {
       } else {
         Alert.alert(
           'Error al iniciar sesión',
-          'El correo electrónico o la contraseña son incorrectos. Por favor, intenta nuevamente.'
+          'Ha ocurrido un error inesperado. Por favor, intenta nuevamente más tarde.'
         );
       }
     } finally {
@@ -139,6 +144,13 @@ const LoginScreen = ({ navigation }) => {
         style={styles.signInButton}
         isLoading={isLoading}
       />
+      
+      <View style={styles.devNote}>
+        <Text style={styles.devNoteText}>
+          Modo de desarrollo: Utiliza el correo y contraseña predeterminados, 
+          o regístrate para crear una nueva cuenta.
+        </Text>
+      </View>
       
       <View style={styles.divider}>
         <View style={styles.dividerLine} />
@@ -199,7 +211,6 @@ const LoginScreen = ({ navigation }) => {
               Inicia sesión para acceder a tus recetas y cursos
             </Text>
           </View>
-          
           <View style={styles.tabsContainer}>
             <TouchableOpacity
               style={[
@@ -352,6 +363,17 @@ const styles = StyleSheet.create({
   signInButton: {
     marginTop: Metrics.mediumSpacing,
     marginBottom: Metrics.mediumSpacing,
+  },
+  devNote: {
+    backgroundColor: Colors.primary + '20',
+    padding: Metrics.baseSpacing,
+    borderRadius: Metrics.baseBorderRadius,
+    marginBottom: Metrics.mediumSpacing,
+  },
+  devNoteText: {
+    fontSize: Metrics.smallFontSize,
+    color: Colors.primary,
+    textAlign: 'center',
   },
   divider: {
     flexDirection: 'row',

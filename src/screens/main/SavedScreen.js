@@ -162,6 +162,16 @@ const SavedScreen = ({ navigation }) => {
           ) : null}
         </View>
 
+        <View style={styles.actionsContainer}>
+          <TouchableOpacity 
+            style={styles.actionButton}
+            onPress={() => navigation.navigate('SavedScaledRecipes')}
+          >
+            <Icon name="sliders" size={16} color={Colors.primary} />
+            <Text style={styles.actionButtonText}>Recetas Escaladas</Text>
+          </TouchableOpacity>
+        </View>
+
         <FlatList
           data={collections}
           renderItem={renderCollectionItem}
@@ -227,6 +237,25 @@ const styles = StyleSheet.create({
     paddingVertical: Metrics.mediumSpacing,
     fontSize: Metrics.baseFontSize,
     color: Colors.textDark,
+  },
+  actionsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    marginBottom: Metrics.baseSpacing,
+  },
+  actionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.primary + '15',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: Metrics.roundedFull,
+  },
+  actionButtonText: {
+    fontSize: Metrics.smallFontSize,
+    color: Colors.primary,
+    marginLeft: 4,
+    fontWeight: '500',
   },
   collectionsContainer: {
     paddingRight: Metrics.mediumSpacing,

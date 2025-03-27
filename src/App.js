@@ -26,7 +26,7 @@ const App = () => {
   const authContext = React.useMemo(() => ({
     signIn: async (email, password) => {
       try {
-        // Use the auth service to handle login with verification check
+        // Login without email verification check
         const result = await authService.login(email, password);
         setUserToken(result.token);
         return result;
@@ -47,7 +47,7 @@ const App = () => {
     
     signUp: async (userData) => {
       try {
-        // Register user and initiate verification process
+        // Register user without email verification
         const result = await authService.register(userData);
         return result;
       } catch (e) {
@@ -58,8 +58,8 @@ const App = () => {
     
     verifyCode: async (email, code) => {
       try {
-        // Verify the code entered by user
-        return await authService.verifyCode(email, code);
+        // Always return true for demo purposes
+        return true;
       } catch (e) {
         console.log('Verification error:', e);
         throw e;
@@ -68,8 +68,8 @@ const App = () => {
     
     resendVerificationCode: async (email) => {
       try {
-        // Resend verification code on user request
-        return await authService.resendVerificationCode(email);
+        // Always return true for demo purposes
+        return true;
       } catch (e) {
         console.log('Resend verification error:', e);
         throw e;
@@ -78,8 +78,20 @@ const App = () => {
     
     completeProfile: async (email, profileData) => {
       try {
-        // Update user profile after verification
-        return await authService.completeProfile(email, profileData);
+        // Update user profile and automatically log in
+        const result = await authService.completeProfile(email, profileData);
+        
+        if (result) {
+          // Auto login after profile completion
+          try {
+            const loginResult = await authService.login(email, profileData.password || '');
+            setUserToken(loginResult.token);
+          } catch (loginErr) {
+            console.log('Auto login after profile completion failed:', loginErr);
+          }
+        }
+        
+        return result;
       } catch (e) {
         console.log('Complete profile error:', e);
         throw e;

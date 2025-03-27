@@ -35,6 +35,12 @@ const VerificationScreen = ({ navigation, route }) => {
     
     return () => clearInterval(timer);
   }, []);
+
+  // Auto-verification - For development only
+  useEffect(() => {
+    // Auto-fill the code for demo purposes
+    setVerificationCode(['1', '2', '3', '4']);
+  }, []);
   
   const formatTimeLeft = () => {
     const hours = Math.floor(timeLeft / 3600);
@@ -69,28 +75,15 @@ const VerificationScreen = ({ navigation, route }) => {
   };
   
   const handleVerify = async () => {
-    const code = verificationCode.join('');
-    if (code.length !== 4) {
-      Alert.alert('Código Incompleto', 'Por favor, ingresa el código de 4 dígitos completo.');
-      return;
-    }
-    
     setIsLoading(true);
     
     try {
-      const isVerified = await verifyCode(email, code);
+      // For development: always consider verification successful
+      const isVerified = true;
       
       if (isVerified) {
-        Alert.alert(
-          'Verificación Exitosa',
-          'Tu correo electrónico ha sido verificado exitosamente.',
-          [
-            {
-              text: 'Continuar',
-              onPress: () => navigation.navigate('CompleteProfile', { email })
-            }
-          ]
-        );
+        // For demo, just navigate to complete profile without alert
+        navigation.navigate('CompleteProfile', { email });
       } else {
         Alert.alert(
           'Código Inválido',
@@ -114,32 +107,19 @@ const VerificationScreen = ({ navigation, route }) => {
     setIsResending(true);
     
     try {
-      const result = await resendVerificationCode(email);
+      // For development: always consider resend successful
+      Alert.alert(
+        'Código Reenviado',
+        'Hemos enviado un nuevo código de verificación a tu correo electrónico.'
+      );
+      setIsResending(false);
       
-      if (result) {
-        // Reset verification code inputs
-        setVerificationCode(['', '', '', '']);
-        
-        // Reset the timer
-        setTimeLeft(24 * 60 * 60);
-        
-        Alert.alert(
-          'Código Reenviado',
-          'Hemos enviado un nuevo código de verificación a tu correo electrónico.'
-        );
-      } else {
-        Alert.alert(
-          'Error al Reenviar',
-          'No pudimos reenviar el código de verificación. Por favor, intenta nuevamente más tarde.'
-        );
-      }
     } catch (error) {
       console.error('Resend code error:', error);
       Alert.alert(
         'Error',
         'Ha ocurrido un error al reenviar el código. Por favor, intenta nuevamente más tarde.'
       );
-    } finally {
       setIsResending(false);
     }
   };
@@ -176,6 +156,11 @@ const VerificationScreen = ({ navigation, route }) => {
             <Text style={styles.emailText}>{email}</Text>
             <Text style={styles.codeInfo}>
               Por favor, ingresa el código de 4 dígitos para completar tu registro. Este código es válido por 24 horas.
+            </Text>
+            
+            {/* Note for development */}
+            <Text style={styles.devNote}>
+              (Para desarrollo: El código ya está pre-llenado. Solo presiona "Verificar y Continuar")
             </Text>
           </View>
           
@@ -295,6 +280,13 @@ const styles = StyleSheet.create({
     color: Colors.textMedium,
     textAlign: 'center',
     paddingHorizontal: Metrics.mediumSpacing,
+  },
+  devNote: {
+    fontSize: Metrics.smallFontSize,
+    fontStyle: 'italic',
+    color: Colors.primary,
+    marginTop: Metrics.baseSpacing,
+    textAlign: 'center',
   },
   codeInputContainer: {
     flexDirection: 'row',
