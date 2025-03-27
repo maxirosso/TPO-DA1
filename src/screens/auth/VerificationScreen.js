@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useContext } from 'react';
 import {
   View,
   Text,
@@ -7,21 +7,25 @@ import {
   TextInput,
   KeyboardAvoidingView,
   Platform,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/Feather';
 
+import { AuthContext } from '../../context/AuthContext';
 import Button from '../../components/common/Button';
 import Colors from '../../themes/colors';
 import Metrics from '../../themes/metrics';
 
 const VerificationScreen = ({ navigation, route }) => {
-  const { email = 'example@email.com' } = route.params || {};
+  const { email = '' } = route.params || {};
   const [verificationCode, setVerificationCode] = useState(['', '', '', '']);
   const [isLoading, setIsLoading] = useState(false);
+  const [isResending, setIsResending] = useState(false);
   const [timeLeft, setTimeLeft] = useState(24 * 60 * 60); // 24 hours in seconds
   
+  const { verifyCode, resendVerificationCode } = useContext(AuthContext);
   const inputRefs = [useRef(), useRef(), useRef(), useRef()];
   
   useEffect(() => {
@@ -43,42 +47,101 @@ const VerificationScreen = ({ navigation, route }) => {
   };
   
   const handleCodeChange = (text, index) => {
-    // Update the code digits
+    // Only allow numbers
+    if (!/^\d*$/.test(text)) return;
+    
+    // Update the digits of the code
     const newCode = [...verificationCode];
     newCode[index] = text;
     setVerificationCode(newCode);
     
-    // Auto-focus next input if current input is filled
+    // Auto-focus the next input if the current one is filled
     if (text && index < 3) {
       inputRefs[index + 1].current.focus();
     }
   };
   
   const handleKeyPress = (e, index) => {
-    // Handle backspace to move to previous input
+    // Handle backspace key to move to the previous input
     if (e.nativeEvent.key === 'Backspace' && !verificationCode[index] && index > 0) {
       inputRefs[index - 1].current.focus();
     }
   };
   
-  const handleVerify = () => {
+  const handleVerify = async () => {
     const code = verificationCode.join('');
     if (code.length !== 4) {
-      // Add validation feedback
+      Alert.alert('Código Incompleto', 'Por favor, ingresa el código de 4 dígitos completo.');
       return;
     }
     
     setIsLoading(true);
     
-    // Simulate API call
-    setTimeout(() => {
+    try {
+      const isVerified = await verifyCode(email, code);
+      
+      if (isVerified) {
+        Alert.alert(
+          'Verificación Exitosa',
+          'Tu correo electrónico ha sido verificado exitosamente.',
+          [
+            {
+              text: 'Continuar',
+              onPress: () => navigation.navigate('CompleteProfile', { email })
+            }
+          ]
+        );
+      } else {
+        Alert.alert(
+          'Código Inválido',
+          'El código ingresado es incorrecto o ha expirado. Por favor, intenta nuevamente o solicita un nuevo código.'
+        );
+      }
+    } catch (error) {
+      console.error('Verification error:', error);
+      Alert.alert(
+        'Error de Verificación',
+        'Ha ocurrido un error al verificar tu código. Por favor, intenta nuevamente.'
+      );
+    } finally {
       setIsLoading(false);
-      navigation.navigate('CompleteProfile');
-    }, 1500);
+    }
   };
   
-  const handleResendCode = () => {
-    // Implement resend code logic
+  const handleResendCode = async () => {
+    if (isResending) return;
+    
+    setIsResending(true);
+    
+    try {
+      const result = await resendVerificationCode(email);
+      
+      if (result) {
+        // Reset verification code inputs
+        setVerificationCode(['', '', '', '']);
+        
+        // Reset the timer
+        setTimeLeft(24 * 60 * 60);
+        
+        Alert.alert(
+          'Código Reenviado',
+          'Hemos enviado un nuevo código de verificación a tu correo electrónico.'
+        );
+      } else {
+        Alert.alert(
+          'Error al Reenviar',
+          'No pudimos reenviar el código de verificación. Por favor, intenta nuevamente más tarde.'
+        );
+      }
+    } catch (error) {
+      console.error('Resend code error:', error);
+      Alert.alert(
+        'Error',
+        'Ha ocurrido un error al reenviar el código. Por favor, intenta nuevamente más tarde.'
+      );
+    } finally {
+      setIsResending(false);
+    }
   };
   
   return (
@@ -99,20 +162,20 @@ const VerificationScreen = ({ navigation, route }) => {
             >
               <Icon name="chevron-left" size={24} color={Colors.textDark} />
             </TouchableOpacity>
-            <Text style={styles.headerTitle}>Verify Email</Text>
+            <Text style={styles.headerTitle}>Verificar Correo</Text>
           </View>
         </LinearGradient>
         
         <View style={styles.content}>
           <View style={styles.successContainer}>
             <View style={styles.successIconContainer}>
-              <Icon name="check" size={40} color={Colors.success} />
+              <Icon name="mail" size={40} color={Colors.success} />
             </View>
-            <Text style={styles.successTitle}>Registration Successful!</Text>
-            <Text style={styles.successMessage}>We've sent a verification code to</Text>
+            <Text style={styles.successTitle}>¡Revisa Tu Correo!</Text>
+            <Text style={styles.successMessage}>Hemos enviado un código de verificación a</Text>
             <Text style={styles.emailText}>{email}</Text>
             <Text style={styles.codeInfo}>
-              Please enter the 4-digit code to complete your registration. This code is valid for 24 hours.
+              Por favor, ingresa el código de 4 dígitos para completar tu registro. Este código es válido por 24 horas.
             </Text>
           </View>
           
@@ -133,14 +196,16 @@ const VerificationScreen = ({ navigation, route }) => {
           </View>
           
           <View style={styles.resendContainer}>
-            <Text style={styles.resendText}>Didn't receive a code?</Text>
-            <TouchableOpacity onPress={handleResendCode}>
-              <Text style={styles.resendButton}>Resend</Text>
+            <Text style={styles.resendText}>¿No recibiste un código?</Text>
+            <TouchableOpacity onPress={handleResendCode} disabled={isResending}>
+              <Text style={[styles.resendButton, isResending && styles.resendButtonDisabled]}>
+                {isResending ? 'Enviando...' : 'Reenviar'}
+              </Text>
             </TouchableOpacity>
           </View>
           
           <Button
-            title="Verify and Continue"
+            title="Verificar y Continuar"
             onPress={handleVerify}
             fullWidth
             style={styles.verifyButton}
@@ -149,14 +214,14 @@ const VerificationScreen = ({ navigation, route }) => {
           
           <View style={styles.supportContainer}>
             <Text style={styles.supportText}>
-              Having trouble? <Text style={styles.supportLink}>Contact Support</Text>
+              ¿Tienes problemas? <Text style={styles.supportLink}>Contacta Soporte</Text>
             </Text>
           </View>
         </View>
         
         <View style={styles.footerContainer}>
           <Text style={styles.expirationText}>
-            Your verification code will expire in{' '}
+            Tu código de verificación expirará en{' '}
             <Text style={styles.expirationTime}>{formatTimeLeft()}</Text>
           </Text>
         </View>
@@ -262,6 +327,9 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: Colors.primary,
     marginLeft: Metrics.smallSpacing,
+  },
+  resendButtonDisabled: {
+    color: Colors.textLight,
   },
   verifyButton: {
     marginBottom: Metrics.mediumSpacing,

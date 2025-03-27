@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import {
   View,
   Text,
@@ -7,46 +7,106 @@ import {
   TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/Feather';
 
+import { AuthContext } from '../../context/AuthContext';
 import Button from '../../components/common/Button';
 import Input from '../../components/common/Input';
 import Colors from '../../themes/colors';
 import Metrics from '../../themes/metrics';
 
 const CompleteProfileScreen = ({ navigation, route }) => {
+  const { email = '' } = route.params || {};
   const [name, setName] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   
-  const handleCompleteProfile = () => {
-    if (!name || !password || password !== confirmPassword) {
-      // Add validation feedback
+  const { completeProfile, signIn } = useContext(AuthContext);
+  
+  const handleCompleteProfile = async () => {
+    // Validate inputs
+    if (!name) {
+      Alert.alert('Campos incompletos', 'Por favor, ingresa tu nombre completo.');
+      return;
+    }
+    
+    if (password && password.length < 6) {
+      Alert.alert('Contraseña débil', 'La contraseña debe tener al menos 6 caracteres.');
+      return;
+    }
+    
+    if (password !== confirmPassword) {
+      Alert.alert('Las contraseñas no coinciden', 'Por favor, verifica que las contraseñas ingresadas sean iguales.');
       return;
     }
     
     setIsLoading(true);
     
-    // Simulate API call
-    setTimeout(() => {
-      setIsLoading(false);
-      navigation.reset({
-        index: 0,
-        routes: [{ name: 'Login' }],
+    try {
+      // Save profile data
+      const result = await completeProfile(email, {
+        name,
+        phoneNumber,
+        password: password || undefined
       });
-    }, 1500);
+      
+      if (result) {
+        // Try to automatically sign in the user after profile completion
+        try {
+          // Note: In a real app, you would retrieve the password from secure storage or use a token
+          await signIn(email, password);
+          
+          // Reset navigation stack to start from main app
+          navigation.reset({
+            index: 0,
+            routes: [{ name: 'Login' }],
+          });
+        } catch (error) {
+          // If auto-login fails, redirect to login screen
+          navigation.reset({
+            index: 0,
+            routes: [{ name: 'Login' }],
+          });
+        }
+      } else {
+        Alert.alert(
+          'Error',
+          'No se pudo completar tu perfil. Por favor, intenta nuevamente.'
+        );
+      }
+    } catch (error) {
+      console.error('Complete profile error:', error);
+      Alert.alert(
+        'Error',
+        'Ha ocurrido un error al completar tu perfil. Por favor, intenta nuevamente.'
+      );
+    } finally {
+      setIsLoading(false);
+    }
   };
   
   const handleSkip = () => {
-    navigation.reset({
-      index: 0,
-      routes: [{ name: 'Login' }],
-    });
+    // Complete profile with minimal information
+    completeProfile(email, { name: email.split('@')[0] })
+      .then(() => {
+        navigation.reset({
+          index: 0,
+          routes: [{ name: 'Login' }],
+        });
+      })
+      .catch((error) => {
+        console.error('Skip profile completion error:', error);
+        navigation.reset({
+          index: 0,
+          routes: [{ name: 'Login' }],
+        });
+      });
   };
   
   return (
@@ -67,7 +127,7 @@ const CompleteProfileScreen = ({ navigation, route }) => {
             >
               <Icon name="chevron-left" size={24} color={Colors.textDark} />
             </TouchableOpacity>
-            <Text style={styles.headerTitle}>Complete Profile</Text>
+            <Text style={styles.headerTitle}>Completar Perfil</Text>
           </View>
         </LinearGradient>
         
@@ -77,40 +137,40 @@ const CompleteProfileScreen = ({ navigation, route }) => {
         >
           <View style={styles.progressContainer}>
             <View style={styles.progressBar}>
-              <View style={[styles.progressFill, { width: '66%' }]} />
+              <View style={[styles.progressFill, { width: '100%' }]} />
             </View>
-            <Text style={styles.progressText}>Step 2/3</Text>
+            <Text style={styles.progressText}>Paso 3/3</Text>
           </View>
           
           <View style={styles.formContainer}>
             <Input
-              label="Full Name"
+              label="Nombre Completo"
               value={name}
               onChangeText={setName}
-              placeholder="Enter your full name"
+              placeholder="Ingresa tu nombre completo"
               leftIcon="user"
             />
             
             <Input
-              label="Create Password"
+              label="Confirmar Contraseña"
               value={password}
               onChangeText={setPassword}
-              placeholder="Minimum 8 characters"
+              placeholder="Mínimo 6 caracteres"
               secureTextEntry
               leftIcon="lock"
             />
             
             <Input
-              label="Confirm Password"
+              label="Confirmar Contraseña"
               value={confirmPassword}
               onChangeText={setConfirmPassword}
-              placeholder="Re-enter your password"
+              placeholder="Vuelve a ingresar tu contraseña"
               secureTextEntry
               leftIcon="lock"
             />
             
             <Input
-              label="Phone Number (Optional)"
+              label="Número de Teléfono (Opcional)"
               value={phoneNumber}
               onChangeText={setPhoneNumber}
               placeholder="+1 (___) ___-____"
@@ -119,7 +179,7 @@ const CompleteProfileScreen = ({ navigation, route }) => {
             />
             
             <Button
-              title="Complete Registration"
+              title="Completar Registro"
               onPress={handleCompleteProfile}
               fullWidth
               style={styles.completeButton}
@@ -131,9 +191,9 @@ const CompleteProfileScreen = ({ navigation, route }) => {
             style={styles.skipContainer}
             onPress={handleSkip}
           >
-            <Text style={styles.skipText}>Skip for now</Text>
+            <Text style={styles.skipText}>Omitir por ahora</Text>
             <Text style={styles.skipSubtext}>
-              You can complete your profile later
+              Puedes completar tu perfil más tarde
             </Text>
           </TouchableOpacity>
         </ScrollView>

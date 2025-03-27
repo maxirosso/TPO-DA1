@@ -8,6 +8,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Keyboard,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
@@ -23,30 +24,67 @@ const SignupScreen = ({ navigation }) => {
   const [activeTab, setActiveTab] = useState('regularUser');
   const [email, setEmail] = useState('');
   const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   
-  // Create refs for the input fields
   const emailInputRef = useRef(null);
   const usernameInputRef = useRef(null);
+  const passwordInputRef = useRef(null);
   
   const { signUp } = useContext(AuthContext);
   
+  const validateEmail = (email) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+  
   const handleSignUp = async () => {
-    Keyboard.dismiss(); // Close keyboard when submitting
+    Keyboard.dismiss();
     
-    if (!email || !username || !termsAccepted) {
-      // Add validation feedback
+    // Validate inputs
+    if (!email || !username || !password) {
+      Alert.alert('Campos incompletos', 'Por favor, completa todos los campos requeridos.');
+      return;
+    }
+    
+    if (!validateEmail(email)) {
+      Alert.alert('Email inválido', 'Por favor, ingresa una dirección de correo electrónico válida.');
+      return;
+    }
+    
+    if (password.length < 6) {
+      Alert.alert('Contraseña débil', 'La contraseña debe tener al menos 6 caracteres.');
+      return;
+    }
+    
+    if (!termsAccepted) {
+      Alert.alert('Términos y condiciones', 'Debes aceptar los términos y condiciones para continuar.');
       return;
     }
     
     setIsLoading(true);
+    
     try {
-      // In a real app, pass to verification screen
-      navigation.navigate('Verification', { email });
+      // Register user and send verification email
+      const result = await signUp({
+        email,
+        username,
+        password,
+        userType: activeTab === 'regularUser' ? 'regular' : 'student'
+      });
+      
+      // If registration successful, navigate to verification screen
+      if (result && result.success) {
+        navigation.navigate('Verification', { email });
+      }
     } catch (error) {
-      console.log('Sign up error:', error);
-      // Handle sign up error
+      // Handle registration errors
+      console.error('Registration error:', error);
+      Alert.alert(
+        'Error en el registro',
+        'Ha ocurrido un error al registrar tu cuenta. Por favor, intenta nuevamente.'
+      );
     } finally {
       setIsLoading(false);
     }
@@ -63,7 +101,7 @@ const SignupScreen = ({ navigation }) => {
         <ScrollView
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.scrollContent}
-          keyboardShouldPersistTaps="handled" // Important for keyboard handling
+          keyboardShouldPersistTaps="handled"
         >
           <LinearGradient
             colors={[Colors.gradientStart, Colors.gradientEnd]}
@@ -76,15 +114,15 @@ const SignupScreen = ({ navigation }) => {
               >
                 <Icon name="chevron-left" size={24} color={Colors.textDark} />
               </TouchableOpacity>
-              <Text style={styles.headerTitle}>Create Account</Text>
+              <Text style={styles.headerTitle}>Crear Cuenta</Text>
             </View>
           </LinearGradient>
           
           <View style={styles.content}>
             <View style={styles.welcomeContainer}>
-              <Text style={styles.welcomeTitle}>Welcome to CulinaryDelight</Text>
+              <Text style={styles.welcomeTitle}>Bienvenido a CulinaryDelight</Text>
               <Text style={styles.welcomeMessage}>
-                Begin your culinary journey by creating an account. We'll send you a verification code to complete your registration.
+                Comienza tu viaje culinario creando una cuenta. Te enviaremos un código de verificación para completar tu registro.
               </Text>
             </View>
             
@@ -102,7 +140,7 @@ const SignupScreen = ({ navigation }) => {
                     activeTab === 'regularUser' && styles.activeTabText,
                   ]}
                 >
-                  Regular User
+                  Usuario Regular
                 </Text>
               </TouchableOpacity>
               
@@ -119,7 +157,7 @@ const SignupScreen = ({ navigation }) => {
                     activeTab === 'student' && styles.activeTabText,
                   ]}
                 >
-                  Student
+                  Estudiante
                 </Text>
               </TouchableOpacity>
             </View>
@@ -127,10 +165,10 @@ const SignupScreen = ({ navigation }) => {
             <View style={styles.formContainer}>
               <Input
                 ref={emailInputRef}
-                label="Email Address"
+                label="Correo Electrónico"
                 value={email}
                 onChangeText={setEmail}
-                placeholder="your@email.com"
+                placeholder="tu@correo.com"
                 keyboardType="email-address"
                 autoCapitalize="none"
                 returnKeyType="next"
@@ -140,11 +178,23 @@ const SignupScreen = ({ navigation }) => {
               
               <Input
                 ref={usernameInputRef}
-                label="Username / Alias"
+                label="Nombre de Usuario / Alias"
                 value={username}
                 onChangeText={setUsername}
-                placeholder="Choose a unique username"
+                placeholder="Elige un nombre de usuario único"
                 autoCapitalize="none"
+                returnKeyType="next"
+                blurOnSubmit={false}
+                onSubmitEditing={() => passwordInputRef.current?.focus()}
+              />
+              
+              <Input
+                ref={passwordInputRef}
+                label="Contraseña"
+                value={password}
+                onChangeText={setPassword}
+                placeholder="Mínimo 6 caracteres"
+                secureTextEntry
                 returnKeyType="done"
                 blurOnSubmit={true}
                 onSubmitEditing={handleSignUp}
@@ -166,14 +216,14 @@ const SignupScreen = ({ navigation }) => {
                 </TouchableOpacity>
                 
                 <Text style={styles.termsText}>
-                  I agree to the{' '}
-                  <Text style={styles.termsLink}>Terms of Service</Text> and{' '}
-                  <Text style={styles.termsLink}>Privacy Policy</Text>
+                  Acepto los{' '}
+                  <Text style={styles.termsLink}>Términos de Servicio</Text> y la{' '}
+                  <Text style={styles.termsLink}>Política de Privacidad</Text>
                 </Text>
               </View>
               
               <Button
-                title="Create Account"
+                title="Crear Cuenta"
                 onPress={handleSignUp}
                 fullWidth
                 style={styles.createAccountButton}
@@ -182,7 +232,7 @@ const SignupScreen = ({ navigation }) => {
               
               <View style={styles.divider}>
                 <View style={styles.dividerLine} />
-                <Text style={styles.dividerText}>or sign up with</Text>
+                <Text style={styles.dividerText}>o regístrate con</Text>
                 <View style={styles.dividerLine} />
               </View>
               
@@ -203,12 +253,12 @@ const SignupScreen = ({ navigation }) => {
         
         <View style={styles.bottomContainer}>
           <Text style={styles.bottomText}>
-            Already have an account?{' '}
+            ¿Ya tienes una cuenta?{' '}
             <Text
               style={styles.bottomLink}
               onPress={() => navigation.navigate('Login')}
             >
-              Sign In
+              Iniciar Sesión
             </Text>
           </Text>
         </View>

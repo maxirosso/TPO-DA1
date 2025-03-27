@@ -27,24 +27,24 @@ const AddRecipeScreen = ({ navigation }) => {
   const [cookTime, setCookTime] = useState('');
   const [servings, setServings] = useState('');
   const [calories, setCalories] = useState('');
-  const [difficulty, setDifficulty] = useState('Medium');
+  const [difficulty, setDifficulty] = useState('Medio');
   const [recipeImage, setRecipeImage] = useState(null);
   const [ingredients, setIngredients] = useState(['']);
   const [instructions, setInstructions] = useState(['']);
   const [selectedCategories, setSelectedCategories] = useState([]);
 
-  const difficultyOptions = ['Easy', 'Medium', 'Hard'];
+  const difficultyOptions = ['Fácil', 'Medio', 'Difícil'];
   const categoryOptions = [
-    'Breakfast',
-    'Lunch',
-    'Dinner',
-    'Dessert',
-    'Appetizer',
-    'Soup',
-    'Salad',
-    'Vegetarian',
-    'Vegan',
-    'Gluten-Free',
+    'Desayuno',
+    'Almuerzo',
+    'Cena',
+    'Postre',
+    'Aperitivo',
+    'Sopa',
+    'Ensalada',
+    'Vegetariano',
+    'Vegano',
+    'Sin Gluten',
     'Keto',
     'Paleo',
   ];
@@ -116,7 +116,6 @@ const AddRecipeScreen = ({ navigation }) => {
   };
 
   const handleSaveRecipe = () => {
-    // Implement save recipe logic
     console.log({
       title,
       description,
@@ -131,7 +130,6 @@ const AddRecipeScreen = ({ navigation }) => {
       categories: selectedCategories,
     });
     
-    // Navigate back or to recipe details
     navigation.goBack();
   };
 
@@ -153,7 +151,7 @@ const AddRecipeScreen = ({ navigation }) => {
             >
               <Icon name="chevron-left" size={24} color={Colors.textDark} />
             </TouchableOpacity>
-            <Text style={styles.headerTitle}>Create Recipe</Text>
+            <Text style={styles.headerTitle}>Crear Receta</Text>
             <TouchableOpacity
               style={styles.saveButton}
               onPress={handleSaveRecipe}
@@ -180,31 +178,31 @@ const AddRecipeScreen = ({ navigation }) => {
             ) : (
               <View style={styles.imagePlaceholder}>
                 <Icon name="camera" size={40} color={Colors.textMedium} />
-                <Text style={styles.imagePlaceholderText}>Add Recipe Photo</Text>
+                <Text style={styles.imagePlaceholderText}>Añadir Foto de Receta</Text>
               </View>
             )}
           </TouchableOpacity>
 
           <View style={styles.formSection}>
             <Input
-              label="Recipe Title"
+              label="Título de la Receta"
               value={title}
               onChangeText={setTitle}
-              placeholder="Enter recipe title"
+              placeholder="Ingresa el título de la receta"
             />
 
             <Input
-              label="Description"
+              label="Descripción"
               value={description}
               onChangeText={setDescription}
-              placeholder="Briefly describe your recipe"
+              placeholder="Describe brevemente tu receta"
               multiline
               numberOfLines={3}
             />
 
             <View style={styles.rowFields}>
               <Input
-                label="Prep Time (mins)"
+                label="Tiempo de Preparación (min)"
                 value={prepTime}
                 onChangeText={setPrepTime}
                 placeholder="10"
@@ -213,7 +211,7 @@ const AddRecipeScreen = ({ navigation }) => {
               />
 
               <Input
-                label="Cook Time (mins)"
+                label="Tiempo de Cocción (min)"
                 value={cookTime}
                 onChangeText={setCookTime}
                 placeholder="20"
@@ -224,7 +222,7 @@ const AddRecipeScreen = ({ navigation }) => {
 
             <View style={styles.rowFields}>
               <Input
-                label="Servings"
+                label="Porciones"
                 value={servings}
                 onChangeText={setServings}
                 placeholder="4"
@@ -233,7 +231,7 @@ const AddRecipeScreen = ({ navigation }) => {
               />
 
               <Input
-                label="Calories"
+                label="Calorías"
                 value={calories}
                 onChangeText={setCalories}
                 placeholder="400"
@@ -242,7 +240,7 @@ const AddRecipeScreen = ({ navigation }) => {
               />
             </View>
 
-            <Text style={styles.labelText}>Difficulty</Text>
+            <Text style={styles.labelText}>Dificultad</Text>
             <View style={styles.difficultyContainer}>
               {difficultyOptions.map((option) => (
                 <TouchableOpacity
@@ -265,7 +263,7 @@ const AddRecipeScreen = ({ navigation }) => {
               ))}
             </View>
 
-            <Text style={styles.labelText}>Categories</Text>
+            <Text style={styles.labelText}>Categorías</Text>
             <View style={styles.categoriesContainer}>
               {categoryOptions.map((category) => (
                 <TouchableOpacity
@@ -291,7 +289,7 @@ const AddRecipeScreen = ({ navigation }) => {
             </View>
 
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Ingredients</Text>
+              <Text style={styles.sectionTitle}>Ingredientes</Text>
               <TouchableOpacity
                 style={styles.addButton}
                 onPress={handleAddIngredient}
@@ -306,7 +304,7 @@ const AddRecipeScreen = ({ navigation }) => {
                   style={styles.ingredientInput}
                   value={ingredient}
                   onChangeText={(text) => handleUpdateIngredient(text, index)}
-                  placeholder={`Ingredient ${index + 1}`}
+                  placeholder={`Ingrediente ${index + 1}`}
                   placeholderTextColor={Colors.textLight}
                 />
                 <TouchableOpacity
@@ -328,7 +326,7 @@ const AddRecipeScreen = ({ navigation }) => {
             ))}
 
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Instructions</Text>
+              <Text style={styles.sectionTitle}>Instrucciones</Text>
               <TouchableOpacity
                 style={styles.addButton}
                 onPress={handleAddInstruction}
@@ -346,7 +344,7 @@ const AddRecipeScreen = ({ navigation }) => {
                   style={styles.instructionInput}
                   value={instruction}
                   onChangeText={(text) => handleUpdateInstruction(text, index)}
-                  placeholder={`Step ${index + 1}`}
+                  placeholder={`Paso ${index + 1}`}
                   placeholderTextColor={Colors.textLight}
                   multiline
                 />
@@ -369,7 +367,7 @@ const AddRecipeScreen = ({ navigation }) => {
             ))}
 
             <Button
-              title="Save Recipe"
+              title="Guardar Receta"
               onPress={handleSaveRecipe}
               style={styles.saveRecipeButton}
               fullWidth

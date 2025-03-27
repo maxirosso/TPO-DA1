@@ -17,14 +17,13 @@ import Button from '../../components/common/Button';
 import Colors from '../../themes/colors';
 import Metrics from '../../themes/metrics';
 
-// Dummy data for courses
 const featuredCourses = [
   {
     id: '1',
-    title: 'Italian Cuisine Basics',
+    title: 'Cocina Italiana Básica',
     imageUrl: 'https://images.unsplash.com/photo-1556910103-1c02745aae4d',
-    level: 'Beginner',
-    description: 'Learn the fundamentals of Italian cooking from authentic pasta to classic sauces.',
+    level: 'Principiante',
+    description: 'Aprende los fundamentos de la cocina italiana, desde pastas auténticas hasta salsas clásicas.',
     instructor: {
       name: 'Chef Marco',
       avatar: 'https://images.unsplash.com/photo-1560250097-0b93528c311a',
@@ -33,10 +32,10 @@ const featuredCourses = [
   },
   {
     id: '2',
-    title: 'Plant-Based Cooking',
+    title: 'Cocina Basada en Plantas',
     imageUrl: 'https://images.unsplash.com/photo-1516685018646-549198525c1b',
-    level: 'All Levels',
-    description: 'Master the art of creating delicious and nutritious plant-based meals.',
+    level: 'Todos los Niveles',
+    description: 'Domina el arte de crear comidas deliciosas y nutritivas basadas en plantas.',
     instructor: {
       name: 'Chef Sarah',
       avatar: 'https://images.unsplash.com/photo-1611432579699-484f7990b127',
@@ -48,41 +47,40 @@ const featuredCourses = [
 const workshops = [
   {
     id: '3',
-    title: 'Sushi Making Workshop',
-    date: 'June 15',
+    title: 'Taller de Elaboración de Sushi',
+    date: '15 de Junio',
     time: '2:00 PM - 5:00 PM',
-    tag: 'Limited Seats',
+    tag: 'Asientos Limitados',
   },
   {
     id: '4',
-    title: 'Bread Baking Basics',
-    date: 'June 22',
+    title: 'Panificación Básica',
+    date: '22 de Junio',
     time: '10:00 AM - 1:00 PM',
-    tag: 'Beginner Friendly',
+    tag: 'Apto para Principiantes',
   },
 ];
 
 const myLearning = {
   id: '5',
-  title: 'French Pastry Techniques',
+  title: 'Técnicas de Pastelería Francesa',
   progress: 45,
-  nextClass: 'Tomorrow, 7 PM',
-  status: 'In Progress',
+  nextClass: 'Mañana, 7 PM',
+  status: 'En Progreso',
 };
 
-// Category filters
 const courseCategories = [
-  'All',
-  'Beginners',
-  'Advanced',
-  'Master Class',
-  'Workshops',
-  'Pastry',
-  'Baking',
+  'Todos',
+  'Principiantes',
+  'Avanzado',
+  'Clase Magistral',
+  'Talleres',
+  'Pastelería',
+  'Panificación',
 ];
 
 const CourseScreen = ({ navigation }) => {
-  const [selectedCategory, setSelectedCategory] = useState('All');
+  const [selectedCategory, setSelectedCategory] = useState('Todos');
 
   const renderCategoryItem = ({ item }) => (
     <TouchableOpacity
@@ -119,7 +117,7 @@ const CourseScreen = ({ navigation }) => {
             >
               <Icon name="chevron-left" size={24} color={Colors.textDark} />
             </TouchableOpacity>
-            <Text style={styles.headerTitle}>Cooking Courses</Text>
+            <Text style={styles.headerTitle}>Cursos de Cocina</Text>
           </View>
         </View>
         
@@ -138,7 +136,7 @@ const CourseScreen = ({ navigation }) => {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Featured Courses</Text>
+          <Text style={styles.sectionTitle}>Cursos Destacados</Text>
           
           {featuredCourses.map((course) => (
             <View key={course.id} style={styles.courseCard}>
@@ -152,7 +150,7 @@ const CourseScreen = ({ navigation }) => {
                   <Text style={styles.courseTitle}>{course.title}</Text>
                   <View style={[
                     styles.levelBadge,
-                    course.level === 'Beginner' ? styles.beginnerBadge : styles.allLevelsBadge
+                    course.level === 'Principiante' ? styles.beginnerBadge : styles.allLevelsBadge
                   ]}>
                     <Text style={styles.levelText}>{course.level}</Text>
                   </View>
@@ -174,7 +172,7 @@ const CourseScreen = ({ navigation }) => {
         </View>
         
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Upcoming Workshops</Text>
+          <Text style={styles.sectionTitle}>Próximos Talleres</Text>
           
           {workshops.map((workshop) => (
             <View key={workshop.id} style={styles.workshopCard}>
@@ -193,7 +191,7 @@ const CourseScreen = ({ navigation }) => {
                 </View>
               </View>
               <Button
-                title="Enroll"
+                title="Inscribirse"
                 size="small"
                 onPress={() => {}}
                 style={styles.enrollButton}
@@ -203,7 +201,7 @@ const CourseScreen = ({ navigation }) => {
         </View>
         
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>My Learning</Text>
+          <Text style={styles.sectionTitle}>Mi Aprendizaje</Text>
           
           <View style={styles.learningCard}>
             <View style={styles.learningHeader}>
@@ -220,24 +218,24 @@ const CourseScreen = ({ navigation }) => {
                 />
               </View>
               <View style={styles.progressInfo}>
-                <Text style={styles.progressText}>{myLearning.progress}% completed</Text>
-                <Text style={styles.nextClassText}>Next class: {myLearning.nextClass}</Text>
+                <Text style={styles.progressText}>{myLearning.progress}% completado</Text>
+                <Text style={styles.nextClassText}>Próxima clase: {myLearning.nextClass}</Text>
               </View>
             </View>
             
             <View style={styles.learningActions}>
               <TouchableOpacity style={styles.actionButton}>
                 <Icon name="clipboard" size={16} color={Colors.textDark} style={styles.actionIcon} />
-                <Text style={styles.actionText}>Notes</Text>
+                <Text style={styles.actionText}>Notas</Text>
               </TouchableOpacity>
               
               <TouchableOpacity style={styles.actionButton}>
                 <Icon name="calendar" size={16} color={Colors.textDark} style={styles.actionIcon} />
-                <Text style={styles.actionText}>Attendance</Text>
+                <Text style={styles.actionText}>Asistencia</Text>
               </TouchableOpacity>
               
               <Button
-                title="Continue"
+                title="Continuar"
                 size="small"
                 iconName="play-circle"
                 onPress={() => {}}
@@ -374,9 +372,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   instructorAvatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     marginRight: Metrics.baseSpacing,
   },
   instructorName: {
@@ -384,9 +382,9 @@ const styles = StyleSheet.create({
     color: Colors.textDark,
   },
   coursePrice: {
-    fontSize: Metrics.baseFontSize,
+    fontSize: Metrics.mediumFontSize,
     fontWeight: '600',
-    color: Colors.textDark,
+    color: Colors.primary,
   },
   workshopCard: {
     flexDirection: 'row',
@@ -394,47 +392,48 @@ const styles = StyleSheet.create({
     borderRadius: Metrics.mediumBorderRadius,
     padding: Metrics.mediumSpacing,
     marginBottom: Metrics.mediumSpacing,
+    alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 2,
-    alignItems: 'center',
   },
   dateContainer: {
-    width: 64,
-    height: 64,
-    backgroundColor: Colors.gradientStart,
-    borderRadius: Metrics.baseBorderRadius,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: Colors.primary,
+    width: 50,
+    height: 50,
+    borderRadius: Metrics.baseBorderRadius,
     marginRight: Metrics.mediumSpacing,
   },
   dateDay: {
-    fontSize: Metrics.largeFontSize,
-    fontWeight: '700',
-    color: Colors.textDark,
+    fontSize: Metrics.mediumFontSize,
+    fontWeight: '600',
+    color: Colors.card,
   },
   dateMonth: {
     fontSize: Metrics.xSmallFontSize,
-    color: Colors.textDark,
+    color: Colors.card,
   },
   workshopInfo: {
     flex: 1,
+    marginRight: Metrics.mediumSpacing,
   },
   workshopTitle: {
     fontSize: Metrics.baseFontSize,
-    fontWeight: '500',
+    fontWeight: '600',
     color: Colors.textDark,
     marginBottom: Metrics.smallSpacing,
   },
   workshopTimeContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: Metrics.baseSpacing,
+    marginBottom: Metrics.smallSpacing,
   },
   workshopTime: {
-    fontSize: Metrics.xSmallFontSize,
+    fontSize: Metrics.smallFontSize,
     color: Colors.textDark,
     marginLeft: Metrics.smallSpacing,
   },
@@ -450,7 +449,7 @@ const styles = StyleSheet.create({
     color: Colors.textDark,
   },
   enrollButton: {
-    marginLeft: Metrics.baseSpacing,
+    height: 36,
   },
   learningCard: {
     backgroundColor: Colors.card,
@@ -469,30 +468,32 @@ const styles = StyleSheet.create({
     marginBottom: Metrics.mediumSpacing,
   },
   learningTitle: {
-    fontSize: Metrics.baseFontSize,
-    fontWeight: '500',
+    fontSize: Metrics.mediumFontSize,
+    fontWeight: '600',
     color: Colors.textDark,
+    flex: 1,
+    marginRight: Metrics.baseSpacing,
   },
   statusBadge: {
-    backgroundColor: Colors.warning + '20', // 20% opacity
+    backgroundColor: Colors.success + '20', // 20% opacity
     paddingVertical: 4,
-    paddingHorizontal: 8,
+    paddingHorizontal: 10,
     borderRadius: Metrics.baseBorderRadius,
   },
   statusText: {
     fontSize: Metrics.xSmallFontSize,
+    color: Colors.success,
     fontWeight: '500',
-    color: Colors.textDark,
   },
   progressContainer: {
     marginBottom: Metrics.mediumSpacing,
   },
   progressBar: {
-    height: 10,
+    height: 8,
     backgroundColor: Colors.background,
     borderRadius: Metrics.roundedFull,
-    marginBottom: Metrics.baseSpacing,
     overflow: 'hidden',
+    marginBottom: Metrics.baseSpacing,
   },
   progressFill: {
     height: '100%',
@@ -504,12 +505,13 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   progressText: {
-    fontSize: Metrics.xSmallFontSize,
+    fontSize: Metrics.smallFontSize,
     color: Colors.textDark,
+    fontWeight: '500',
   },
   nextClassText: {
-    fontSize: Metrics.xSmallFontSize,
-    color: Colors.textDark,
+    fontSize: Metrics.smallFontSize,
+    color: Colors.textMedium,
   },
   learningActions: {
     flexDirection: 'row',
@@ -517,12 +519,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   actionButton: {
-    backgroundColor: Colors.background,
-    paddingVertical: Metrics.baseSpacing,
-    paddingHorizontal: Metrics.mediumSpacing,
-    borderRadius: Metrics.roundedFull,
     flexDirection: 'row',
     alignItems: 'center',
+    padding: Metrics.baseSpacing,
+    backgroundColor: Colors.background,
+    borderRadius: Metrics.baseBorderRadius,
   },
   actionIcon: {
     marginRight: Metrics.smallSpacing,
@@ -530,12 +531,13 @@ const styles = StyleSheet.create({
   actionText: {
     fontSize: Metrics.smallFontSize,
     color: Colors.textDark,
+    fontWeight: '500',
   },
   continueButton: {
-    minWidth: 100,
+    height: 36,
   },
   bottomPadding: {
-    height: Metrics.xxLargeSpacing,
+    height: Metrics.largeSpacing,
   },
 });
 

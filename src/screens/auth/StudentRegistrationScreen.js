@@ -26,32 +26,25 @@ const StudentRegistrationScreen = ({ navigation }) => {
   
   const handleContinue = () => {
     if (!cardNumber || !expiry || !cvv || !cardName) {
-      // Add validation feedback
       return;
     }
     
     setIsLoading(true);
     
-    // Simulate API call
     setTimeout(() => {
       setIsLoading(false);
-      navigation.navigate('Verification', { email: 'student@example.com' });
+      navigation.navigate('Verification', { email: 'estudiante@ejemplo.com' });
     }, 1500);
   };
   
   const formatCardNumber = (text) => {
-    // Remove non-digit characters
     const cleaned = text.replace(/\D/g, '');
-    // Add space after every 4 digits
     const formatted = cleaned.replace(/(\d{4})(?=\d)/g, '$1 ');
-    // Limit to 19 characters (16 digits + 3 spaces)
     return formatted.slice(0, 19);
   };
   
   const formatExpiry = (text) => {
-    // Remove non-digit characters
     const cleaned = text.replace(/\D/g, '');
-    // Format as MM/YY
     if (cleaned.length > 2) {
       return `${cleaned.slice(0, 2)}/${cleaned.slice(2, 4)}`;
     }
@@ -76,7 +69,7 @@ const StudentRegistrationScreen = ({ navigation }) => {
             >
               <Icon name="chevron-left" size={24} color={Colors.textDark} />
             </TouchableOpacity>
-            <Text style={styles.headerTitle}>Student Registration</Text>
+            <Text style={styles.headerTitle}>Registro de Estudiante</Text>
           </View>
         </LinearGradient>
         
@@ -88,7 +81,7 @@ const StudentRegistrationScreen = ({ navigation }) => {
             <View style={styles.progressBar}>
               <View style={[styles.progressFill, { width: '33%' }]} />
             </View>
-            <Text style={styles.progressText}>Step 1/3</Text>
+            <Text style={styles.progressText}>Paso 1/3</Text>
           </View>
           
           <View style={styles.infoContainer}>
@@ -96,18 +89,18 @@ const StudentRegistrationScreen = ({ navigation }) => {
               <Icon name="info" size={20} color={Colors.primary} />
             </View>
             <Text style={styles.infoText}>
-              Registration as a student is free unless you enroll in a course. You'll need to provide payment information for future enrollments.
+              El registro como estudiante es gratuito a menos que te inscribas en un curso. Necesitarás proporcionar información de pago para futuras inscripciones.
             </Text>
           </View>
           
           <View style={styles.sectionContainer}>
-            <Text style={styles.sectionTitle}>Payment Method</Text>
+            <Text style={styles.sectionTitle}>Método de Pago</Text>
             <Text style={styles.sectionDescription}>
-              Add a payment method for course enrollments. We won't charge you until you register for a course.
+              Agrega un método de pago para las inscripciones a cursos. No te cobraremos hasta que te registres en un curso.
             </Text>
             
             <Input
-              label="Card Number"
+              label="Número de Tarjeta"
               value={cardNumber}
               onChangeText={(text) => setCardNumber(formatCardNumber(text))}
               placeholder="1234 5678 9012 3456"
@@ -117,16 +110,16 @@ const StudentRegistrationScreen = ({ navigation }) => {
             
             <View style={styles.rowFields}>
               <Input
-                label="Expiration Date"
+                label="Fecha de Expiración"
                 value={expiry}
                 onChangeText={(text) => setExpiry(formatExpiry(text))}
-                placeholder="MM/YY"
+                placeholder="MM/AA"
                 keyboardType="number-pad"
                 style={styles.halfField}
               />
               
               <Input
-                label="Security Code"
+                label="Código de Seguridad"
                 value={cvv}
                 onChangeText={setCvv}
                 placeholder="CVV"
@@ -137,18 +130,18 @@ const StudentRegistrationScreen = ({ navigation }) => {
             </View>
             
             <Input
-              label="Name on Card"
+              label="Nombre en la Tarjeta"
               value={cardName}
               onChangeText={setCardName}
-              placeholder="John Doe"
+              placeholder="Juan Pérez"
             />
             
-            <Text style={styles.altPaymentLabel}>Or use another payment method</Text>
+            <Text style={styles.altPaymentLabel}>O usa otro método de pago</Text>
             
             <View style={styles.altPaymentsContainer}>
               <TouchableOpacity style={styles.altPaymentButton}>
                 <Icon name="dollar-sign" size={20} color={Colors.textDark} style={styles.altPaymentIcon} />
-                <Text style={styles.altPaymentText}>Pay</Text>
+                <Text style={styles.altPaymentText}>Pagar</Text>
               </TouchableOpacity>
               
               <TouchableOpacity style={styles.altPaymentButton}>
@@ -159,7 +152,7 @@ const StudentRegistrationScreen = ({ navigation }) => {
           </View>
           
           <Button
-            title="Continue"
+            title="Continuar"
             onPress={handleContinue}
             fullWidth
             style={styles.continueButton}
@@ -171,6 +164,7 @@ const StudentRegistrationScreen = ({ navigation }) => {
   );
 };
 
+// Styles remain unchanged
 const styles = StyleSheet.create({
   container: {
     flex: 1,

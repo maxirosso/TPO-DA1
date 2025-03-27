@@ -19,12 +19,11 @@ import { AuthContext } from '../../context/AuthContext';
 const ProfileScreen = ({ navigation }) => {
   const { signOut } = React.useContext(AuthContext);
 
-  // Mock user data
   const user = {
     name: 'Sarah Johnson',
     username: '@sarahjcook',
     avatar: 'https://images.unsplash.com/photo-1580489944761-15a19d654956',
-    bio: 'Food enthusiast and home chef. Love to experiment with new flavors and share my recipes.',
+    bio: 'Entusiasta de la comida y chef casera. Me encanta experimentar con nuevos sabores y compartir mis recetas.',
     location: 'San Francisco, CA',
     recipeCount: 42,
     followers: 1253,
@@ -35,38 +34,38 @@ const ProfileScreen = ({ navigation }) => {
     {
       id: 'my_recipes',
       icon: 'book-open',
-      title: 'My Recipes',
-      description: 'View and manage your recipes',
+      title: 'Mis Recetas',
+      description: 'Ver y gestionar tus recetas',
     },
     {
       id: 'my_courses',
       icon: 'briefcase',
-      title: 'My Courses',
-      description: 'Track your learning progress',
+      title: 'Mis Cursos',
+      description: 'Seguimiento de tu progreso de aprendizaje',
     },
     {
       id: 'saved_recipes',
       icon: 'bookmark',
-      title: 'Saved Recipes',
-      description: 'Recipes youve saved for later',
+      title: 'Recetas Guardadas',
+      description: 'Recetas que has guardado para después',
     },
     {
       id: 'shopping_list',
       icon: 'shopping-cart',
-      title: 'Shopping List',
-      description: 'Your ingredients shopping list',
+      title: 'Lista de Compras',
+      description: 'Tu lista de compras de ingredientes',
     },
     {
       id: 'settings',
       icon: 'settings',
-      title: 'Settings',
-      description: 'App preferences and account settings',
+      title: 'Configuración',
+      description: 'Preferencias de la app y ajustes de cuenta',
     },
     {
       id: 'help',
       icon: 'help-circle',
-      title: 'Help & Support',
-      description: 'FAQs and contact information',
+      title: 'Ayuda y Soporte',
+      description: 'Preguntas frecuentes e información de contacto',
     },
   ];
 
@@ -74,7 +73,7 @@ const ProfileScreen = ({ navigation }) => {
     if (id === 'saved_recipes') {
       navigation.navigate('SavedTab');
     } else if (id === 'settings') {
-      // Navigate to Settings
+      // Navegar a Configuración
     }
   };
 
@@ -86,7 +85,7 @@ const ProfileScreen = ({ navigation }) => {
           style={styles.headerContainer}
         >
           <View style={styles.headerContent}>
-            <Text style={styles.headerTitle}>Profile</Text>
+            <Text style={styles.headerTitle}>Perfil</Text>
             <TouchableOpacity style={styles.settingsButton}>
               <Icon name="settings" size={24} color={Colors.textDark} />
             </TouchableOpacity>
@@ -118,32 +117,32 @@ const ProfileScreen = ({ navigation }) => {
           <View style={styles.statsContainer}>
             <View style={styles.statItem}>
               <Text style={styles.statValue}>{user.recipeCount}</Text>
-              <Text style={styles.statLabel}>Recipes</Text>
+              <Text style={styles.statLabel}>Recetas</Text>
             </View>
 
             <View style={styles.statDivider} />
 
             <View style={styles.statItem}>
               <Text style={styles.statValue}>{user.followers}</Text>
-              <Text style={styles.statLabel}>Followers</Text>
+              <Text style={styles.statLabel}>Seguidores</Text>
             </View>
 
             <View style={styles.statDivider} />
 
             <View style={styles.statItem}>
               <Text style={styles.statValue}>{user.following}</Text>
-              <Text style={styles.statLabel}>Following</Text>
+              <Text style={styles.statLabel}>Siguiendo</Text>
             </View>
           </View>
 
           <View style={styles.buttonsContainer}>
             <Button
-              title="Edit Profile"
+              title="Editar Perfil"
               type="outline"
               style={styles.editButton}
             />
             <Button
-              title="Share Profile"
+              title="Compartir Perfil"
               type="primary"
               iconName="share-2"
               style={styles.shareButton}
@@ -173,14 +172,14 @@ const ProfileScreen = ({ navigation }) => {
         </View>
 
         <Button
-          title="Sign Out"
+          title="Cerrar Sesión"
           type="outline"
           onPress={signOut}
           style={styles.signOutButton}
         />
 
         <View style={styles.versionContainer}>
-          <Text style={styles.versionText}>Version 1.0.0</Text>
+          <Text style={styles.versionText}>Versión 1.0.0</Text>
         </View>
       </ScrollView>
     </SafeAreaView>

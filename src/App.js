@@ -26,7 +26,7 @@ const App = () => {
   const authContext = React.useMemo(() => ({
     signIn: async (email, password) => {
       try {
-        // Use the auth service instead of directly working with AsyncStorage
+        // Use the auth service to handle login with verification check
         const result = await authService.login(email, password);
         setUserToken(result.token);
         return result;
@@ -47,15 +47,44 @@ const App = () => {
     
     signUp: async (userData) => {
       try {
-        // Use the auth service for registration
+        // Register user and initiate verification process
         const result = await authService.register(userData);
-        setUserToken(result.token);
         return result;
       } catch (e) {
         console.log('Sign up error:', e);
         throw e;
       }
     },
+    
+    verifyCode: async (email, code) => {
+      try {
+        // Verify the code entered by user
+        return await authService.verifyCode(email, code);
+      } catch (e) {
+        console.log('Verification error:', e);
+        throw e;
+      }
+    },
+    
+    resendVerificationCode: async (email) => {
+      try {
+        // Resend verification code on user request
+        return await authService.resendVerificationCode(email);
+      } catch (e) {
+        console.log('Resend verification error:', e);
+        throw e;
+      }
+    },
+    
+    completeProfile: async (email, profileData) => {
+      try {
+        // Update user profile after verification
+        return await authService.completeProfile(email, profileData);
+      } catch (e) {
+        console.log('Complete profile error:', e);
+        throw e;
+      }
+    }
   }), []);
 
   useEffect(() => {

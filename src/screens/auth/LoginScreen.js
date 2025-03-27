@@ -8,6 +8,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Keyboard,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
@@ -25,27 +26,66 @@ const LoginScreen = ({ navigation }) => {
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   
-  // Create refs for the input fields
   const emailInputRef = useRef(null);
   const passwordInputRef = useRef(null);
   
-  const { signIn } = useContext(AuthContext);
+  const { signIn, resendVerificationCode } = useContext(AuthContext);
   
   const handleSignIn = async () => {
-    Keyboard.dismiss(); // Close keyboard when submitting
+    Keyboard.dismiss();
     
     if (!email || !password) {
-      // You could add validation feedback here
+      Alert.alert('Campos incompletos', 'Por favor, ingresa tu correo y contraseña.');
       return;
     }
     
     setIsLoading(true);
+    
     try {
-      // In a real app, you would validate inputs and handle errors properly
-      await signIn({ email, password });
+      await signIn(email, password);
     } catch (error) {
-      console.log('Sign in error:', error);
-      // Handle sign in error
+      console.log('Error al iniciar sesión:', error);
+      
+      // Check for verification error
+      if (error.message === 'EMAIL_NOT_VERIFIED') {
+        Alert.alert(
+          'Correo No Verificado',
+          'Tu correo electrónico aún no ha sido verificado. ¿Deseas que te enviemos un nuevo código de verificación?',
+          [
+            {
+              text: 'Cancelar',
+              style: 'cancel'
+            },
+            {
+              text: 'Enviar Código',
+              onPress: async () => {
+                try {
+                  const sent = await resendVerificationCode(email);
+                  if (sent) {
+                    navigation.navigate('Verification', { email });
+                  } else {
+                    Alert.alert(
+                      'Error',
+                      'No pudimos enviar el código de verificación. Por favor, intenta registrarte nuevamente.'
+                    );
+                  }
+                } catch (err) {
+                  console.error('Error sending verification code:', err);
+                  Alert.alert(
+                    'Error',
+                    'Ha ocurrido un error al enviar el código de verificación.'
+                  );
+                }
+              }
+            }
+          ]
+        );
+      } else {
+        Alert.alert(
+          'Error al iniciar sesión',
+          'El correo electrónico o la contraseña son incorrectos. Por favor, intenta nuevamente.'
+        );
+      }
     } finally {
       setIsLoading(false);
     }
@@ -59,10 +99,10 @@ const LoginScreen = ({ navigation }) => {
     <>
       <Input
         ref={emailInputRef}
-        label="Email Address"
+        label="Dirección de Correo"
         value={email}
         onChangeText={setEmail}
-        placeholder="your@email.com"
+        placeholder="tu@email.com"
         keyboardType="email-address"
         leftIcon="mail"
         autoCapitalize="none"
@@ -73,7 +113,7 @@ const LoginScreen = ({ navigation }) => {
       
       <Input
         ref={passwordInputRef}
-        label="Password"
+        label="Contraseña"
         value={password}
         onChangeText={setPassword}
         placeholder="••••••••"
@@ -87,13 +127,13 @@ const LoginScreen = ({ navigation }) => {
             onPress={() => navigation.navigate('ForgotPassword')}
             style={styles.forgotPasswordButton}
           >
-            <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+            <Text style={styles.forgotPasswordText}>¿Olvidaste tu contraseña?</Text>
           </TouchableOpacity>
         }
       />
       
       <Button
-        title="Sign In"
+        title="Iniciar Sesión"
         onPress={handleSignIn}
         fullWidth
         style={styles.signInButton}
@@ -102,7 +142,7 @@ const LoginScreen = ({ navigation }) => {
       
       <View style={styles.divider}>
         <View style={styles.dividerLine} />
-        <Text style={styles.dividerText}>or continue with</Text>
+        <Text style={styles.dividerText}>o continúa con</Text>
         <View style={styles.dividerLine} />
       </View>
       
@@ -133,7 +173,7 @@ const LoginScreen = ({ navigation }) => {
         <ScrollView
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.scrollContent}
-          keyboardShouldPersistTaps="handled" // Important for keyboard handling
+          keyboardShouldPersistTaps="handled"
         >
           <LinearGradient
             colors={[Colors.gradientStart, Colors.gradientEnd]}
@@ -146,7 +186,7 @@ const LoginScreen = ({ navigation }) => {
               >
                 <Icon name="chevron-left" size={24} color={Colors.textDark} />
               </TouchableOpacity>
-              <Text style={styles.headerTitle}>Account</Text>
+              <Text style={styles.headerTitle}>Cuenta</Text>
             </View>
           </LinearGradient>
           
@@ -154,9 +194,9 @@ const LoginScreen = ({ navigation }) => {
             <View style={styles.logoCircle}>
               <Icon name="pie-chart" size={48} color={Colors.card} />
             </View>
-            <Text style={styles.welcomeTitle}>Welcome to CulinaryDelight</Text>
+            <Text style={styles.welcomeTitle}>Bienvenido a CulinaryDelight</Text>
             <Text style={styles.welcomeSubtitle}>
-              Sign in to access your recipes and courses
+              Inicia sesión para acceder a tus recetas y cursos
             </Text>
           </View>
           
@@ -174,7 +214,7 @@ const LoginScreen = ({ navigation }) => {
                   activeTab === 'signIn' && styles.activeTabText,
                 ]}
               >
-                Sign In
+                Iniciar Sesión
               </Text>
             </TouchableOpacity>
             
@@ -191,7 +231,7 @@ const LoginScreen = ({ navigation }) => {
                   activeTab === 'signUp' && styles.activeTabText,
                 ]}
               >
-                Sign Up
+                Registrarse
               </Text>
             </TouchableOpacity>
           </View>
@@ -203,12 +243,12 @@ const LoginScreen = ({ navigation }) => {
         
         <View style={styles.bottomContainer}>
           <Text style={styles.bottomText}>
-            Don't have an account?{' '}
+            ¿No tienes una cuenta?{' '}
             <Text
               style={styles.bottomLink}
               onPress={handleSignUp}
             >
-              Sign Up
+              Registrarse
             </Text>
           </Text>
         </View>

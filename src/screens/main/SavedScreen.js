@@ -15,66 +15,66 @@ import RecipeCard from '../../components/recipe/RecipeCard';
 import Colors from '../../themes/colors';
 import Metrics from '../../themes/metrics';
 
-// Dummy data for saved recipes
+// Datos ficticios para recetas guardadas
 const savedRecipes = [
   {
     id: '1',
-    title: 'Mediterranean Bowl',
+    title: 'Tazón Mediterráneo',
     imageUrl: 'https://images.unsplash.com/photo-1527515637462-cff94eecc1ac',
     time: 25,
-    tags: ['Healthy', 'Lunch'],
+    tags: ['Saludable', 'Almuerzo'],
   },
   {
     id: '2',
-    title: 'Avocado Toast',
+    title: 'Tostada de Aguacate',
     imageUrl: 'https://images.unsplash.com/photo-1565299507177-b0ac66763828',
     time: 10,
-    tags: ['Breakfast', 'Quick'],
+    tags: ['Desayuno', 'Rápido'],
   },
   {
     id: '3',
-    title: 'Berry Smoothie Bowl',
+    title: 'Tazón de Batido de Bayas',
     imageUrl: 'https://images.unsplash.com/photo-1557837931-97fdbe7cb9a4',
     time: 15,
-    tags: ['Breakfast', 'Vegan'],
+    tags: ['Desayuno', 'Vegano'],
   },
   {
     id: '4',
-    title: 'Grilled Salmon',
+    title: 'Salmón a la Parrilla',
     imageUrl: 'https://images.unsplash.com/photo-1551183053-bf91a1d81141',
     time: 30,
-    tags: ['Dinner', 'Protein'],
+    tags: ['Cena', 'Proteína'],
   },
   {
     id: '5',
-    title: 'Quinoa Stuffed Peppers',
+    title: 'Pimientos Rellenos de Quinua',
     imageUrl: 'https://images.unsplash.com/photo-1564834744159-ff0ea41ba4b9',
     time: 45,
-    tags: ['Dinner', 'Vegetarian'],
+    tags: ['Cena', 'Vegetariano'],
   },
   {
     id: '6',
-    title: 'Fresh Vegetable Salad',
+    title: 'Ensalada de Verduras Frescas',
     imageUrl: 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd',
     time: 15,
-    tags: ['Lunch', 'Vegan'],
+    tags: ['Almuerzo', 'Vegano'],
   },
 ];
 
-// Collection categories
+// Categorías de colecciones
 const collections = [
-  'All Saved',
-  'Favorites',
-  'Quick Meals',
-  'Breakfast',
-  'Lunch',
-  'Dinner',
-  'Desserts',
+  'Todas Guardadas',
+  'Favoritas',
+  'Comidas Rápidas',
+  'Desayuno',
+  'Almuerzo',
+  'Cena',
+  'Postres',
 ];
 
 const SavedScreen = ({ navigation }) => {
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCollection, setSelectedCollection] = useState('All Saved');
+  const [selectedCollection, setSelectedCollection] = useState('Todas Guardadas');
   const [filteredRecipes, setFilteredRecipes] = useState(savedRecipes);
 
   const handleRecipePress = (recipe) => {
@@ -96,12 +96,12 @@ const SavedScreen = ({ navigation }) => {
 
   const handleCollectionPress = (collection) => {
     setSelectedCollection(collection);
-    if (collection === 'All Saved') {
+    if (collection === 'Todas Guardadas') {
       setFilteredRecipes(savedRecipes);
     } else {
       const filtered = savedRecipes.filter((recipe) =>
         recipe.tags.some(tag => tag === collection) ||
-        (collection === 'Quick Meals' && recipe.time <= 15)
+        (collection === 'Comidas Rápidas' && recipe.time <= 15)
       );
       setFilteredRecipes(filtered);
     }
@@ -129,9 +129,9 @@ const SavedScreen = ({ navigation }) => {
   const renderEmptyList = () => (
     <View style={styles.emptyContainer}>
       <Icon name="bookmark" size={60} color={Colors.textLight} />
-      <Text style={styles.emptyTitle}>No saved recipes found</Text>
+      <Text style={styles.emptyTitle}>No se encontraron recetas guardadas</Text>
       <Text style={styles.emptyText}>
-        Try a different search term or collection, or save some recipes to view them here.
+        Prueba con un término de búsqueda o colección diferente, o guarda algunas recetas para verlas aquí.
       </Text>
     </View>
   );
@@ -143,14 +143,14 @@ const SavedScreen = ({ navigation }) => {
         style={styles.headerContainer}
       >
         <View style={styles.headerContent}>
-          <Text style={styles.headerTitle}>Saved Recipes</Text>
+          <Text style={styles.headerTitle}>Recetas Guardadas</Text>
         </View>
 
         <View style={styles.searchContainer}>
           <Icon name="search" size={20} color={Colors.textMedium} style={styles.searchIcon} />
           <TextInput
             style={styles.searchInput}
-            placeholder="Search saved recipes..."
+            placeholder="Buscar recetas guardadas..."
             placeholderTextColor={Colors.textMedium}
             value={searchQuery}
             onChangeText={handleSearch}
