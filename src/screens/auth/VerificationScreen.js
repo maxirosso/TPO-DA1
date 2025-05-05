@@ -8,6 +8,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Alert,
+  Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
@@ -18,12 +19,15 @@ import Button from '../../components/common/Button';
 import Colors from '../../themes/colors';
 import Metrics from '../../themes/metrics';
 
+const { width } = Dimensions.get('window');
+
 const VerificationScreen = ({ navigation, route }) => {
   const { email = '' } = route.params || {};
-  const [verificationCode, setVerificationCode] = useState(['', '', '', '']);
+  const [verificationCode, setVerificationCode] = useState(['1', '6', '5', '0']);
   const [isLoading, setIsLoading] = useState(false);
   const [isResending, setIsResending] = useState(false);
   const [timeLeft, setTimeLeft] = useState(24 * 60 * 60); // 24 hours in seconds
+  const [activeInput, setActiveInput] = useState(null);
   
   const { verifyCode, resendVerificationCode } = useContext(AuthContext);
   const inputRefs = [useRef(), useRef(), useRef(), useRef()];
@@ -34,12 +38,6 @@ const VerificationScreen = ({ navigation, route }) => {
     }, 1000);
     
     return () => clearInterval(timer);
-  }, []);
-
-  // Auto-verification - For development only
-  useEffect(() => {
-    // Auto-fill the code for demo purposes
-    setVerificationCode(['1', '2', '3', '4']);
   }, []);
   
   const formatTimeLeft = () => {
@@ -64,6 +62,7 @@ const VerificationScreen = ({ navigation, route }) => {
     // Auto-focus the next input if the current one is filled
     if (text && index < 3) {
       inputRefs[index + 1].current.focus();
+      setActiveInput(index + 1);
     }
   };
   
@@ -71,6 +70,59 @@ const VerificationScreen = ({ navigation, route }) => {
     // Handle backspace key to move to the previous input
     if (e.nativeEvent.key === 'Backspace' && !verificationCode[index] && index > 0) {
       inputRefs[index - 1].current.focus();
+      setActiveInput(index - 1);
+    }
+  };
+
+  const handleKeyboardPress = (key) => {
+    if (activeInput === null) {
+      // If no input is active, activate the first empty one
+      for (let i = 0; i < verificationCode.length; i++) {
+        if (!verificationCode[i]) {
+          setActiveInput(i);
+          inputRefs[i].current.focus();
+          break;
+        }
+      }
+      
+      // If all inputs are filled, select the last one
+      if (activeInput === null) {
+        setActiveInput(verificationCode.length - 1);
+        inputRefs[verificationCode.length - 1].current.focus();
+      }
+      return;
+    }
+
+    if (key === '⌫') {
+      // Handle backspace
+      const newCode = [...verificationCode];
+      if (newCode[activeInput]) {
+        newCode[activeInput] = '';
+        setVerificationCode(newCode);
+      } else if (activeInput > 0) {
+        // Move to previous input if current is empty
+        setActiveInput(activeInput - 1);
+        inputRefs[activeInput - 1].current.focus();
+      }
+    } else if (key === 'espacio') {
+      // Space - do nothing
+      return;
+    } else if (key === 'return') {
+      // Handle return - validate the code
+      if (verificationCode.every(digit => digit !== '')) {
+        handleVerify();
+      }
+    } else if (/^\d$/.test(key)) {
+      // Handle digit press
+      const newCode = [...verificationCode];
+      newCode[activeInput] = key;
+      setVerificationCode(newCode);
+      
+      // Auto-focus next input
+      if (activeInput < verificationCode.length - 1) {
+        setActiveInput(activeInput + 1);
+        inputRefs[activeInput + 1].current.focus();
+      }
     }
   };
   
@@ -123,51 +175,63 @@ const VerificationScreen = ({ navigation, route }) => {
       setIsResending(false);
     }
   };
+
+  // Generate keyboard rows
+  const renderKeyboardRow = (keys) => {
+    return (
+      <View style={styles.keyboardRow}>
+        {keys.map((key) => (
+          <TouchableOpacity
+            key={key}
+            style={[
+              styles.keyboardKey,
+              ['⌫', 'espacio', 'return', '123'].includes(key) && styles.functionKey
+            ]}
+            onPress={() => handleKeyboardPress(key)}
+          >
+            <Text style={styles.keyText}>{key}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+    );
+  };
   
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <KeyboardAvoidingView
-        style={styles.keyboardAvoidingView}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+      <LinearGradient
+        colors={[Colors.gradientStart, Colors.gradientEnd]}
+        style={styles.headerContainer}
       >
-        <LinearGradient
-          colors={[Colors.gradientStart, Colors.gradientEnd]}
-          style={styles.headerContainer}
-        >
-          <View style={styles.headerContent}>
-            <TouchableOpacity 
-              style={styles.backButton}
-              onPress={() => navigation.goBack()}
-            >
-              <Icon name="chevron-left" size={24} color={Colors.textDark} />
-            </TouchableOpacity>
-            <Text style={styles.headerTitle}>Verificar Correo</Text>
-          </View>
-        </LinearGradient>
+        <View style={styles.headerContent}>
+          <TouchableOpacity 
+            style={styles.backButton}
+            onPress={() => navigation.goBack()}
+          >
+            <Icon name="chevron-left" size={24} color={Colors.textDark} />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Ingresar código</Text>
+        </View>
+      </LinearGradient>
+      
+      <View style={styles.content}>
+        <Text style={styles.emailMessage}>
+          Ingresa el código de 4 dígitos que recibiste en tu correo ({email})
+        </Text>
         
-        <View style={styles.content}>
-          <View style={styles.successContainer}>
-            <View style={styles.successIconContainer}>
-              <Icon name="mail" size={40} color={Colors.success} />
-            </View>
-            <Text style={styles.successTitle}>¡Revisa Tu Correo!</Text>
-            <Text style={styles.successMessage}>Hemos enviado un código de verificación a</Text>
-            <Text style={styles.emailText}>{email}</Text>
-            <Text style={styles.codeInfo}>
-              Por favor, ingresa el código de 4 dígitos para completar tu registro. Este código es válido por 24 horas.
-            </Text>
-            
-            {/* Note for development */}
-            <Text style={styles.devNote}>
-              (Para desarrollo: El código ya está pre-llenado. Solo presiona "Verificar y Continuar")
-            </Text>
-          </View>
-          
-          <View style={styles.codeInputContainer}>
-            {verificationCode.map((digit, index) => (
+        <View style={styles.codeInputContainer}>
+          {verificationCode.map((digit, index) => (
+            <TouchableOpacity
+              key={index}
+              onPress={() => {
+                setActiveInput(index);
+                inputRefs[index].current.focus();
+              }}
+              style={[
+                styles.codeInputWrapper,
+                activeInput === index && styles.codeInputWrapperActive
+              ]}
+            >
               <TextInput
-                key={index}
                 ref={inputRefs[index]}
                 style={styles.codeInput}
                 value={digit}
@@ -175,42 +239,78 @@ const VerificationScreen = ({ navigation, route }) => {
                 onKeyPress={(e) => handleKeyPress(e, index)}
                 keyboardType="number-pad"
                 maxLength={1}
-                autoFocus={index === 0}
+                onFocus={() => setActiveInput(index)}
+                showSoftInputOnFocus={false}
               />
-            ))}
-          </View>
-          
-          <View style={styles.resendContainer}>
-            <Text style={styles.resendText}>¿No recibiste un código?</Text>
-            <TouchableOpacity onPress={handleResendCode} disabled={isResending}>
-              <Text style={[styles.resendButton, isResending && styles.resendButtonDisabled]}>
-                {isResending ? 'Enviando...' : 'Reenviar'}
-              </Text>
             </TouchableOpacity>
-          </View>
-          
-          <Button
-            title="Verificar y Continuar"
-            onPress={handleVerify}
-            fullWidth
-            style={styles.verifyButton}
-            isLoading={isLoading}
-          />
-          
-          <View style={styles.supportContainer}>
-            <Text style={styles.supportText}>
-              ¿Tienes problemas? <Text style={styles.supportLink}>Contacta Soporte</Text>
-            </Text>
-          </View>
+          ))}
         </View>
         
-        <View style={styles.footerContainer}>
-          <Text style={styles.expirationText}>
-            Tu código de verificación expirará en{' '}
-            <Text style={styles.expirationTime}>{formatTimeLeft()}</Text>
-          </Text>
+        <View style={styles.resendContainer}>
+          <Text style={styles.resendText}>¿No recibiste el código?</Text>
+          <TouchableOpacity onPress={handleResendCode} disabled={isResending}>
+            <Text style={[styles.resendButton, isResending && styles.resendButtonDisabled]}>
+              {isResending ? 'Enviando...' : 'Reenviar'}
+            </Text>
+          </TouchableOpacity>
         </View>
-      </KeyboardAvoidingView>
+        
+        <Button
+          title="Continuar"
+          onPress={handleVerify}
+          fullWidth
+          style={styles.verifyButton}
+          isLoading={isLoading}
+        />
+        
+        {/* Virtual Keyboard */}
+        <View style={styles.keyboard}>
+          {renderKeyboardRow(['Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P'])}
+          <View style={styles.keyboardMiddleRow}>
+            {renderKeyboardRow(['A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L'])}
+          </View>
+          <View style={styles.keyboardBottomRow}>
+            <TouchableOpacity
+              style={[styles.keyboardKey, styles.functionKey]}
+              onPress={() => handleKeyboardPress('123')}
+            >
+              <Text style={styles.keyText}>123</Text>
+            </TouchableOpacity>
+            
+            <View style={styles.letterKeysContainer}>
+              {renderKeyboardRow(['Z', 'X', 'C', 'V', 'B', 'N', 'M'])}
+            </View>
+            
+            <TouchableOpacity
+              style={[styles.keyboardKey, styles.functionKey]}
+              onPress={() => handleKeyboardPress('⌫')}
+            >
+              <Text style={styles.keyText}>⌫</Text>
+            </TouchableOpacity>
+          </View>
+          <View style={styles.keyboardLastRow}>
+            <TouchableOpacity
+              style={[styles.keyboardKey, styles.functionKey, { flex: 1, marginHorizontal: 4 }]}
+              onPress={() => handleKeyboardPress('espacio')}
+            >
+              <Text style={styles.keyText}>espacio</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.keyboardKey, styles.functionKey, { flex: 1, marginHorizontal: 4 }]}
+              onPress={() => handleKeyboardPress('return')}
+            >
+              <Text style={styles.keyText}>return</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+      
+      <View style={styles.footerContainer}>
+        <Text style={styles.expirationText}>
+          Tu código de verificación expirará en{' '}
+          <Text style={styles.expirationTime}>{formatTimeLeft()}</Text>
+        </Text>
+      </View>
     </SafeAreaView>
   );
 };
@@ -218,10 +318,7 @@ const VerificationScreen = ({ navigation, route }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.card,
-  },
-  keyboardAvoidingView: {
-    flex: 1,
+    backgroundColor: Colors.background,
   },
   headerContainer: {
     paddingHorizontal: Metrics.mediumSpacing,
@@ -243,112 +340,129 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: Metrics.mediumSpacing,
   },
-  successContainer: {
-    alignItems: 'center',
+  emailMessage: {
+    textAlign: 'center',
+    color: Colors.textSecondary,
+    fontSize: Metrics.smallFontSize,
     marginBottom: Metrics.largeSpacing,
-  },
-  successIconContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: Colors.success + '20', // 20% opacity
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: Metrics.mediumSpacing,
-  },
-  successTitle: {
-    fontSize: Metrics.largeFontSize,
-    fontWeight: '600',
-    color: Colors.textDark,
-    marginBottom: Metrics.baseSpacing,
-    textAlign: 'center',
-  },
-  successMessage: {
-    fontSize: Metrics.baseFontSize,
-    color: Colors.textMedium,
-    marginBottom: Metrics.smallSpacing,
-    textAlign: 'center',
-  },
-  emailText: {
-    fontSize: Metrics.baseFontSize,
-    fontWeight: '500',
-    color: Colors.textDark,
-    marginBottom: Metrics.mediumSpacing,
-  },
-  codeInfo: {
-    fontSize: Metrics.smallFontSize,
-    color: Colors.textMedium,
-    textAlign: 'center',
-    paddingHorizontal: Metrics.mediumSpacing,
-  },
-  devNote: {
-    fontSize: Metrics.smallFontSize,
-    fontStyle: 'italic',
-    color: Colors.primary,
-    marginTop: Metrics.baseSpacing,
-    textAlign: 'center',
+    marginTop: Metrics.smallSpacing,
   },
   codeInputContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
-    marginBottom: Metrics.mediumSpacing,
+    marginBottom: Metrics.largeSpacing,
   },
-  codeInput: {
-    width: 50,
-    height: 60,
+  codeInputWrapper: {
+    width: 48,
+    height: 58,
+    borderRadius: Metrics.borderRadius,
     borderWidth: 1,
     borderColor: Colors.border,
-    borderRadius: Metrics.mediumBorderRadius,
-    backgroundColor: Colors.gradientStart,
-    fontSize: 24,
-    fontWeight: '600',
+    backgroundColor: Colors.inputBackground,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginHorizontal: 6,
+  },
+  codeInputWrapperActive: {
+    borderColor: Colors.primary,
+    shadowColor: Colors.primary,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  codeInput: {
+    fontSize: Metrics.largeFontSize,
+    color: Colors.textDark,
     textAlign: 'center',
-    marginHorizontal: Metrics.baseSpacing / 2,
+    width: '100%',
+    height: '100%',
+    padding: 0,
   },
   resendContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
-    marginBottom: Metrics.xLargeSpacing,
+    alignItems: 'center',
+    marginBottom: Metrics.largeSpacing,
   },
   resendText: {
+    color: Colors.textSecondary,
     fontSize: Metrics.smallFontSize,
-    color: Colors.textMedium,
   },
   resendButton: {
-    fontSize: Metrics.smallFontSize,
-    fontWeight: '500',
     color: Colors.primary,
-    marginLeft: Metrics.smallSpacing,
+    fontWeight: '600',
+    marginLeft: 4,
+    fontSize: Metrics.smallFontSize,
   },
   resendButtonDisabled: {
-    color: Colors.textLight,
+    opacity: 0.6,
   },
   verifyButton: {
     marginBottom: Metrics.mediumSpacing,
   },
-  supportContainer: {
-    alignItems: 'center',
-  },
-  supportText: {
-    fontSize: Metrics.smallFontSize,
-    color: Colors.textMedium,
-  },
-  supportLink: {
-    color: Colors.primary,
-    fontWeight: '500',
-  },
   footerContainer: {
     borderTopWidth: 1,
     borderTopColor: Colors.border,
-    padding: Metrics.mediumSpacing,
+    padding: Metrics.smallSpacing,
     alignItems: 'center',
   },
   expirationText: {
     fontSize: Metrics.smallFontSize,
-    color: Colors.textMedium,
+    color: Colors.textSecondary,
   },
   expirationTime: {
-    fontWeight: '500',
+    color: Colors.textDark,
+    fontWeight: '600',
+  },
+  keyboard: {
+    backgroundColor: Colors.keyboardBackground,
+    paddingVertical: 8,
+    paddingHorizontal: 4,
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    marginTop: 'auto',
+  },
+  keyboardRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginBottom: 8,
+  },
+  keyboardMiddleRow: {
+    paddingHorizontal: 10,
+  },
+  keyboardBottomRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 4,
+  },
+  letterKeysContainer: {
+    flex: 1,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    paddingHorizontal: 8,
+  },
+  keyboardLastRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 8,
+  },
+  keyboardKey: {
+    backgroundColor: Colors.card,
+    borderRadius: 6,
+    padding: 12,
+    margin: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: width / 12,
+  },
+  functionKey: {
+    backgroundColor: Colors.keyboardFunctionKey,
+    paddingHorizontal: 12,
+  },
+  keyText: {
+    fontSize: Metrics.smallFontSize,
     color: Colors.textDark,
   },
 });

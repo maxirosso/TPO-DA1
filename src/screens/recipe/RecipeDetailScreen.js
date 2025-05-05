@@ -94,7 +94,17 @@ const RecipeDetailScreen = ({ navigation, route }) => {
     ]
   };
   
-  const recipe = route.params?.recipe || recipeData;
+  // Asegurarnos de que recipe tenga todos los datos necesarios
+  const recipeFromParams = route.params?.recipe || {};
+  const recipe = {
+    ...recipeData,
+    ...recipeFromParams,
+    // Asegurarnos de que estas propiedades siempre existan
+    ingredients: recipeFromParams.ingredients || recipeData.ingredients,
+    instructions: recipeFromParams.instructions || recipeData.instructions,
+    comments: recipeFromParams.comments || recipeData.comments,
+    servings: recipeFromParams.servings || recipeData.servings
+  };
   
   const handleFavoriteToggle = () => {
     setIsFavorite(!isFavorite);
@@ -396,7 +406,7 @@ const RecipeDetailScreen = ({ navigation, route }) => {
             <View style={styles.ingredientsContainer}>
               <View style={styles.servingInfo}>
                 <Text style={styles.servingText}>
-                  Ingredientes para <Text style={styles.servingHighlight}>{Math.round(recipe.servings * scaleFactor)}</Text> porciones
+                  Para <Text style={styles.servingCount}>{Math.round(recipe.servings * scaleFactor)}</Text> {Math.round(recipe.servings * scaleFactor) === 1 ? 'persona' : 'personas'}
                 </Text>
                 {!scaleByIngredient && (
                   <TouchableOpacity onPress={openScaleModal}>
@@ -404,13 +414,13 @@ const RecipeDetailScreen = ({ navigation, route }) => {
                   </TouchableOpacity>
                 )}
               </View>
-              {recipe.ingredients.map((ingredient, index) => renderIngredient(ingredient, index))}
+              {recipe.ingredients && recipe.ingredients.map((ingredient, index) => renderIngredient(ingredient, index))}
             </View>
           )}
           
           {activeTab === 'instructions' && (
             <View style={styles.instructionsContainer}>
-              {recipe.instructions.map((instruction, index) => renderStepWithImage(instruction, index))}
+              {recipe.instructions && recipe.instructions.map((instruction, index) => renderStepWithImage(instruction, index))}
             </View>
           )}
           
@@ -424,7 +434,7 @@ const RecipeDetailScreen = ({ navigation, route }) => {
                 <Text style={styles.addReviewText}>Añadir reseña</Text>
               </TouchableOpacity>
               
-              {recipe.comments.map((comment, index) => (
+              {recipe.comments && recipe.comments.map((comment, index) => (
                 <View key={index} style={styles.reviewItem}>
                   <View style={styles.reviewHeader}>
                     <View style={styles.reviewUser}>
@@ -591,7 +601,7 @@ const RecipeDetailScreen = ({ navigation, route }) => {
               <View style={styles.scaleByIngredientContainer}>
                 <Text style={styles.scaleLabel}>Selecciona un ingrediente:</Text>
                 <ScrollView style={styles.ingredientSelector}>
-                  {recipe.ingredients.map((ingredient, index) => (
+                  {recipe.ingredients && recipe.ingredients.map((ingredient, index) => (
                     <TouchableOpacity 
                       key={index}
                       style={[

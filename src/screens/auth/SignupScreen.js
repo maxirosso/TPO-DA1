@@ -120,7 +120,7 @@ const SignupScreen = ({ navigation }) => {
           
           <View style={styles.content}>
             <View style={styles.welcomeContainer}>
-              <Text style={styles.welcomeTitle}>Bienvenido a CulinaryDelight</Text>
+              <Text style={styles.welcomeTitle}>Bienvenido a ChefNet</Text>
               <Text style={styles.welcomeMessage}>
                 Comienza tu viaje culinario creando una cuenta. Te enviaremos un código de verificación para completar tu registro.
               </Text>

@@ -206,7 +206,7 @@ const LoginScreen = ({ navigation }) => {
             <View style={styles.logoCircle}>
               <Icon name="pie-chart" size={48} color={Colors.card} />
             </View>
-            <Text style={styles.welcomeTitle}>Bienvenido a CulinaryDelight</Text>
+            <Text style={styles.welcomeTitle}>Bienvenido a ChefNet</Text>
             <Text style={styles.welcomeSubtitle}>
               Inicia sesión para acceder a tus recetas y cursos
             </Text>

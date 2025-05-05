@@ -128,7 +128,7 @@ const HomeScreen = ({ navigation }) => {
         style={styles.headerContainer}
       >
         <View style={styles.headerContent}>
-          <Text style={styles.headerTitle}>CulinaryDelight</Text>
+          <Text style={styles.headerTitle}>ChefNet</Text>
           <TouchableOpacity onPress={() => navigation.navigate('ProfileTab')}>
             <Image
               source={{ 
