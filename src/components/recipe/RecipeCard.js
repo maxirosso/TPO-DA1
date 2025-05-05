@@ -12,19 +12,53 @@ import Colors from '../../themes/colors';
 import Metrics from '../../themes/metrics';
 
 const RecipeCard = ({
+  id,
   title,
   imageUrl,
   time,
   tags = [],
+  ingredients = [],
   onPress,
   type = 'grid', // 'grid' or 'list'
   style,
 }) => {
+  // Obtener el recuento de ingredientes, manejando ambos formatos (array de strings u objetos)
+  const getIngredientsCount = () => {
+    if (!ingredients) return 0;
+    
+    // Si es un array, contar directamente
+    if (Array.isArray(ingredients)) {
+      return ingredients.length;
+    }
+    
+    // Si es un objeto, contar sus propiedades
+    if (typeof ingredients === 'object') {
+      return Object.keys(ingredients).length;
+    }
+    
+    return 0;
+  };
+
+  const ingredientsCount = getIngredientsCount();
+  
+  // Función para manejar el clic en la receta
+  const handlePress = () => {
+    if (onPress) {
+      // Asegurarse de que los datos básicos siempre estén presentes
+      onPress({
+        id: id, // Asegurarse de pasar el ID correctamente
+        title,
+        imageUrl,
+        time
+      });
+    }
+  };
+
   if (type === 'grid') {
     return (
       <TouchableOpacity
         style={[styles.gridContainer, style]}
-        onPress={onPress}
+        onPress={handlePress}
         activeOpacity={0.8}
       >
         <Image
@@ -36,9 +70,17 @@ const RecipeCard = ({
           <Text style={styles.title} numberOfLines={1}>
             {title}
           </Text>
-          <View style={styles.timeContainer}>
-            <Icon name="clock" size={14} color={Colors.textDark} />
-            <Text style={styles.timeText}>{time} min</Text>
+          <View style={styles.metaContainer}>
+            <View style={styles.timeContainer}>
+              <Icon name="clock" size={14} color={Colors.textDark} />
+              <Text style={styles.metaText}>{time} min</Text>
+            </View>
+            {ingredientsCount > 0 && (
+              <View style={styles.ingredientsContainer}>
+                <Icon name="list" size={14} color={Colors.textDark} />
+                <Text style={styles.metaText}>{ingredientsCount} ing.</Text>
+              </View>
+            )}
           </View>
         </View>
       </TouchableOpacity>
@@ -48,7 +90,7 @@ const RecipeCard = ({
   return (
     <TouchableOpacity
       style={[styles.listContainer, style]}
-      onPress={onPress}
+      onPress={handlePress}
       activeOpacity={0.8}
     >
       <Image
@@ -60,9 +102,17 @@ const RecipeCard = ({
         <Text style={styles.title} numberOfLines={2}>
           {title}
         </Text>
-        <View style={styles.timeContainer}>
-          <Icon name="clock" size={14} color={Colors.textDark} />
-          <Text style={styles.timeText}>{time} min</Text>
+        <View style={styles.metaContainer}>
+          <View style={styles.timeContainer}>
+            <Icon name="clock" size={14} color={Colors.textDark} />
+            <Text style={styles.metaText}>{time} min</Text>
+          </View>
+          {ingredientsCount > 0 && (
+            <View style={styles.ingredientsContainer}>
+              <Icon name="list" size={14} color={Colors.textDark} />
+              <Text style={styles.metaText}>{ingredientsCount} ing.</Text>
+            </View>
+          )}
         </View>
         {tags.length > 0 && (
           <View style={styles.tagsContainer}>
@@ -128,12 +178,21 @@ const styles = StyleSheet.create({
     color: Colors.textDark,
     marginBottom: Metrics.smallSpacing,
   },
-  timeContainer: {
+  metaContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: Metrics.baseSpacing,
   },
-  timeText: {
+  timeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginRight: Metrics.baseSpacing,
+  },
+  ingredientsContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  metaText: {
     fontSize: Metrics.smallFontSize,
     color: Colors.textDark,
     marginLeft: Metrics.smallSpacing,

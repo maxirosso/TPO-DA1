@@ -27,7 +27,13 @@ const allRecipes = [
     time: 25,
     tags: ['Saludable', 'Almuerzo', 'Vegetariano'],
     user: 'Chef María',
-    ingredients: ['quinoa', 'tomate', 'pepino', 'aceitunas', 'queso feta'],
+    ingredients: [
+      {name: 'quinoa', amount: '1 taza'},
+      {name: 'tomate', amount: '1 taza', preparation: 'partido en cubos'},
+      {name: 'pepino', amount: '1', preparation: 'cortado en cubos'},
+      {name: 'aceitunas', amount: '1/2 taza'},
+      {name: 'queso feta', amount: '1/4 taza', preparation: 'desmenuzado'}
+    ],
     dateAdded: '2023-05-15',
   },
   {
@@ -37,7 +43,12 @@ const allRecipes = [
     time: 10,
     tags: ['Desayuno', 'Rápido', 'Vegetariano'],
     user: 'Carlos Gómez',
-    ingredients: ['pan integral', 'aguacate', 'tomate', 'huevo'],
+    ingredients: [
+      {name: 'pan integral', amount: '2 rebanadas'},
+      {name: 'aguacate', amount: '1', preparation: 'maduro'},
+      {name: 'tomate', amount: '1', preparation: 'en rodajas'},
+      {name: 'huevo', amount: '1', preparation: 'frito o pochado'}
+    ],
     dateAdded: '2023-06-22',
   },
   {
@@ -47,7 +58,12 @@ const allRecipes = [
     time: 15,
     tags: ['Desayuno', 'Vegano', 'Sin Gluten'],
     user: 'Ana Hernández',
-    ingredients: ['bayas mixtas', 'plátano', 'leche de almendras', 'granola'],
+    ingredients: [
+      {name: 'bayas mixtas', amount: '1 taza', preparation: 'congeladas'},
+      {name: 'plátano', amount: '1', preparation: 'congelado en trozos'},
+      {name: 'leche de almendras', amount: '1/2 taza'},
+      {name: 'granola', amount: '1/4 taza', preparation: 'sin gluten'}
+    ],
     dateAdded: '2023-07-10',
   },
   {
@@ -57,7 +73,13 @@ const allRecipes = [
     time: 30,
     tags: ['Cena', 'Proteína', 'Pescado'],
     user: 'Chef Roberto',
-    ingredients: ['salmón', 'limón', 'eneldo', 'ajo', 'aceite de oliva'],
+    ingredients: [
+      {name: 'salmón', amount: '4 filetes', preparation: '150g cada uno'},
+      {name: 'limón', amount: '1'},
+      {name: 'eneldo', amount: '2 cucharadas', preparation: 'fresco, picado'},
+      {name: 'ajo', amount: '2 dientes', preparation: 'picados'},
+      {name: 'aceite de oliva', amount: '2 cucharadas'}
+    ],
     dateAdded: '2023-08-05',
   },
   {
@@ -67,7 +89,13 @@ const allRecipes = [
     time: 45,
     tags: ['Cena', 'Vegetariano', 'Sin Gluten'],
     user: 'Laura Martínez',
-    ingredients: ['pimientos', 'quinua', 'cebolla', 'tomate', 'queso'],
+    ingredients: [
+      {name: 'pimientos', amount: '4', preparation: 'grandes, variados colores'},
+      {name: 'quinua', amount: '1 taza'},
+      {name: 'cebolla', amount: '1', preparation: 'picada finamente'},
+      {name: 'tomate', amount: '2', preparation: 'picados'},
+      {name: 'queso', amount: '1/2 taza', preparation: 'rallado'}
+    ],
     dateAdded: '2023-09-12',
   },
   {
@@ -77,7 +105,13 @@ const allRecipes = [
     time: 15,
     tags: ['Almuerzo', 'Vegano', 'Rápido'],
     user: 'Chef María',
-    ingredients: ['lechuga', 'tomate', 'pepino', 'zanahoria', 'aguacate'],
+    ingredients: [
+      {name: 'lechuga', amount: '4 tazas', preparation: 'mixta'},
+      {name: 'tomate', amount: '2', preparation: 'cortados en cubos'},
+      {name: 'pepino', amount: '1', preparation: 'en rodajas finas'},
+      {name: 'zanahoria', amount: '1', preparation: 'rallada'},
+      {name: 'aguacate', amount: '1', preparation: 'en cubos'}
+    ],
     dateAdded: '2023-10-18',
   },
 ];
@@ -104,7 +138,7 @@ const RecipeSearchScreen = ({ navigation }) => {
         case 'ingredient':
           results = results.filter(recipe =>
             recipe.ingredients.some(ingredient =>
-              ingredient.toLowerCase().includes(searchQuery.toLowerCase())
+              ingredient.name.toLowerCase().includes(searchQuery.toLowerCase())
             )
           );
           break;
@@ -127,7 +161,7 @@ const RecipeSearchScreen = ({ navigation }) => {
     if (excludeIngredient.trim() !== '') {
       results = results.filter(recipe =>
         !recipe.ingredients.some(ingredient =>
-          ingredient.toLowerCase().includes(excludeIngredient.toLowerCase())
+          ingredient.name.toLowerCase().includes(excludeIngredient.toLowerCase())
         )
       );
     }
@@ -158,7 +192,21 @@ const RecipeSearchScreen = ({ navigation }) => {
   };
 
   const handleRecipePress = (recipe) => {
-    navigation.navigate('RecipeDetail', { recipe });
+    // Asegurarse de que el ID se pasa correctamente
+    console.log('Navigating to recipe detail with data:', JSON.stringify(recipe));
+    
+    if (!recipe || !recipe.id) {
+      console.error('Invalid recipe data:', recipe);
+      return;
+    }
+    
+    navigation.navigate('RecipeDetail', { 
+      recipe: {
+        id: recipe.id,
+        title: recipe.title,
+        imageUrl: recipe.imageUrl
+      }
+    });
   };
 
   const handleFilterChange = (type) => {
@@ -377,12 +425,14 @@ const RecipeSearchScreen = ({ navigation }) => {
         data={filteredRecipes}
         renderItem={({ item }) => (
           <RecipeCard
+            id={item.id}
             title={item.title}
             imageUrl={item.imageUrl}
             time={item.time}
             tags={item.tags}
+            ingredients={item.ingredients}
             type="list"
-            onPress={() => handleRecipePress(item)}
+            onPress={handleRecipePress}
           />
         )}
         keyExtractor={(item) => item.id}

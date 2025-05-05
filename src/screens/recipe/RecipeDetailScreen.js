@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -10,7 +10,8 @@ import {
   Modal,
   TextInput,
   FlatList,
-  Alert
+  Alert,
+  ActivityIndicator
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Feather';
@@ -33,78 +34,83 @@ const RecipeDetailScreen = ({ navigation, route }) => {
   const [scaleByIngredient, setScaleByIngredient] = useState(false);
   const [selectedIngredient, setSelectedIngredient] = useState(null);
   const [customAmount, setCustomAmount] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   
-  // La receta puede venir de la navegación o usamos datos demo
-  const recipeData = {
-    id: '1',
-    title: 'Cuenco Mediterráneo',
-    imageUrl: 'https://images.unsplash.com/photo-1527515637462-cff94eecc1ac',
-    rating: 4.8,
-    reviews: 124,
-    cookTime: 25,
-    prepTime: 10,
-    servings: 2,
-    calories: 420,
-    protein: 22,
-    carbs: 48,
-    fat: 18,
-    author: {
-      name: 'Chef María',
-      avatar: 'https://images.unsplash.com/photo-1567532939604-b6b5b0db2604',
-    },
-    description:
-      'Este colorido cuenco mediterráneo está lleno de ingredientes nutritivos y sabores vibrantes. Perfecto para un almuerzo o cena saludable.',
-    ingredients: [
-      {name: 'quinoa cocida', amount: '1 taza'},
-      {name: 'tomates cherry', amount: '1 taza', preparation: 'partidos por la mitad'},
-      {name: 'pepino', amount: '1', preparation: 'cortado en cubos'},
-      {name: 'aceitunas Kalamata', amount: '1/2 taza', preparation: 'sin hueso'},
-      {name: 'queso feta', amount: '1/4 taza', preparation: 'desmenuzado'},
-      {name: 'hummus', amount: '1/4 taza'},
-      {name: 'aceite de oliva', amount: '2 cucharadas'},
-      {name: 'jugo de limón', amount: '1 cucharada'},
-      {name: 'orégano seco', amount: '1 cucharadita'},
-      {name: 'sal y pimienta', amount: 'al gusto'},
-      {name: 'perejil fresco', amount: '2 cucharadas', preparation: 'picado'},
-    ],
-    instructions: [
-      {text: 'Cocina la quinoa según las instrucciones del paquete y déjala enfriar.', hasImage: false},
-      {text: 'En un tazón grande, combina la quinoa enfriada, los tomates, el pepino y las aceitunas.', hasImage: true, imageUrl: 'https://images.unsplash.com/photo-1623428187969-5da2dcea5ebf?q=80&w=1064&auto=format&fit=crop'},
-      {text: 'En un tazón pequeño, mezcla el aceite de oliva, el jugo de limón, el orégano, la sal y la pimienta.', hasImage: false},
-      {text: 'Vierte el aderezo sobre la ensalada y mezcla para combinar.', hasImage: false},
-      {text: 'Divide la mezcla en tazones para servir.', hasImage: true, imageUrl: 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?q=80&w=1170&auto=format&fit=crop'},
-      {text: 'Coloca una cucharada de hummus en cada tazón y espolvorea con queso feta.', hasImage: false},
-      {text: 'Decora con perejil fresco antes de servir.', hasImage: false},
-    ],
-    comments: [
-      {
-        user: 'Carlos',
-        avatar: 'https://randomuser.me/api/portraits/men/32.jpg',
-        text: 'Excelente receta, la preparé ayer y quedó deliciosa.',
-        rating: 5,
-        date: '2 días atrás'
-      },
-      {
-        user: 'Laura',
-        avatar: 'https://randomuser.me/api/portraits/women/44.jpg',
-        text: 'Muy rica pero le añadí un poco más de limón para darle más sabor.',
-        rating: 4,
-        date: '1 semana atrás'
-      }
-    ]
-  };
-  
-  // Asegurarnos de que recipe tenga todos los datos necesarios
+  // Obtener el ID o datos iniciales de la receta de los parámetros de navegación
   const recipeFromParams = route.params?.recipe || {};
-  const recipe = {
-    ...recipeData,
-    ...recipeFromParams,
-    // Asegurarnos de que estas propiedades siempre existan
-    ingredients: recipeFromParams.ingredients || recipeData.ingredients,
-    instructions: recipeFromParams.instructions || recipeData.instructions,
-    comments: recipeFromParams.comments || recipeData.comments,
-    servings: recipeFromParams.servings || recipeData.servings
-  };
+  
+  // Estado para almacenar los datos completos de la receta
+  const [recipe, setRecipe] = useState({
+    id: recipeFromParams.id || '0',
+    title: recipeFromParams.title || 'Receta sin título',
+    imageUrl: recipeFromParams.imageUrl || 'https://images.unsplash.com/photo-1527515637462-cff94eecc1ac',
+    rating: recipeFromParams.rating || 4.5,
+    reviews: recipeFromParams.reviews || 0,
+    cookTime: recipeFromParams.cookTime || 15,
+    prepTime: recipeFromParams.prepTime || 10,
+    servings: recipeFromParams.servings || 2,
+    calories: recipeFromParams.calories || 300,
+    protein: recipeFromParams.protein || 10,
+    carbs: recipeFromParams.carbs || 30,
+    fat: recipeFromParams.fat || 15,
+    author: recipeFromParams.author || {
+      name: 'Chef Anónimo',
+      avatar: 'https://randomuser.me/api/portraits/men/41.jpg',
+    },
+    description: recipeFromParams.description || 'Una deliciosa receta casera.',
+    ingredients: recipeFromParams.ingredients || [],
+    instructions: recipeFromParams.instructions || [],
+    comments: recipeFromParams.comments || [],
+    tags: recipeFromParams.tags || []
+  });
+  
+  // Cargar los datos completos de la receta al montar el componente
+  useEffect(() => {
+    const loadRecipeDetails = async () => {
+      try {
+        setLoading(true);
+        setError(''); // Reset error state
+        
+        // Verificar el ID recibido y normalizarlo si es necesario
+        const recipeId = recipeFromParams.id ? String(recipeFromParams.id) : '';
+        console.log('Loading recipe with ID:', recipeId, 'Full params:', JSON.stringify(recipeFromParams));
+        
+        // Si no hay ID, usar los datos que ya tenemos
+        if (!recipeId) {
+          console.log('No recipe ID provided, using default data');
+          setLoading(false);
+          return;
+        }
+        
+        // Importar dinámicamente el servicio API para evitar dependencias circulares
+        const { recipeService } = await import('../../services/api');
+        
+        // Obtener la receta completa
+        const fullRecipe = await recipeService.getRecipeById(recipeId);
+        
+        // Verificar que la receta tiene todos los campos necesarios
+        if (!fullRecipe || typeof fullRecipe !== 'object') {
+          throw new Error('La receta cargada tiene un formato inválido');
+        }
+        
+        console.log('Loaded full recipe:', fullRecipe.title, 'ID:', fullRecipe.id);
+        
+        // Actualizar el estado con los datos completos
+        setRecipe(prevRecipe => ({
+          ...prevRecipe,
+          ...fullRecipe
+        }));
+      } catch (error) {
+        console.error('Error al cargar los detalles de la receta:', error);
+        setError(`No se pudo cargar la receta. ${error.message || 'Error desconocido'}`);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    loadRecipeDetails();
+  }, [recipeFromParams.id]);
   
   const handleFavoriteToggle = () => {
     setIsFavorite(!isFavorite);
@@ -155,18 +161,77 @@ const RecipeDetailScreen = ({ navigation, route }) => {
     setScaleModalVisible(false);
   };
 
+  // Función auxiliar mejorada para escalar cantidades por persona
+  const scaleAmount = (amount, factor) => {
+    if (typeof amount !== 'string') return amount;
+    
+    // Si el campo amount está vacío (como para secciones de título), retornarlo tal cual
+    if (amount === '' || !amount.trim()) return amount;
+    
+    // Detectar números en el string
+    const match = amount.match(/^(\d+\/\d+|\d+\.\d+|\d+)(\s+)(.*)$/);
+    if (!match) return amount;
+    
+    let num = match[1];
+    const separator = match[2]; // Espacio entre número y unidad
+    const rest = match[3];      // Unidad y resto del texto
+    
+    // Manejar fracciones
+    if (num.includes('/')) {
+      const [numerator, denominator] = num.split('/');
+      num = parseInt(numerator) / parseInt(denominator);
+    } else {
+      num = parseFloat(num);
+    }
+    
+    // Validar que num sea un número válido
+    if (isNaN(num)) return amount;
+    
+    // Escalar el número
+    let scaledNum = (num * factor).toFixed(2);
+    
+    // Eliminar ceros decimales innecesarios
+    scaledNum = parseFloat(scaledNum);
+    
+    // Si es una fracción simple, intentamos representarla como fracción
+    if (Math.abs(scaledNum - 0.5) < 0.01) return `1/2${separator}${rest}`;
+    if (Math.abs(scaledNum - 0.25) < 0.01) return `1/4${separator}${rest}`;
+    if (Math.abs(scaledNum - 0.75) < 0.01) return `3/4${separator}${rest}`;
+    if (Math.abs(scaledNum - 0.33) < 0.01) return `1/3${separator}${rest}`;
+    if (Math.abs(scaledNum - 0.67) < 0.01) return `2/3${separator}${rest}`;
+    
+    // Si es un número entero, eliminar el decimal
+    if (Math.round(scaledNum) === scaledNum) {
+      scaledNum = Math.round(scaledNum);
+    }
+    
+    return `${scaledNum}${separator}${rest}`;
+  };
+
+  // Función mejorada para renderizar cada ingrediente con su cantidad escalada
   const renderIngredient = (item, index) => {
+    // Validar que el ingrediente sea un objeto válido
+    if (typeof item !== 'object' || item === null) {
+      item = { name: String(item), amount: '', preparation: '' };
+    }
+    
     // Escalar la cantidad según el factor
-    const scaledAmount = scaleByIngredient ? item.amount : scaleAmount(item.amount, scaleFactor);
+    const scaledAmount = scaleByIngredient 
+      ? item.amount 
+      : scaleAmount(item.amount, scaleFactor);
     
     return (
       <View key={index} style={styles.ingredientItem}>
         <View style={styles.bulletPoint} />
-        <Text style={styles.ingredientText}>
-          <Text style={styles.ingredientAmount}>{scaledAmount} </Text>
-          <Text>{item.name}</Text>
-          {item.preparation ? <Text style={styles.ingredientPrep}>, {item.preparation}</Text> : null}
-        </Text>
+        <View style={styles.ingredientTextContainer}>
+          {scaledAmount && scaledAmount.trim() !== '' && (
+            <Text style={styles.ingredientAmount}>{scaledAmount} </Text>
+          )}
+          <Text style={styles.ingredientName}>{item.name}</Text>
+          {item.preparation && item.preparation.trim() !== '' && (
+            <Text style={styles.ingredientPrep}>, {item.preparation}</Text>
+          )}
+        </View>
       </View>
     );
   };
@@ -188,460 +253,475 @@ const RecipeDetailScreen = ({ navigation, route }) => {
       </View>
     </View>
   );
-
-  // Función auxiliar para escalar cantidades
-  const scaleAmount = (amount, factor) => {
-    if (typeof amount !== 'string') return amount;
-    
-    // Detectar números en el string
-    const match = amount.match(/^(\d+\/\d+|\d+\.\d+|\d+)(\s+)(.*)$/);
-    if (!match) return amount;
-    
-    let num = match[1];
-    const rest = match[3];
-    
-    // Manejar fracciones
-    if (num.includes('/')) {
-      const [numerator, denominator] = num.split('/');
-      num = parseInt(numerator) / parseInt(denominator);
-    } else {
-      num = parseFloat(num);
-    }
-    
-    // Escalar el número
-    const scaledNum = (num * factor).toFixed(1).replace(/\.0$/, '');
-    
-    // Si es una fracción simple, intentamos mantener la fracción
-    if (scaledNum === '0.5') return `1/2 ${rest}`;
-    if (scaledNum === '0.25') return `1/4 ${rest}`;
-    if (scaledNum === '0.75') return `3/4 ${rest}`;
-    
-    return `${scaledNum} ${rest}`;
-  };
   
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
-      >
-        <View style={styles.header}>
-          <TouchableOpacity
-            style={styles.backButton}
+      {loading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={Colors.primary} />
+          <Text style={styles.loadingText}>Cargando receta...</Text>
+        </View>
+      ) : error ? (
+        <View style={styles.errorContainer}>
+          <Icon name="alert-circle" size={60} color={Colors.error} />
+          <Text style={styles.errorTitle}>Error</Text>
+          <Text style={styles.errorText}>{error}</Text>
+          <TouchableOpacity 
+            style={styles.errorButton}
             onPress={() => navigation.goBack()}
           >
-            <Icon name="arrow-left" size={24} color={Colors.card} />
+            <Text style={styles.errorButtonText}>Volver atrás</Text>
           </TouchableOpacity>
-          
-          <View style={styles.headerActions}>
-            <TouchableOpacity
-              style={[styles.iconButton, isFavorite && styles.activeIconButton]}
-              onPress={handleFavoriteToggle}
-            >
-              <Icon
-                name={isFavorite ? 'heart' : 'heart'}
-                size={20}
-                color={isFavorite ? Colors.error : Colors.card}
-              />
-            </TouchableOpacity>
-            
-            <TouchableOpacity 
-              style={styles.iconButton}
-              onPress={() => {
-                Alert.alert('Compartir', 'Compartir esta receta por WhatsApp, Instagram, etc.');
-              }}
-            >
-              <Icon name="share-2" size={20} color={Colors.card} />
-            </TouchableOpacity>
-          </View>
         </View>
-        
-        <Image
-          source={{ uri: recipe.imageUrl }}
-          style={styles.recipeImage}
-          resizeMode="cover"
-        />
-        
-        <View style={styles.content}>
-          <Text style={styles.title}>{recipe.title}</Text>
-          
-          <View style={styles.authorRow}>
-            <View style={styles.authorInfo}>
-              <Image
-                source={{ uri: recipe.author?.avatar }}
-                style={styles.authorAvatar}
-              />
-              <Text style={styles.authorName}>por {recipe.author?.name}</Text>
-            </View>
-            
-            <TouchableOpacity onPress={openReviewModal}>
-              <View style={styles.ratingContainer}>
-                <Icon name="star" size={16} color={Colors.warning} />
-                <Text style={styles.ratingText}>
-                  {recipe.rating} ({recipe.reviews})
-                </Text>
-              </View>
-            </TouchableOpacity>
-          </View>
-          
-          <Text style={styles.description}>{recipe.description}</Text>
-          
-          <View style={styles.statsContainer}>
-            <View style={styles.statItem}>
-              <Icon name="clock" size={20} color={Colors.primary} />
-              <Text style={styles.statValue}>{recipe.prepTime + recipe.cookTime} min</Text>
-              <Text style={styles.statLabel}>Tiempo Total</Text>
-            </View>
-            
-            <View style={styles.statDivider} />
-            
-            <View style={styles.statItem}>
-              <Icon name="users" size={20} color={Colors.primary} />
-              <Text style={styles.statValue}>{recipe.servings}</Text>
-              <Text style={styles.statLabel}>Porciones</Text>
-            </View>
-            
-            <View style={styles.statDivider} />
-            
-            <View style={styles.statItem}>
-              <Icon name="activity" size={20} color={Colors.primary} />
-              <Text style={styles.statValue}>{recipe.calories}</Text>
-              <Text style={styles.statLabel}>Calorías</Text>
-            </View>
-          </View>
-          
-          <View style={styles.nutritionContainer}>
-            <View style={styles.nutritionItem}>
-              <Text style={styles.nutritionValue}>{recipe.protein}g</Text>
-              <Text style={styles.nutritionLabel}>Proteína</Text>
-            </View>
-            
-            <View style={styles.nutritionItem}>
-              <Text style={styles.nutritionValue}>{recipe.carbs}g</Text>
-              <Text style={styles.nutritionLabel}>Carbohidratos</Text>
-            </View>
-            
-            <View style={styles.nutritionItem}>
-              <Text style={styles.nutritionValue}>{recipe.fat}g</Text>
-              <Text style={styles.nutritionLabel}>Grasa</Text>
-            </View>
-          </View>
-          
-          <View style={styles.actionButtons}>
-            <TouchableOpacity style={styles.actionButton} onPress={openScaleModal}>
-              <Icon name="refresh-cw" size={20} color={Colors.primary} />
-              <Text style={styles.actionButtonText}>Escalar</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity style={styles.actionButton} onPress={addToShoppingList}>
-              <Icon name="shopping-cart" size={20} color={Colors.primary} />
-              <Text style={styles.actionButtonText}>Compras</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity 
-              style={styles.actionButton}
-              onPress={() => {
-                Alert.alert('Guardar', 'Guardar esta receta a tu colección');
-              }}
-            >
-              <Icon name="bookmark" size={20} color={Colors.primary} />
-              <Text style={styles.actionButtonText}>Guardar</Text>
-            </TouchableOpacity>
-          </View>
-          
-          <View style={styles.tabContainer}>
-            <TouchableOpacity
-              style={[
-                styles.tab,
-                activeTab === 'ingredients' && styles.activeTab,
-              ]}
-              onPress={() => setActiveTab('ingredients')}
-            >
-              <Text
-                style={[
-                  styles.tabText,
-                  activeTab === 'ingredients' && styles.activeTabText,
-                ]}
+      ) : (
+        <>
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.scrollContent}
+          >
+            <View style={styles.header}>
+              <TouchableOpacity
+                style={styles.backButton}
+                onPress={() => navigation.goBack()}
               >
-                Ingredientes
-              </Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity
-              style={[
-                styles.tab,
-                activeTab === 'instructions' && styles.activeTab,
-              ]}
-              onPress={() => setActiveTab('instructions')}
-            >
-              <Text
-                style={[
-                  styles.tabText,
-                  activeTab === 'instructions' && styles.activeTabText,
-                ]}
-              >
-                Instrucciones
-              </Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity
-              style={[
-                styles.tab,
-                activeTab === 'reviews' && styles.activeTab,
-              ]}
-              onPress={() => setActiveTab('reviews')}
-            >
-              <Text
-                style={[
-                  styles.tabText,
-                  activeTab === 'reviews' && styles.activeTabText,
-                ]}
-              >
-                Reseñas
-              </Text>
-            </TouchableOpacity>
-          </View>
-          
-          {activeTab === 'ingredients' && (
-            <View style={styles.ingredientsContainer}>
-              <View style={styles.servingInfo}>
-                <Text style={styles.servingText}>
-                  Para <Text style={styles.servingCount}>{Math.round(recipe.servings * scaleFactor)}</Text> {Math.round(recipe.servings * scaleFactor) === 1 ? 'persona' : 'personas'}
-                </Text>
-                {!scaleByIngredient && (
-                  <TouchableOpacity onPress={openScaleModal}>
-                    <Text style={styles.servingModifier}>Modificar</Text>
-                  </TouchableOpacity>
-                )}
-              </View>
-              {recipe.ingredients && recipe.ingredients.map((ingredient, index) => renderIngredient(ingredient, index))}
-            </View>
-          )}
-          
-          {activeTab === 'instructions' && (
-            <View style={styles.instructionsContainer}>
-              {recipe.instructions && recipe.instructions.map((instruction, index) => renderStepWithImage(instruction, index))}
-            </View>
-          )}
-          
-          {activeTab === 'reviews' && (
-            <View style={styles.reviewsContainer}>
-              <TouchableOpacity 
-                style={styles.addReviewButton}
-                onPress={openReviewModal}
-              >
-                <Icon name="edit-2" size={16} color={Colors.primary} />
-                <Text style={styles.addReviewText}>Añadir reseña</Text>
+                <Icon name="arrow-left" size={24} color={Colors.card} />
               </TouchableOpacity>
               
-              {recipe.comments && recipe.comments.map((comment, index) => (
-                <View key={index} style={styles.reviewItem}>
-                  <View style={styles.reviewHeader}>
-                    <View style={styles.reviewUser}>
-                      <Image source={{uri: comment.avatar}} style={styles.reviewAvatar} />
-                      <View>
-                        <Text style={styles.reviewUserName}>{comment.user}</Text>
-                        <Text style={styles.reviewDate}>{comment.date}</Text>
-                      </View>
-                    </View>
-                    <View style={styles.reviewRating}>
-                      {[1, 2, 3, 4, 5].map(i => (
-                        <Icon 
-                          key={i}
-                          name="star" 
-                          size={14} 
-                          color={i <= comment.rating ? Colors.warning : Colors.textLight} 
-                        />
-                      ))}
-                    </View>
-                  </View>
-                  <Text style={styles.reviewText}>{comment.text}</Text>
-                </View>
-              ))}
-            </View>
-          )}
-        </View>
-      </ScrollView>
-      
-      <View style={styles.footer}>
-        <Button
-          title="Comenzar a Cocinar"
-          iconName="play-circle"
-          onPress={() => {
-            Alert.alert("Comenzar", "¡Buena suerte con tu preparación!");
-          }}
-          style={styles.startButton}
-          fullWidth
-        />
-      </View>
-      
-      {/* Modal para añadir reseña */}
-      <Modal
-        animationType="slide"
-        transparent={true}
-        visible={isModalVisible}
-        onRequestClose={() => setIsModalVisible(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Calificar Receta</Text>
-              <TouchableOpacity onPress={() => setIsModalVisible(false)}>
-                <Icon name="x" size={24} color={Colors.textDark} />
-              </TouchableOpacity>
-            </View>
-            
-            <Text style={styles.ratingLabel}>Tu calificación:</Text>
-            <View style={styles.ratingStars}>
-              {[1, 2, 3, 4, 5].map(i => (
-                <TouchableOpacity 
-                  key={i}
-                  onPress={() => setReviewRating(i)}
+              <View style={styles.headerActions}>
+                <TouchableOpacity
+                  style={[styles.iconButton, isFavorite && styles.activeIconButton]}
+                  onPress={handleFavoriteToggle}
                 >
-                  <Icon 
-                    name="star" 
-                    size={28} 
-                    color={i <= reviewRating ? Colors.warning : Colors.textLight} 
-                    style={{marginHorizontal: 5}}
+                  <Icon
+                    name={isFavorite ? 'heart' : 'heart'}
+                    size={20}
+                    color={isFavorite ? Colors.error : Colors.card}
                   />
                 </TouchableOpacity>
-              ))}
+                
+                <TouchableOpacity 
+                  style={styles.iconButton}
+                  onPress={() => {
+                    Alert.alert('Compartir', 'Compartir esta receta por WhatsApp, Instagram, etc.');
+                  }}
+                >
+                  <Icon name="share-2" size={20} color={Colors.card} />
+                </TouchableOpacity>
+              </View>
             </View>
             
-            <Text style={styles.reviewLabel}>Tu comentario:</Text>
-            <TextInput
-              style={styles.reviewInput}
-              placeholder="Escribe tu comentario sobre esta receta..."
-              value={reviewText}
-              onChangeText={setReviewText}
-              multiline
-              numberOfLines={4}
+            <Image
+              source={{ uri: recipe.imageUrl }}
+              style={styles.recipeImage}
+              resizeMode="cover"
             />
             
+            <View style={styles.content}>
+              <Text style={styles.title}>{recipe.title}</Text>
+              
+              <View style={styles.authorRow}>
+                <View style={styles.authorInfo}>
+                  <Image
+                    source={{ uri: recipe.author?.avatar }}
+                    style={styles.authorAvatar}
+                  />
+                  <Text style={styles.authorName}>por {recipe.author?.name}</Text>
+                </View>
+                
+                <TouchableOpacity onPress={openReviewModal}>
+                  <View style={styles.ratingContainer}>
+                    <Icon name="star" size={16} color={Colors.warning} />
+                    <Text style={styles.ratingText}>
+                      {recipe.rating} ({recipe.reviews})
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              </View>
+              
+              <Text style={styles.description}>{recipe.description}</Text>
+              
+              <View style={styles.statsContainer}>
+                <View style={styles.statItem}>
+                  <Icon name="clock" size={20} color={Colors.primary} />
+                  <Text style={styles.statValue}>
+                    {Math.round((recipe.prepTime + recipe.cookTime) * scaleFactor)} min
+                  </Text>
+                  <Text style={styles.statLabel}>Tiempo Total</Text>
+                </View>
+                
+                <View style={styles.statDivider} />
+                
+                <View style={styles.statItem}>
+                  <Icon name="users" size={20} color={Colors.primary} />
+                  <Text style={styles.statValue}>
+                    {Math.round(recipe.servings * scaleFactor)}
+                  </Text>
+                  <Text style={styles.statLabel}>Porciones</Text>
+                </View>
+                
+                <View style={styles.statDivider} />
+                
+                <View style={styles.statItem}>
+                  <Icon name="activity" size={20} color={Colors.primary} />
+                  <Text style={styles.statValue}>
+                    {Math.round(recipe.calories * scaleFactor / recipe.servings)}
+                  </Text>
+                  <Text style={styles.statLabel}>Calorías/porción</Text>
+                </View>
+              </View>
+              
+              <View style={styles.nutritionContainer}>
+                <View style={styles.nutritionItem}>
+                  <Text style={styles.nutritionValue}>
+                    {Math.round(recipe.protein * scaleFactor / recipe.servings)}g
+                  </Text>
+                  <Text style={styles.nutritionLabel}>Proteína</Text>
+                </View>
+                
+                <View style={styles.nutritionItem}>
+                  <Text style={styles.nutritionValue}>
+                    {Math.round(recipe.carbs * scaleFactor / recipe.servings)}g
+                  </Text>
+                  <Text style={styles.nutritionLabel}>Carbohidratos</Text>
+                </View>
+                
+                <View style={styles.nutritionItem}>
+                  <Text style={styles.nutritionValue}>
+                    {Math.round(recipe.fat * scaleFactor / recipe.servings)}g
+                  </Text>
+                  <Text style={styles.nutritionLabel}>Grasa</Text>
+                </View>
+              </View>
+              
+              <View style={styles.actionButtons}>
+                <TouchableOpacity style={styles.actionButton} onPress={openScaleModal}>
+                  <Icon name="refresh-cw" size={20} color={Colors.primary} />
+                  <Text style={styles.actionButtonText}>Escalar</Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity style={styles.actionButton} onPress={addToShoppingList}>
+                  <Icon name="shopping-cart" size={20} color={Colors.primary} />
+                  <Text style={styles.actionButtonText}>Compras</Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity 
+                  style={styles.actionButton}
+                  onPress={() => {
+                    Alert.alert('Guardar', 'Guardar esta receta a tu colección');
+                  }}
+                >
+                  <Icon name="bookmark" size={20} color={Colors.primary} />
+                  <Text style={styles.actionButtonText}>Guardar</Text>
+                </TouchableOpacity>
+              </View>
+              
+              <View style={styles.tabContainer}>
+                <TouchableOpacity
+                  style={[
+                    styles.tab,
+                    activeTab === 'ingredients' && styles.activeTab,
+                  ]}
+                  onPress={() => setActiveTab('ingredients')}
+                >
+                  <Text
+                    style={[
+                      styles.tabText,
+                      activeTab === 'ingredients' && styles.activeTabText,
+                    ]}
+                  >
+                    Ingredientes
+                  </Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity
+                  style={[
+                    styles.tab,
+                    activeTab === 'instructions' && styles.activeTab,
+                  ]}
+                  onPress={() => setActiveTab('instructions')}
+                >
+                  <Text
+                    style={[
+                      styles.tabText,
+                      activeTab === 'instructions' && styles.activeTabText,
+                    ]}
+                  >
+                    Instrucciones
+                  </Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity
+                  style={[
+                    styles.tab,
+                    activeTab === 'reviews' && styles.activeTab,
+                  ]}
+                  onPress={() => setActiveTab('reviews')}
+                >
+                  <Text
+                    style={[
+                      styles.tabText,
+                      activeTab === 'reviews' && styles.activeTabText,
+                    ]}
+                  >
+                    Reseñas
+                  </Text>
+                </TouchableOpacity>
+              </View>
+              
+              {activeTab === 'ingredients' && (
+                <View style={styles.ingredientsContainer}>
+                  <View style={styles.servingInfo}>
+                    <Text style={styles.servingText}>
+                      Para <Text style={styles.servingCount}>{Math.round(recipe.servings * scaleFactor)}</Text> {Math.round(recipe.servings * scaleFactor) === 1 ? 'persona' : 'personas'}
+                    </Text>
+                    {!scaleByIngredient && (
+                      <TouchableOpacity onPress={openScaleModal}>
+                        <Text style={styles.servingModifier}>Modificar</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                  {recipe.ingredients && recipe.ingredients.length > 0 ? (
+                    recipe.ingredients.map((ingredient, index) => renderIngredient(ingredient, index))
+                  ) : (
+                    <Text style={styles.emptyMessage}>No hay ingredientes disponibles para esta receta.</Text>
+                  )}
+                </View>
+              )}
+              
+              {activeTab === 'instructions' && (
+                <View style={styles.instructionsContainer}>
+                  {recipe.instructions && recipe.instructions.length > 0 ? (
+                    recipe.instructions.map((instruction, index) => renderStepWithImage(instruction, index))
+                  ) : (
+                    <Text style={styles.emptyMessage}>No hay instrucciones disponibles para esta receta.</Text>
+                  )}
+                </View>
+              )}
+              
+              {activeTab === 'reviews' && (
+                <View style={styles.reviewsContainer}>
+                  <TouchableOpacity 
+                    style={styles.addReviewButton}
+                    onPress={openReviewModal}
+                  >
+                    <Icon name="edit-2" size={16} color={Colors.primary} />
+                    <Text style={styles.addReviewText}>Añadir reseña</Text>
+                  </TouchableOpacity>
+                  
+                  {recipe.comments && recipe.comments.length > 0 ? (
+                    recipe.comments.map((comment, index) => (
+                      <View key={index} style={styles.reviewItem}>
+                        <View style={styles.reviewHeader}>
+                          <View style={styles.reviewUser}>
+                            <Image source={{uri: comment.avatar}} style={styles.reviewAvatar} />
+                            <View>
+                              <Text style={styles.reviewUserName}>{comment.user}</Text>
+                              <Text style={styles.reviewDate}>{comment.date}</Text>
+                            </View>
+                          </View>
+                          <View style={styles.reviewRating}>
+                            {[1, 2, 3, 4, 5].map(i => (
+                              <Icon 
+                                key={i}
+                                name="star" 
+                                size={14} 
+                                color={i <= comment.rating ? Colors.warning : Colors.textLight} 
+                              />
+                            ))}
+                          </View>
+                        </View>
+                        <Text style={styles.reviewText}>{comment.text}</Text>
+                      </View>
+                    ))
+                  ) : (
+                    <Text style={styles.emptyMessage}>No hay reseñas disponibles para esta receta. ¡Sé el primero en comentar!</Text>
+                  )}
+                </View>
+              )}
+            </View>
+          </ScrollView>
+          
+          <View style={styles.footer}>
             <Button
-              title="Enviar Reseña"
-              onPress={submitReview}
-              style={styles.submitReviewButton}
+              title="Comenzar a Cocinar"
+              iconName="play-circle"
+              onPress={() => {
+                Alert.alert("Comenzar", "¡Buena suerte con tu preparación!");
+              }}
+              style={styles.startButton}
               fullWidth
             />
           </View>
-        </View>
-      </Modal>
-      
-      {/* Modal para escalar receta */}
-      <Modal
-        animationType="slide"
-        transparent={true}
-        visible={scaleModalVisible}
-        onRequestClose={() => setScaleModalVisible(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Escalar Receta</Text>
-              <TouchableOpacity onPress={() => setScaleModalVisible(false)}>
-                <Icon name="x" size={24} color={Colors.textDark} />
-              </TouchableOpacity>
-            </View>
-            
-            <View style={styles.scaleTypeToggle}>
-              <TouchableOpacity 
-                style={[
-                  styles.scaleTypeButton, 
-                  !scaleByIngredient && styles.activeScaleTypeButton
-                ]}
-                onPress={() => toggleScaleMethod()}
-              >
-                <Text style={!scaleByIngredient ? styles.activeScaleTypeText : styles.scaleTypeText}>
-                  Por porciones
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={[
-                  styles.scaleTypeButton, 
-                  scaleByIngredient && styles.activeScaleTypeButton
-                ]}
-                onPress={() => toggleScaleMethod()}
-              >
-                <Text style={scaleByIngredient ? styles.activeScaleTypeText : styles.scaleTypeText}>
-                  Por ingrediente
-                </Text>
-              </TouchableOpacity>
-            </View>
-            
-            {!scaleByIngredient ? (
-              <View style={styles.scaleByPortionContainer}>
-                <Text style={styles.scaleLabel}>
-                  Ajustar porciones: <Text style={styles.scaleValue}>{Math.round(recipe.servings * scaleFactor)}</Text>
-                </Text>
-                <Slider
-                  style={styles.slider}
-                  minimumValue={0.5}
-                  maximumValue={10}
-                  step={0.5}
-                  value={scaleFactor}
-                  onValueChange={setScaleFactor}
-                  minimumTrackTintColor={Colors.primary}
-                  maximumTrackTintColor={Colors.textLight}
-                  thumbTintColor={Colors.primary}
-                />
-                <View style={styles.sliderLabels}>
-                  <Text style={styles.sliderMinLabel}>½×</Text>
-                  <Text style={styles.sliderMaxLabel}>10×</Text>
+          
+          {/* Modal para añadir reseña */}
+          <Modal
+            animationType="slide"
+            transparent={true}
+            visible={isModalVisible}
+            onRequestClose={() => setIsModalVisible(false)}
+          >
+            <View style={styles.modalOverlay}>
+              <View style={styles.modalContent}>
+                <View style={styles.modalHeader}>
+                  <Text style={styles.modalTitle}>Calificar Receta</Text>
+                  <TouchableOpacity onPress={() => setIsModalVisible(false)}>
+                    <Icon name="x" size={24} color={Colors.textDark} />
+                  </TouchableOpacity>
                 </View>
                 
+                <Text style={styles.ratingLabel}>Tu calificación:</Text>
+                <View style={styles.ratingStars}>
+                  {[1, 2, 3, 4, 5].map(i => (
+                    <TouchableOpacity 
+                      key={i}
+                      onPress={() => setReviewRating(i)}
+                    >
+                      <Icon 
+                        name="star" 
+                        size={28} 
+                        color={i <= reviewRating ? Colors.warning : Colors.textLight} 
+                        style={{marginHorizontal: 5}}
+                      />
+                    </TouchableOpacity>
+                  ))}
+                </View>
+                
+                <Text style={styles.reviewLabel}>Tu comentario:</Text>
+                <TextInput
+                  style={styles.reviewInput}
+                  placeholder="Escribe tu comentario sobre esta receta..."
+                  value={reviewText}
+                  onChangeText={setReviewText}
+                  multiline
+                  numberOfLines={4}
+                />
+                
                 <Button
-                  title="Aplicar"
-                  onPress={applyScaling}
-                  style={styles.applyScaleButton}
+                  title="Enviar Reseña"
+                  onPress={submitReview}
+                  style={styles.submitReviewButton}
                   fullWidth
                 />
               </View>
-            ) : (
-              <View style={styles.scaleByIngredientContainer}>
-                <Text style={styles.scaleLabel}>Selecciona un ingrediente:</Text>
-                <ScrollView style={styles.ingredientSelector}>
-                  {recipe.ingredients && recipe.ingredients.map((ingredient, index) => (
-                    <TouchableOpacity 
-                      key={index}
-                      style={[
-                        styles.selectableIngredient,
-                        selectedIngredient?.index === index && styles.selectedIngredient
-                      ]}
-                      onPress={() => selectIngredient(ingredient, index)}
-                    >
-                      <Text style={styles.selectableIngredientText}>
-                        <Text style={styles.ingredientAmount}>{ingredient.amount} </Text>
-                        {ingredient.name}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </ScrollView>
+            </View>
+          </Modal>
+          
+          {/* Modal para escalar receta */}
+          <Modal
+            animationType="slide"
+            transparent={true}
+            visible={scaleModalVisible}
+            onRequestClose={() => setScaleModalVisible(false)}
+          >
+            <View style={styles.modalOverlay}>
+              <View style={styles.modalContent}>
+                <View style={styles.modalHeader}>
+                  <Text style={styles.modalTitle}>Escalar Receta</Text>
+                  <TouchableOpacity onPress={() => setScaleModalVisible(false)}>
+                    <Icon name="x" size={24} color={Colors.textDark} />
+                  </TouchableOpacity>
+                </View>
                 
-                {selectedIngredient && (
-                  <View style={styles.customAmountContainer}>
-                    <Text style={styles.customAmountLabel}>Nueva cantidad:</Text>
-                    <TextInput
-                      style={styles.customAmountInput}
-                      value={customAmount}
-                      onChangeText={setCustomAmount}
-                      placeholder={`Ej: 2 tazas de ${selectedIngredient.name}`}
+                <View style={styles.scaleTypeToggle}>
+                  <TouchableOpacity 
+                    style={[
+                      styles.scaleTypeButton, 
+                      !scaleByIngredient && styles.activeScaleTypeButton
+                    ]}
+                    onPress={() => toggleScaleMethod()}
+                  >
+                    <Text style={!scaleByIngredient ? styles.activeScaleTypeText : styles.scaleTypeText}>
+                      Por porciones
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity 
+                    style={[
+                      styles.scaleTypeButton, 
+                      scaleByIngredient && styles.activeScaleTypeButton
+                    ]}
+                    onPress={() => toggleScaleMethod()}
+                  >
+                    <Text style={scaleByIngredient ? styles.activeScaleTypeText : styles.scaleTypeText}>
+                      Por ingrediente
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+                
+                {!scaleByIngredient ? (
+                  <View style={styles.scaleByPortionContainer}>
+                    <Text style={styles.scaleLabel}>
+                      Ajustar porciones: <Text style={styles.scaleValue}>{Math.round(recipe.servings * scaleFactor)}</Text>
+                    </Text>
+                    <Slider
+                      style={styles.slider}
+                      minimumValue={0.5}
+                      maximumValue={10}
+                      step={0.5}
+                      value={scaleFactor}
+                      onValueChange={setScaleFactor}
+                      minimumTrackTintColor={Colors.primary}
+                      maximumTrackTintColor={Colors.textLight}
+                      thumbTintColor={Colors.primary}
+                    />
+                    <View style={styles.sliderLabels}>
+                      <Text style={styles.sliderMinLabel}>½×</Text>
+                      <Text style={styles.sliderMaxLabel}>10×</Text>
+                    </View>
+                    
+                    <Button
+                      title="Aplicar"
+                      onPress={applyScaling}
+                      style={styles.applyScaleButton}
+                      fullWidth
+                    />
+                  </View>
+                ) : (
+                  <View style={styles.scaleByIngredientContainer}>
+                    <Text style={styles.scaleLabel}>Selecciona un ingrediente:</Text>
+                    <ScrollView style={styles.ingredientSelector}>
+                      {recipe.ingredients && recipe.ingredients.map((ingredient, index) => (
+                        <TouchableOpacity 
+                          key={index}
+                          style={[
+                            styles.selectableIngredient,
+                            selectedIngredient?.index === index && styles.selectedIngredient
+                          ]}
+                          onPress={() => selectIngredient(ingredient, index)}
+                        >
+                          <Text style={styles.selectableIngredientText}>
+                            <Text style={styles.ingredientAmount}>{ingredient.amount} </Text>
+                            {ingredient.name}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </ScrollView>
+                    
+                    {selectedIngredient && (
+                      <View style={styles.customAmountContainer}>
+                        <Text style={styles.customAmountLabel}>Nueva cantidad:</Text>
+                        <TextInput
+                          style={styles.customAmountInput}
+                          value={customAmount}
+                          onChangeText={setCustomAmount}
+                          placeholder={`Ej: 2 tazas de ${selectedIngredient.name}`}
+                        />
+                      </View>
+                    )}
+                    
+                    <Button
+                      title="Aplicar"
+                      onPress={scaleRecipeByIngredient}
+                      style={styles.applyScaleButton}
+                      disabled={!selectedIngredient || !customAmount}
+                      fullWidth
                     />
                   </View>
                 )}
-                
-                <Button
-                  title="Aplicar"
-                  onPress={scaleRecipeByIngredient}
-                  style={styles.applyScaleButton}
-                  disabled={!selectedIngredient || !customAmount}
-                  fullWidth
-                />
               </View>
-            )}
-          </View>
-        </View>
-      </Modal>
+            </View>
+          </Modal>
+        </>
+      )}
     </SafeAreaView>
   );
 };
@@ -871,16 +951,23 @@ const styles = StyleSheet.create({
     marginRight: Metrics.baseSpacing,
     marginTop: 8,
   },
-  ingredientText: {
+  ingredientTextContainer: {
+    flex: 1,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+  },
+  ingredientName: {
     fontSize: Metrics.baseFontSize,
     color: Colors.textDark,
-    flex: 1,
-    lineHeight: Metrics.mediumLineHeight,
   },
   ingredientAmount: {
+    fontSize: Metrics.baseFontSize,
     fontWeight: '600',
+    color: Colors.primary,
   },
   ingredientPrep: {
+    fontSize: Metrics.baseFontSize,
     fontStyle: 'italic',
     color: Colors.textMedium,
   },
@@ -1128,6 +1215,53 @@ const styles = StyleSheet.create({
   },
   applyScaleButton: {
     height: 50,
+  },
+  emptyMessage: {
+    fontSize: Metrics.baseFontSize,
+    color: Colors.textMedium,
+    textAlign: 'center',
+    marginTop: Metrics.mediumSpacing,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    fontSize: Metrics.baseFontSize,
+    color: Colors.primary,
+    marginTop: Metrics.mediumSpacing,
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: Metrics.mediumSpacing,
+  },
+  errorTitle: {
+    fontSize: Metrics.largeFontSize,
+    fontWeight: '600',
+    color: Colors.error,
+    marginTop: Metrics.mediumSpacing,
+    marginBottom: Metrics.baseSpacing,
+  },
+  errorText: {
+    fontSize: Metrics.baseFontSize,
+    color: Colors.textMedium,
+    textAlign: 'center',
+    marginBottom: Metrics.mediumSpacing,
+  },
+  errorButton: {
+    backgroundColor: Colors.primary,
+    paddingVertical: Metrics.baseSpacing,
+    paddingHorizontal: Metrics.mediumSpacing,
+    borderRadius: Metrics.baseBorderRadius,
+    marginTop: Metrics.mediumSpacing,
+  },
+  errorButtonText: {
+    fontSize: Metrics.baseFontSize,
+    color: Colors.card,
+    fontWeight: '500',
   },
 });
 

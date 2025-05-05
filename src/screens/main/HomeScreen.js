@@ -25,48 +25,114 @@ const popularRecipes = [
     title: 'Tazón Mediterráneo',
     imageUrl: 'https://images.unsplash.com/photo-1527515637462-cff94eecc1ac',
     time: 25,
+    category: 'Almuerzo',
   },
   {
     id: '2',
     title: 'Tostada de Aguacate',
     imageUrl: 'https://images.unsplash.com/photo-1565299507177-b0ac66763828',
     time: 10,
+    category: 'Desayuno',
   },
   {
     id: '3',
     title: 'Tazón de Batido de Bayas',
     imageUrl: 'https://images.unsplash.com/photo-1557837931-97fdbe7cb9a4',
     time: 15,
+    category: 'Desayuno',
   },
   {
     id: '4',
-    title: 'Panqueques Veganos',
-    imageUrl: 'https://images.unsplash.com/photo-1528207776546-365bb710ee93',
-    time: 20,
+    title: 'Salmón a la Parrilla',
+    imageUrl: 'https://images.unsplash.com/photo-1551183053-bf91a1d81141',
+    time: 30,
+    category: 'Cena',
+  },
+  {
+    id: '5',
+    title: 'Pimientos Rellenos de Quinua',
+    imageUrl: 'https://images.unsplash.com/photo-1564834744159-ff0ea41ba4b9',
+    time: 45,
+    category: 'Cena',
+  },
+  {
+    id: '6',
+    title: 'Ensalada de Verduras Frescas',
+    imageUrl: 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd',
+    time: 15,
+    category: 'Almuerzo',
+  },
+  {
+    id: '8',
+    title: 'Tiramisu Clásico',
+    imageUrl: 'https://images.unsplash.com/photo-1571877227200-a0d98ea607e9',
+    time: 240,
+    category: 'Postres',
+  },
+  {
+    id: '9',
+    title: 'Guacamole Casero',
+    imageUrl: 'https://images.unsplash.com/photo-1600335895229-6e75511892c8',
+    time: 15,
+    category: 'Aperitivos',
+  },
+  {
+    id: '10',
+    title: 'Smoothie de Frutas',
+    imageUrl: 'https://images.unsplash.com/photo-1623065422902-30a2d299bbe4',
+    time: 10,
+    category: 'Bebidas',
   },
 ];
 
 const recentlyAddedRecipes = [
   {
-    id: '5',
+    id: '6',
     title: 'Ensalada de Verduras Frescas',
     imageUrl: 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd',
     time: 15,
     tags: ['Saludable', 'Vegano'],
+    category: 'Almuerzo',
   },
   {
-    id: '6',
+    id: '4',
     title: 'Salmón a la Parrilla',
     imageUrl: 'https://images.unsplash.com/photo-1551183053-bf91a1d81141',
     time: 30,
     tags: ['Proteína', 'Cena'],
+    category: 'Cena',
   },
   {
-    id: '7',
+    id: '5',
     title: 'Pimientos Rellenos de Quinua',
     imageUrl: 'https://images.unsplash.com/photo-1564834744159-ff0ea41ba4b9',
     time: 45,
     tags: ['Vegetariano', 'Cena'],
+    category: 'Cena',
+  },
+  {
+    id: '8',
+    title: 'Tiramisu Clásico',
+    imageUrl: 'https://images.unsplash.com/photo-1571877227200-a0d98ea607e9',
+    time: 240,
+    tags: ['Dulce', 'Italiano'],
+    category: 'Postres',
+  },
+  {
+    id: '9',
+    title: 'Guacamole Casero',
+    imageUrl: 'https://images.unsplash.com/photo-1600335895229-6e75511892c8',
+    time: 15,
+    tags: ['Rápido', 'Mexicano'],
+    category: 'Aperitivos',
+  },
+  {
+    id: '10',
+    title: 'Smoothie de Frutas',
+    imageUrl: 'https://images.unsplash.com/photo-1623065422902-30a2d299bbe4',
+    time: 10,
+    tags: ['Refrescante', 'Saludable'],
+    category: 'Bebidas',
   },
 ];
 
@@ -84,8 +150,31 @@ const categories = [
 const HomeScreen = ({ navigation }) => {
   const [selectedCategory, setSelectedCategory] = useState('Todas las Recetas');
   const [searchQuery, setSearchQuery] = useState('');
+  const [filteredPopularRecipes, setFilteredPopularRecipes] = useState(popularRecipes);
+  const [filteredRecentRecipes, setFilteredRecentRecipes] = useState(recentlyAddedRecipes);
+
+  // Aplicar filtro cuando cambia la categoría seleccionada
+  React.useEffect(() => {
+    filterRecipesByCategory(selectedCategory);
+  }, [selectedCategory]);
+
+  // Filtrar recetas por categoría
+  const filterRecipesByCategory = (category) => {
+    if (category === 'Todas las Recetas') {
+      setFilteredPopularRecipes(popularRecipes);
+      setFilteredRecentRecipes(recentlyAddedRecipes);
+    } else {
+      setFilteredPopularRecipes(
+        popularRecipes.filter(recipe => recipe.category === category)
+      );
+      setFilteredRecentRecipes(
+        recentlyAddedRecipes.filter(recipe => recipe.category === category)
+      );
+    }
+  };
 
   const handleRecipePress = (recipe) => {
+    console.log('Navegando a receta desde HomeScreen:', JSON.stringify(recipe));
     navigation.navigate('RecipeDetail', { recipe });
   };
 
@@ -110,11 +199,12 @@ const HomeScreen = ({ navigation }) => {
 
   const renderPopularRecipe = ({ item }) => (
     <RecipeCard
+      id={item.id}
       title={item.title}
       imageUrl={item.imageUrl}
       time={item.time}
       type="grid"
-      onPress={() => handleRecipePress(item)}
+      onPress={handleRecipePress}
       style={styles.popularRecipeCard}
     />
   );
@@ -174,30 +264,43 @@ const HomeScreen = ({ navigation }) => {
           </TouchableOpacity>
         </View>
         
-        <FlatList
-          data={popularRecipes}
-          renderItem={renderPopularRecipe}
-          keyExtractor={(item) => item.id}
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.popularRecipesContainer}
-        />
+        {filteredPopularRecipes.length > 0 ? (
+          <FlatList
+            data={filteredPopularRecipes}
+            renderItem={renderPopularRecipe}
+            keyExtractor={(item) => item.id}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.popularRecipesContainer}
+          />
+        ) : (
+          <View style={styles.emptyStateContainer}>
+            <Text style={styles.emptyStateText}>No hay recetas en esta categoría</Text>
+          </View>
+        )}
         
         <Text style={[styles.sectionTitle, styles.recentTitle]}>
           Agregadas Recientemente
         </Text>
         
-        {recentlyAddedRecipes.map((recipe) => (
-          <RecipeCard
-            key={recipe.id}
-            title={recipe.title}
-            imageUrl={recipe.imageUrl}
-            time={recipe.time}
-            tags={recipe.tags}
-            type="list"
-            onPress={() => handleRecipePress(recipe)}
-          />
-        ))}
+        {filteredRecentRecipes.length > 0 ? (
+          filteredRecentRecipes.map((recipe) => (
+            <RecipeCard
+              key={recipe.id}
+              id={recipe.id}
+              title={recipe.title}
+              imageUrl={recipe.imageUrl}
+              time={recipe.time}
+              tags={recipe.tags}
+              type="list"
+              onPress={handleRecipePress}
+            />
+          ))
+        ) : (
+          <View style={styles.emptyStateContainer}>
+            <Text style={styles.emptyStateText}>No hay recetas recientes en esta categoría</Text>
+          </View>
+        )}
         
         <View style={styles.bottomPadding} />
       </ScrollView>
@@ -300,6 +403,19 @@ const styles = StyleSheet.create({
   },
   bottomPadding: {
     height: Metrics.xxLargeSpacing,
+  },
+  emptyStateContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: Metrics.largeSpacing,
+    backgroundColor: Colors.card,
+    borderRadius: Metrics.mediumBorderRadius,
+    marginBottom: Metrics.mediumSpacing,
+  },
+  emptyStateText: {
+    fontSize: Metrics.baseFontSize,
+    color: Colors.textMedium,
+    textAlign: 'center',
   },
 });
 
