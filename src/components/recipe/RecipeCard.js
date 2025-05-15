@@ -71,8 +71,8 @@ const RecipeCard = ({
             {title}
           </Text>
           <View style={styles.metaContainer}>
-            <View style={styles.timeContainer}>
-              <Icon name="clock" size={14} color={Colors.textDark} />
+          <View style={styles.timeContainer}>
+            <Icon name="clock" size={14} color={Colors.textDark} />
               <Text style={styles.metaText}>{time} min</Text>
             </View>
             {ingredientsCount > 0 && (
@@ -103,8 +103,8 @@ const RecipeCard = ({
           {title}
         </Text>
         <View style={styles.metaContainer}>
-          <View style={styles.timeContainer}>
-            <Icon name="clock" size={14} color={Colors.textDark} />
+        <View style={styles.timeContainer}>
+          <Icon name="clock" size={14} color={Colors.textDark} />
             <Text style={styles.metaText}>{time} min</Text>
           </View>
           {ingredientsCount > 0 && (

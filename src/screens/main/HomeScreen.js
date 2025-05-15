@@ -265,14 +265,14 @@ const HomeScreen = ({ navigation }) => {
         </View>
         
         {filteredPopularRecipes.length > 0 ? (
-          <FlatList
+        <FlatList
             data={filteredPopularRecipes}
-            renderItem={renderPopularRecipe}
-            keyExtractor={(item) => item.id}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.popularRecipesContainer}
-          />
+          renderItem={renderPopularRecipe}
+          keyExtractor={(item) => item.id}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.popularRecipesContainer}
+        />
         ) : (
           <View style={styles.emptyStateContainer}>
             <Text style={styles.emptyStateText}>No hay recetas en esta categoría</Text>
@@ -285,16 +285,16 @@ const HomeScreen = ({ navigation }) => {
         
         {filteredRecentRecipes.length > 0 ? (
           filteredRecentRecipes.map((recipe) => (
-            <RecipeCard
-              key={recipe.id}
+          <RecipeCard
+            key={recipe.id}
               id={recipe.id}
-              title={recipe.title}
-              imageUrl={recipe.imageUrl}
-              time={recipe.time}
-              tags={recipe.tags}
-              type="list"
+            title={recipe.title}
+            imageUrl={recipe.imageUrl}
+            time={recipe.time}
+            tags={recipe.tags}
+            type="list"
               onPress={handleRecipePress}
-            />
+          />
           ))
         ) : (
           <View style={styles.emptyStateContainer}>
