@@ -16,6 +16,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Feather';
 import Slider from '@react-native-community/slider';
+import { Rating } from 'react-native-ratings';
 
 import Button from '../../components/common/Button';
 import Colors from '../../themes/colors';
@@ -36,6 +37,10 @@ const RecipeDetailScreen = ({ navigation, route }) => {
   const [customAmount, setCustomAmount] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [userRating, setUserRating] = useState(0);
+  const [comment, setComment] = useState('');
+  const [comments, setComments] = useState([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
   // Obtener el ID o datos iniciales de la receta de los parámetros de navegación
   const recipeFromParams = route.params?.recipe || {};
@@ -253,6 +258,48 @@ const RecipeDetailScreen = ({ navigation, route }) => {
       </View>
     </View>
   );
+  
+  const handleRating = async (rating) => {
+    try {
+      setUserRating(rating);
+      // Here you would typically send the rating to your backend
+      // await api.post(`/recipes/${recipe.id}/ratings`, { rating });
+    } catch (error) {
+      console.error('Rating error:', error);
+      Alert.alert(
+        'Error',
+        'No se pudo enviar la valoración. Por favor, intenta nuevamente.'
+      );
+    }
+  };
+  
+  const handleAddComment = async () => {
+    if (!comment.trim()) return;
+    
+    setIsSubmitting(true);
+    try {
+      const newComment = {
+        id: Date.now(),
+        text: comment,
+        user: 'Current User', // Replace with actual user
+        status: 'pending',
+        date: new Date().toISOString(),
+      };
+      
+      setComments(prevComments => [...prevComments, newComment]);
+      setComment('');
+      // Here you would typically send the comment to your backend
+      // await api.post(`/recipes/${recipe.id}/comments`, { text: comment });
+    } catch (error) {
+      console.error('Comment error:', error);
+      Alert.alert(
+        'Error',
+        'No se pudo enviar el comentario. Por favor, intenta nuevamente.'
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
   
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -538,6 +585,68 @@ const RecipeDetailScreen = ({ navigation, route }) => {
                   )}
             </View>
           )}
+          
+          <View style={styles.ratingSection}>
+            <Text style={styles.sectionTitle}>Valorar Receta</Text>
+            <Rating
+              showRating
+              onFinishRating={handleRating}
+              style={styles.rating}
+              startingValue={userRating}
+              readonly={isSubmitting}
+            />
+          </View>
+          
+          <View style={styles.commentsSection}>
+            <Text style={styles.sectionTitle}>Comentarios</Text>
+            <View style={styles.commentInput}>
+              <TextInput
+                style={styles.commentTextInput}
+                placeholder="Escribe tu comentario..."
+                value={comment}
+                onChangeText={setComment}
+                multiline
+                editable={!isSubmitting}
+              />
+              <TouchableOpacity
+                style={[
+                  styles.commentButton,
+                  isSubmitting && styles.commentButtonDisabled
+                ]}
+                onPress={handleAddComment}
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? (
+                  <ActivityIndicator size="small" color={Colors.card} />
+                ) : (
+                  <Text style={styles.commentButtonText}>Enviar</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+            
+            <FlatList
+              data={comments}
+              renderItem={({ item }) => (
+                <View style={styles.commentItem}>
+                  <Text style={styles.commentUser}>{item.user}</Text>
+                  <Text style={styles.commentText}>{item.text}</Text>
+                  <Text style={styles.commentDate}>
+                    {new Date(item.date).toLocaleDateString()}
+                  </Text>
+                  {item.status === 'pending' && (
+                    <Text style={styles.commentStatus}>Pendiente de aprobación</Text>
+                  )}
+                </View>
+              )}
+              keyExtractor={item => item.id.toString()}
+              ListEmptyComponent={
+                <Text style={styles.emptyCommentsText}>
+                  No hay comentarios aún. ¡Sé el primero en comentar!
+                </Text>
+              }
+              scrollEnabled={false}
+            />
+          </View>
         </View>
       </ScrollView>
       
@@ -1262,6 +1371,74 @@ const styles = StyleSheet.create({
     fontSize: Metrics.baseFontSize,
     color: Colors.card,
     fontWeight: '500',
+  },
+  ratingSection: {
+    padding: Metrics.mediumSpacing,
+    backgroundColor: Colors.card,
+    marginBottom: Metrics.mediumSpacing,
+    borderRadius: Metrics.mediumBorderRadius,
+  },
+  rating: {
+    paddingVertical: Metrics.smallSpacing,
+  },
+  commentsSection: {
+    padding: Metrics.mediumSpacing,
+    backgroundColor: Colors.card,
+    borderRadius: Metrics.mediumBorderRadius,
+  },
+  commentInput: {
+    flexDirection: 'row',
+    marginBottom: Metrics.mediumSpacing,
+  },
+  commentTextInput: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: Metrics.mediumBorderRadius,
+    padding: Metrics.smallSpacing,
+    marginRight: Metrics.smallSpacing,
+    minHeight: 40,
+  },
+  commentButton: {
+    backgroundColor: Colors.primary,
+    padding: Metrics.smallSpacing,
+    borderRadius: Metrics.mediumBorderRadius,
+    justifyContent: 'center',
+    minWidth: 80,
+  },
+  commentButtonDisabled: {
+    opacity: 0.7,
+  },
+  commentButtonText: {
+    color: Colors.card,
+    fontWeight: '500',
+    textAlign: 'center',
+  },
+  commentItem: {
+    padding: Metrics.smallSpacing,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+  },
+  commentUser: {
+    fontWeight: '500',
+    marginBottom: Metrics.smallSpacing,
+  },
+  commentText: {
+    marginBottom: Metrics.smallSpacing,
+  },
+  commentDate: {
+    fontSize: Metrics.smallFontSize,
+    color: Colors.textLight,
+  },
+  commentStatus: {
+    fontSize: Metrics.smallFontSize,
+    color: Colors.warning,
+    marginTop: Metrics.smallSpacing,
+  },
+  emptyCommentsText: {
+    textAlign: 'center',
+    color: Colors.textLight,
+    padding: Metrics.mediumSpacing,
   },
 });
 

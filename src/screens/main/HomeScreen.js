@@ -1,4 +1,4 @@
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext, useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,10 +9,12 @@ import {
   FlatList,
   Image,
   StatusBar,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Feather';
 import LinearGradient from 'react-native-linear-gradient';
+import NetInfo from '@react-native-community/netinfo';
 
 import RecipeCard from '../../components/recipe/RecipeCard';
 import Colors from '../../themes/colors';
@@ -154,23 +156,51 @@ const HomeScreen = ({ navigation }) => {
   const [filteredPopularRecipes, setFilteredPopularRecipes] = useState(popularRecipes);
   const [filteredRecentRecipes, setFilteredRecentRecipes] = useState(recentlyAddedRecipes);
   const { isVisitor, exitVisitorMode } = useContext(AuthContext);
+  const [isConnected, setIsConnected] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Mostrar solo las 3 recetas más recientes
+  const getLatestThreeRecipes = () => {
+    // Ordenar por id descendente (simulando fecha de creación más reciente)
+    const sorted = [...recentlyAddedRecipes].sort((a, b) => Number(b.id) - Number(a.id));
+    return sorted.slice(0, 3);
+  };
 
   // Aplicar filtro cuando cambia la categoría seleccionada
   React.useEffect(() => {
     filterRecipesByCategory(selectedCategory);
   }, [selectedCategory]);
 
+  // Chequeo de conexión al iniciar
+  useEffect(() => {
+    const checkConnection = async () => {
+      try {
+        const state = await NetInfo.fetch();
+        setIsConnected(state.isConnected);
+      } catch (error) {
+        setIsConnected(false);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    const unsubscribe = NetInfo.addEventListener(state => {
+      setIsConnected(state.isConnected);
+    });
+    checkConnection();
+    return () => unsubscribe();
+  }, []);
+
   // Filtrar recetas por categoría
   const filterRecipesByCategory = (category) => {
     if (category === 'Todas las Recetas') {
       setFilteredPopularRecipes(popularRecipes);
-      setFilteredRecentRecipes(recentlyAddedRecipes);
+      setFilteredRecentRecipes(getLatestThreeRecipes());
     } else {
       setFilteredPopularRecipes(
         popularRecipes.filter(recipe => recipe.category === category)
       );
       setFilteredRecentRecipes(
-        recentlyAddedRecipes.filter(recipe => recipe.category === category)
+        getLatestThreeRecipes().filter(recipe => recipe.category === category)
       );
     }
   };
@@ -219,9 +249,33 @@ const HomeScreen = ({ navigation }) => {
     />
   );
 
+  const renderOfflineMessage = () => (
+    <View style={styles.offlineContainer}>
+      <Icon name="wifi-off" size={24} color={Colors.error} />
+      <Text style={styles.offlineText}>
+        No hay conexión a internet. La aplicación no puede ser utilizada sin conexión.
+      </Text>
+    </View>
+  );
+
+  if (!isConnected) {
+    return (
+      <SafeAreaView style={styles.container} edges={['top']}>
+        <View style={styles.loadingContainer}>
+          <Icon name="wifi-off" size={48} color={Colors.error} />
+          <Text style={styles.offlineText}>
+            No hay conexión a internet. No se puede usar la aplicación.
+          </Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <StatusBar backgroundColor={Colors.gradientStart} barStyle="dark-content" />
+      
+      {!isConnected && renderOfflineMessage()}
       
       <LinearGradient
         colors={[Colors.gradientStart, Colors.gradientEnd]}
@@ -291,14 +345,14 @@ const HomeScreen = ({ navigation }) => {
         </View>
         
         {filteredPopularRecipes.length > 0 ? (
-          <FlatList
+        <FlatList
             data={filteredPopularRecipes}
-            renderItem={renderPopularRecipe}
-            keyExtractor={(item) => item.id}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.popularRecipesContainer}
-          />
+          renderItem={renderPopularRecipe}
+          keyExtractor={(item) => item.id}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.popularRecipesContainer}
+        />
         ) : (
           <View style={styles.emptyStateContainer}>
             <Text style={styles.emptyStateText}>No hay recetas en esta categoría</Text>
@@ -311,16 +365,16 @@ const HomeScreen = ({ navigation }) => {
         
         {filteredRecentRecipes.length > 0 ? (
           filteredRecentRecipes.map((recipe) => (
-            <RecipeCard
-              key={recipe.id}
+          <RecipeCard
+            key={recipe.id}
               id={recipe.id}
-              title={recipe.title}
-              imageUrl={recipe.imageUrl}
-              time={recipe.time}
-              tags={recipe.tags}
-              type="list"
+            title={recipe.title}
+            imageUrl={recipe.imageUrl}
+            time={recipe.time}
+            tags={recipe.tags}
+            type="list"
               onPress={handleRecipePress}
-            />
+          />
           ))
         ) : (
           <View style={styles.emptyStateContainer}>
@@ -468,6 +522,23 @@ const styles = StyleSheet.create({
     color: Colors.card,
     fontSize: Metrics.smallFontSize,
     fontWeight: '500',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  offlineContainer: {
+    backgroundColor: Colors.error + '10',
+    padding: Metrics.mediumSpacing,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  offlineText: {
+    color: Colors.error,
+    marginLeft: Metrics.smallSpacing,
+    textAlign: 'center',
   },
 });
 
