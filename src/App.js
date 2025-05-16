@@ -13,7 +13,7 @@ import AppNavigator from './navigation/AppNavigator';
 import AuthNavigator from './navigation/AuthNavigator';
 
 // Authentication Context
-import { AuthContext } from './context/AuthContext';
+import { AuthContext, AuthProvider } from './context/AuthContext';
 
 // Services
 import { authService } from './services/auth';
@@ -21,14 +21,15 @@ import { authService } from './services/auth';
 const App = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [userToken, setUserToken] = useState(null);
+  const [isVisitor, setIsVisitor] = useState(false);
 
   // Authentication functions
   const authContext = React.useMemo(() => ({
     signIn: async (email, password) => {
       try {
-        // Login without email verification check
         const result = await authService.login(email, password);
         setUserToken(result.token);
+        setIsVisitor(false);
         return result;
       } catch (e) {
         console.log('Sign in error:', e);
@@ -40,6 +41,7 @@ const App = () => {
       try {
         await authService.logout();
         setUserToken(null);
+        setIsVisitor(false);
       } catch (e) {
         console.log('Sign out error:', e);
       }
@@ -47,7 +49,6 @@ const App = () => {
     
     signUp: async (userData) => {
       try {
-        // Register user without email verification
         const result = await authService.register(userData);
         return result;
       } catch (e) {
@@ -58,7 +59,6 @@ const App = () => {
     
     verifyCode: async (email, code) => {
       try {
-        // Always return true for demo purposes
         return true;
       } catch (e) {
         console.log('Verification error:', e);
@@ -68,7 +68,6 @@ const App = () => {
     
     resendVerificationCode: async (email) => {
       try {
-        // Always return true for demo purposes
         return true;
       } catch (e) {
         console.log('Resend verification error:', e);
@@ -78,14 +77,13 @@ const App = () => {
     
     completeProfile: async (email, profileData) => {
       try {
-        // Update user profile and automatically log in
         const result = await authService.completeProfile(email, profileData);
         
         if (result) {
-          // Auto login after profile completion
           try {
             const loginResult = await authService.login(email, profileData.password || '');
             setUserToken(loginResult.token);
+            setIsVisitor(false);
           } catch (loginErr) {
             console.log('Auto login after profile completion failed:', loginErr);
           }
@@ -96,11 +94,18 @@ const App = () => {
         console.log('Complete profile error:', e);
         throw e;
       }
+    },
+
+    enterVisitorMode: () => {
+      setIsVisitor(true);
+    },
+
+    exitVisitorMode: () => {
+      setIsVisitor(false);
     }
   }), []);
 
   useEffect(() => {
-    // Check if user is already logged in
     const bootstrapAsync = async () => {
       setIsLoading(true);
       try {
@@ -137,7 +142,7 @@ const App = () => {
         <SafeAreaProvider>
           <NavigationContainer>
             <StatusBar barStyle="dark-content" backgroundColor="#fff" />
-            {userToken == null ? <AuthNavigator /> : <AppNavigator />}
+            {userToken != null || isVisitor ? <AppNavigator /> : <AuthNavigator />}
           </NavigationContainer>
         </SafeAreaProvider>
       </AuthContext.Provider>

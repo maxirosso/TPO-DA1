@@ -66,7 +66,7 @@ export const authService = {
       await AsyncStorage.setItem(PENDING_USERS_KEY, JSON.stringify(pendingUsers));
       
       // Auto-verify the email for development
-      await this.markEmailAsVerified(email);
+      await authService.markEmailAsVerified(email);
       
       return { email, success: true };
     } catch (error) {
@@ -160,7 +160,43 @@ export const authService = {
       console.error('Auth check error:', error);
       return false;
     }
-  }
+  },
+
+  checkUsernameAvailability: async (username) => {
+    try {
+      const pendingUsersStr = await AsyncStorage.getItem(PENDING_USERS_KEY);
+      const pendingUsers = pendingUsersStr ? JSON.parse(pendingUsersStr) : {};
+      
+      // Check if username is taken
+      const isTaken = Object.values(pendingUsers).some(user => user.username === username);
+      
+      if (!isTaken) {
+        return { available: true };
+      }
+      
+      // Generate suggestions if username is taken
+      const suggestions = [];
+      const baseUsername = username.replace(/\d+$/, ''); // Remove any trailing numbers
+      
+      // Add random numbers
+      for (let i = 0; i < 3; i++) {
+        const randomNum = Math.floor(Math.random() * 1000);
+        suggestions.push(`${baseUsername}${randomNum}`);
+      }
+      
+      // Add current year
+      const currentYear = new Date().getFullYear();
+      suggestions.push(`${baseUsername}${currentYear}`);
+      
+      return {
+        available: false,
+        suggestions
+      };
+    } catch (error) {
+      console.error('Username check error:', error);
+      throw error;
+    }
+  },
 };
 
 export default authService;

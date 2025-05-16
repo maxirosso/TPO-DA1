@@ -1,4 +1,4 @@
-import React, { useState, useContext, useRef } from 'react';
+import React, { useState, useContext, useRef, useCallback } from 'react';
 import {
   View,
   Text,
@@ -13,12 +13,14 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/Feather';
+import debounce from 'lodash/debounce';
 
 import { AuthContext } from '../../context/AuthContext';
 import Input from '../../components/common/Input';
 import Button from '../../components/common/Button';
 import Colors from '../../themes/colors';
 import Metrics from '../../themes/metrics';
+import { authService } from '../../services/auth';
 
 const SignupScreen = ({ navigation }) => {
   const [activeTab, setActiveTab] = useState('regularUser');
@@ -27,6 +29,8 @@ const SignupScreen = ({ navigation }) => {
   const [password, setPassword] = useState('');
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [usernameError, setUsernameError] = useState('');
+  const [usernameSuggestions, setUsernameSuggestions] = useState([]);
   
   const emailInputRef = useRef(null);
   const usernameInputRef = useRef(null);
@@ -39,12 +43,54 @@ const SignupScreen = ({ navigation }) => {
     return emailRegex.test(email);
   };
   
+  const checkUsername = async (value) => {
+    if (!value) {
+      setUsernameError('');
+      setUsernameSuggestions([]);
+      return;
+    }
+    
+    try {
+      const result = await authService.checkUsernameAvailability(value);
+      if (!result.available) {
+        setUsernameError('Este nombre de usuario ya está en uso');
+        setUsernameSuggestions(result.suggestions);
+      } else {
+        setUsernameError('');
+        setUsernameSuggestions([]);
+      }
+    } catch (error) {
+      console.error('Username check error:', error);
+    }
+  };
+  
+  const debouncedCheckUsername = useCallback(
+    debounce((value) => checkUsername(value), 500),
+    []
+  );
+  
+  const handleUsernameChange = (value) => {
+    setUsername(value);
+    debouncedCheckUsername(value);
+  };
+  
+  const handleSuggestionSelect = (suggestion) => {
+    setUsername(suggestion);
+    setUsernameError('');
+    setUsernameSuggestions([]);
+  };
+  
   const handleSignUp = async () => {
     Keyboard.dismiss();
     
     // Validate inputs
     if (!email || !username || !password) {
       Alert.alert('Campos incompletos', 'Por favor, completa todos los campos requeridos.');
+      return;
+    }
+    
+    if (usernameError) {
+      Alert.alert('Nombre de usuario no disponible', 'Por favor, elige otro nombre de usuario o selecciona una de las sugerencias.');
       return;
     }
     
@@ -66,6 +112,16 @@ const SignupScreen = ({ navigation }) => {
     setIsLoading(true);
     
     try {
+      // Check username availability one final time
+      const usernameCheck = await authService.checkUsernameAvailability(username);
+      if (!usernameCheck.available) {
+        setUsernameError('Este nombre de usuario ya está en uso');
+        setUsernameSuggestions(usernameCheck.suggestions);
+        Alert.alert('Nombre de usuario no disponible', 'Por favor, elige otro nombre de usuario o selecciona una de las sugerencias.');
+        setIsLoading(false);
+        return;
+      }
+      
       // Register user and send verification email
       const result = await signUp({
         email,
@@ -74,9 +130,13 @@ const SignupScreen = ({ navigation }) => {
         userType: activeTab === 'regularUser' ? 'regular' : 'student'
       });
       
-      // If registration successful, navigate to verification screen
+      // If registration successful, navigate based on user type
       if (result && result.success) {
-        navigation.navigate('Verification', { email });
+        if (activeTab === 'student') {
+          navigation.navigate('StudentRegistration', { email });
+        } else {
+          navigation.navigate('Verification', { email });
+        }
       }
     } catch (error) {
       // Handle registration errors
@@ -180,13 +240,29 @@ const SignupScreen = ({ navigation }) => {
                 ref={usernameInputRef}
                 label="Nombre de Usuario / Alias"
                 value={username}
-                onChangeText={setUsername}
+                onChangeText={handleUsernameChange}
                 placeholder="Elige un nombre de usuario único"
                 autoCapitalize="none"
                 returnKeyType="next"
                 blurOnSubmit={false}
                 onSubmitEditing={() => passwordInputRef.current?.focus()}
+                error={usernameError}
               />
+              
+              {usernameSuggestions.length > 0 && (
+                <View style={styles.suggestionsContainer}>
+                  <Text style={styles.suggestionsTitle}>Sugerencias:</Text>
+                  {usernameSuggestions.map((suggestion, index) => (
+                    <TouchableOpacity
+                      key={index}
+                      style={styles.suggestionButton}
+                      onPress={() => handleSuggestionSelect(suggestion)}
+                    >
+                      <Text style={styles.suggestionText}>{suggestion}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
               
               <Input
                 ref={passwordInputRef}
@@ -427,6 +503,25 @@ const styles = StyleSheet.create({
   bottomLink: {
     color: Colors.primary,
     fontWeight: '600',
+  },
+  suggestionsContainer: {
+    marginTop: 8,
+    marginBottom: 16,
+  },
+  suggestionsTitle: {
+    fontSize: 14,
+    color: Colors.textDark,
+    marginBottom: 8,
+  },
+  suggestionButton: {
+    backgroundColor: Colors.backgroundLight,
+    padding: 8,
+    borderRadius: 8,
+    marginBottom: 4,
+  },
+  suggestionText: {
+    color: Colors.primary,
+    fontSize: 14,
   },
 });
 

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import {
   View,
   Text,
@@ -17,6 +17,7 @@ import LinearGradient from 'react-native-linear-gradient';
 import RecipeCard from '../../components/recipe/RecipeCard';
 import Colors from '../../themes/colors';
 import Metrics from '../../themes/metrics';
+import { AuthContext } from '../../context/AuthContext';
 
 // Datos ficticios para recetas
 const popularRecipes = [
@@ -152,6 +153,7 @@ const HomeScreen = ({ navigation }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [filteredPopularRecipes, setFilteredPopularRecipes] = useState(popularRecipes);
   const [filteredRecentRecipes, setFilteredRecentRecipes] = useState(recentlyAddedRecipes);
+  const { isVisitor, exitVisitorMode } = useContext(AuthContext);
 
   // Aplicar filtro cuando cambia la categoría seleccionada
   React.useEffect(() => {
@@ -176,6 +178,14 @@ const HomeScreen = ({ navigation }) => {
   const handleRecipePress = (recipe) => {
     console.log('Navegando a receta desde HomeScreen:', JSON.stringify(recipe));
     navigation.navigate('RecipeDetail', { recipe });
+  };
+
+  const handleProfilePress = () => {
+    if (isVisitor) {
+      navigation.navigate('Login');
+    } else {
+      navigation.navigate('ProfileTab');
+    }
   };
 
   const renderCategoryItem = ({ item }) => (
@@ -219,10 +229,12 @@ const HomeScreen = ({ navigation }) => {
       >
         <View style={styles.headerContent}>
           <Text style={styles.headerTitle}>ChefNet</Text>
-          <TouchableOpacity onPress={() => navigation.navigate('ProfileTab')}>
+          <TouchableOpacity onPress={handleProfilePress}>
             <Image
               source={{ 
-                uri: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?ixlib=rb-4.0.3'
+                uri: isVisitor 
+                  ? 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde'
+                  : 'https://images.unsplash.com/photo-1580489944761-15a19d654956?ixlib=rb-4.0.3'
               }}
               style={styles.profileImage}
             />
@@ -257,6 +269,20 @@ const HomeScreen = ({ navigation }) => {
         style={styles.content}
         showsVerticalScrollIndicator={false}
       >
+        {isVisitor && (
+          <View style={styles.visitorBanner}>
+            <Text style={styles.visitorBannerText}>
+              Estás navegando como visitante. Inicia sesión para acceder a todas las funciones.
+            </Text>
+            <TouchableOpacity
+              style={styles.visitorBannerButton}
+              onPress={() => navigation.navigate('Login')}
+            >
+              <Text style={styles.visitorBannerButtonText}>Iniciar Sesión</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+        
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Recetas Populares</Text>
           <TouchableOpacity onPress={() => navigation.navigate('RecipeSearch')}>
@@ -265,14 +291,14 @@ const HomeScreen = ({ navigation }) => {
         </View>
         
         {filteredPopularRecipes.length > 0 ? (
-        <FlatList
+          <FlatList
             data={filteredPopularRecipes}
-          renderItem={renderPopularRecipe}
-          keyExtractor={(item) => item.id}
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.popularRecipesContainer}
-        />
+            renderItem={renderPopularRecipe}
+            keyExtractor={(item) => item.id}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.popularRecipesContainer}
+          />
         ) : (
           <View style={styles.emptyStateContainer}>
             <Text style={styles.emptyStateText}>No hay recetas en esta categoría</Text>
@@ -285,16 +311,16 @@ const HomeScreen = ({ navigation }) => {
         
         {filteredRecentRecipes.length > 0 ? (
           filteredRecentRecipes.map((recipe) => (
-          <RecipeCard
-            key={recipe.id}
+            <RecipeCard
+              key={recipe.id}
               id={recipe.id}
-            title={recipe.title}
-            imageUrl={recipe.imageUrl}
-            time={recipe.time}
-            tags={recipe.tags}
-            type="list"
+              title={recipe.title}
+              imageUrl={recipe.imageUrl}
+              time={recipe.time}
+              tags={recipe.tags}
+              type="list"
               onPress={handleRecipePress}
-          />
+            />
           ))
         ) : (
           <View style={styles.emptyStateContainer}>
@@ -416,6 +442,32 @@ const styles = StyleSheet.create({
     fontSize: Metrics.baseFontSize,
     color: Colors.textMedium,
     textAlign: 'center',
+  },
+  visitorBanner: {
+    backgroundColor: Colors.primary + '10',
+    borderRadius: Metrics.mediumBorderRadius,
+    padding: Metrics.mediumSpacing,
+    marginBottom: Metrics.mediumSpacing,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  visitorBannerText: {
+    flex: 1,
+    fontSize: Metrics.smallFontSize,
+    color: Colors.textDark,
+    marginRight: Metrics.baseSpacing,
+  },
+  visitorBannerButton: {
+    backgroundColor: Colors.primary,
+    paddingVertical: Metrics.smallSpacing,
+    paddingHorizontal: Metrics.mediumSpacing,
+    borderRadius: Metrics.roundedFull,
+  },
+  visitorBannerButtonText: {
+    color: Colors.card,
+    fontSize: Metrics.smallFontSize,
+    fontWeight: '500',
   },
 });
 

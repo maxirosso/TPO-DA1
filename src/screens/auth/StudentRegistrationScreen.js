@@ -7,10 +7,13 @@ import {
   TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
+  Image,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/Feather';
+import * as ImagePicker from 'react-native-image-picker';
 
 import Button from '../../components/common/Button';
 import Input from '../../components/common/Input';
@@ -23,18 +26,54 @@ const StudentRegistrationScreen = ({ navigation }) => {
   const [cvv, setCvv] = useState('');
   const [cardName, setCardName] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [dniFront, setDniFront] = useState(null);
+  const [dniBack, setDniBack] = useState(null);
+  const [currentStep, setCurrentStep] = useState(1);
   
+  const handleSelectImage = (type) => {
+    ImagePicker.launchImageLibrary(
+      {
+        mediaType: 'photo',
+        includeBase64: false,
+        maxHeight: 800,
+        maxWidth: 800,
+      },
+      (response) => {
+        if (response.didCancel) {
+          return;
+        }
+
+        if (response.assets && response.assets.length > 0) {
+          if (type === 'front') {
+            setDniFront(response.assets[0].uri);
+          } else {
+            setDniBack(response.assets[0].uri);
+          }
+        }
+      },
+    );
+  };
+
   const handleContinue = () => {
-    if (!cardNumber || !expiry || !cvv || !cardName) {
-      return;
+    if (currentStep === 1) {
+      if (!cardNumber || !expiry || !cvv || !cardName) {
+        Alert.alert('Error', 'Por favor, completa todos los campos de la tarjeta.');
+        return;
+      }
+      setCurrentStep(2);
+    } else if (currentStep === 2) {
+      if (!dniFront || !dniBack) {
+        Alert.alert('Error', 'Por favor, sube las fotos de tu DNI (frente y reverso).');
+        return;
+      }
+      setIsLoading(true);
+      
+      // Simulate API call for verification
+      setTimeout(() => {
+        setIsLoading(false);
+        navigation.navigate('Verification', { email: 'estudiante@ejemplo.com' });
+      }, 1500);
     }
-    
-    setIsLoading(true);
-    
-    setTimeout(() => {
-      setIsLoading(false);
-      navigation.navigate('Verification', { email: 'estudiante@ejemplo.com' });
-    }, 1500);
   };
   
   const formatCardNumber = (text) => {
@@ -79,80 +118,107 @@ const StudentRegistrationScreen = ({ navigation }) => {
         >
           <View style={styles.progressContainer}>
             <View style={styles.progressBar}>
-              <View style={[styles.progressFill, { width: '33%' }]} />
+              <View style={[styles.progressFill, { width: `${currentStep * 50}%` }]} />
             </View>
-            <Text style={styles.progressText}>Paso 1/3</Text>
+            <Text style={styles.progressText}>Paso {currentStep}/2</Text>
           </View>
           
-          <View style={styles.infoContainer}>
-            <View style={styles.infoIcon}>
-              <Icon name="info" size={20} color={Colors.primary} />
-            </View>
-            <Text style={styles.infoText}>
-              El registro como estudiante es gratuito a menos que te inscribas en un curso. Necesitarás proporcionar información de pago para futuras inscripciones.
-            </Text>
-          </View>
-          
-          <View style={styles.sectionContainer}>
-            <Text style={styles.sectionTitle}>Método de Pago</Text>
-            <Text style={styles.sectionDescription}>
-              Agrega un método de pago para las inscripciones a cursos. No te cobraremos hasta que te registres en un curso.
-            </Text>
-            
-            <Input
-              label="Número de Tarjeta"
-              value={cardNumber}
-              onChangeText={(text) => setCardNumber(formatCardNumber(text))}
-              placeholder="1234 5678 9012 3456"
-              keyboardType="number-pad"
-              leftIcon="credit-card"
-            />
-            
-            <View style={styles.rowFields}>
-              <Input
-                label="Fecha de Expiración"
-                value={expiry}
-                onChangeText={(text) => setExpiry(formatExpiry(text))}
-                placeholder="MM/AA"
-                keyboardType="number-pad"
-                style={styles.halfField}
-              />
+          {currentStep === 1 ? (
+            <>
+              <View style={styles.infoContainer}>
+                <View style={styles.infoIcon}>
+                  <Icon name="info" size={20} color={Colors.primary} />
+                </View>
+                <Text style={styles.infoText}>
+                  El registro como estudiante es gratuito a menos que te inscribas en un curso. Necesitarás proporcionar información de pago para futuras inscripciones.
+                </Text>
+              </View>
               
-              <Input
-                label="Código de Seguridad"
-                value={cvv}
-                onChangeText={setCvv}
-                placeholder="CVV"
-                keyboardType="number-pad"
-                maxLength={3}
-                style={styles.halfField}
-              />
-            </View>
-            
-            <Input
-              label="Nombre en la Tarjeta"
-              value={cardName}
-              onChangeText={setCardName}
-              placeholder="Juan Pérez"
-            />
-            
-            <Text style={styles.altPaymentLabel}>O usa otro método de pago</Text>
-            
-            <View style={styles.altPaymentsContainer}>
-              <TouchableOpacity style={styles.altPaymentButton}>
-                <Icon name="dollar-sign" size={20} color={Colors.textDark} style={styles.altPaymentIcon} />
-                <Text style={styles.altPaymentText}>Pagar</Text>
-              </TouchableOpacity>
+              <View style={styles.sectionContainer}>
+                <Text style={styles.sectionTitle}>Método de Pago</Text>
+                <Text style={styles.sectionDescription}>
+                  Agrega un método de pago para las inscripciones a cursos. No te cobraremos hasta que te registres en un curso.
+                </Text>
+                
+                <Input
+                  label="Número de Tarjeta"
+                  value={cardNumber}
+                  onChangeText={(text) => setCardNumber(formatCardNumber(text))}
+                  placeholder="1234 5678 9012 3456"
+                  keyboardType="number-pad"
+                  leftIcon="credit-card"
+                />
+                
+                <View style={styles.rowFields}>
+                  <Input
+                    label="Fecha de Expiración"
+                    value={expiry}
+                    onChangeText={(text) => setExpiry(formatExpiry(text))}
+                    placeholder="MM/AA"
+                    keyboardType="number-pad"
+                    style={styles.halfField}
+                  />
+                  
+                  <Input
+                    label="Código de Seguridad"
+                    value={cvv}
+                    onChangeText={setCvv}
+                    placeholder="CVV"
+                    keyboardType="number-pad"
+                    maxLength={3}
+                    style={styles.halfField}
+                  />
+                </View>
+                
+                <Input
+                  label="Nombre en la Tarjeta"
+                  value={cardName}
+                  onChangeText={setCardName}
+                  placeholder="Juan Pérez"
+                />
+              </View>
+            </>
+          ) : (
+            <View style={styles.sectionContainer}>
+              <Text style={styles.sectionTitle}>Verificación de Identidad</Text>
+              <Text style={styles.sectionDescription}>
+                Por favor, proporciona fotos de tu documento de identidad (frente y reverso) para la verificación.
+              </Text>
               
-              <TouchableOpacity style={styles.altPaymentButton}>
-                <Icon name="credit-card" size={20} color={Colors.textDark} style={styles.altPaymentIcon} />
-                <Text style={styles.altPaymentText}>PayPal</Text>
-              </TouchableOpacity>
+              <View style={styles.dniUploadContainer}>
+                <TouchableOpacity
+                  style={styles.dniUploadButton}
+                  onPress={() => handleSelectImage('front')}
+                >
+                  {dniFront ? (
+                    <Image source={{ uri: dniFront }} style={styles.dniImage} />
+                  ) : (
+                    <View style={styles.dniPlaceholder}>
+                      <Icon name="camera" size={40} color={Colors.textMedium} />
+                      <Text style={styles.dniPlaceholderText}>Frente del DNI</Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+                
+                <TouchableOpacity
+                  style={styles.dniUploadButton}
+                  onPress={() => handleSelectImage('back')}
+                >
+                  {dniBack ? (
+                    <Image source={{ uri: dniBack }} style={styles.dniImage} />
+                  ) : (
+                    <View style={styles.dniPlaceholder}>
+                      <Icon name="camera" size={40} color={Colors.textMedium} />
+                      <Text style={styles.dniPlaceholderText}>Reverso del DNI</Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+              </View>
             </View>
-          </View>
+          )}
           
           <Button
-            title="Continuar"
+            title={currentStep === 1 ? "Continuar" : "Verificar Identidad"}
             onPress={handleContinue}
             fullWidth
             style={styles.continueButton}
@@ -164,7 +230,6 @@ const StudentRegistrationScreen = ({ navigation }) => {
   );
 };
 
-// Styles remain unchanged
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -254,36 +319,37 @@ const styles = StyleSheet.create({
   halfField: {
     width: '48%',
   },
-  altPaymentLabel: {
-    fontSize: Metrics.baseFontSize,
-    fontWeight: '500',
-    color: Colors.textDark,
-    marginTop: Metrics.mediumSpacing,
-    marginBottom: Metrics.baseSpacing,
-  },
-  altPaymentsContainer: {
+  dniUploadContainer: {
     flexDirection: 'row',
-    marginBottom: Metrics.mediumSpacing,
+    justifyContent: 'space-between',
+    marginTop: Metrics.baseSpacing,
   },
-  altPaymentButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+  dniUploadButton: {
+    width: '48%',
+    aspectRatio: 1.5,
+    borderRadius: Metrics.baseBorderRadius,
+    overflow: 'hidden',
     backgroundColor: Colors.background,
     borderWidth: 1,
     borderColor: Colors.border,
-    borderRadius: Metrics.baseBorderRadius,
-    paddingVertical: Metrics.baseSpacing,
-    paddingHorizontal: Metrics.mediumSpacing,
-    marginRight: Metrics.baseSpacing,
+    borderStyle: 'dashed',
+  },
+  dniImage: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
+  },
+  dniPlaceholder: {
     flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: Metrics.baseSpacing,
   },
-  altPaymentIcon: {
-    marginRight: Metrics.smallSpacing,
-  },
-  altPaymentText: {
-    fontSize: Metrics.baseFontSize,
-    color: Colors.textDark,
+  dniPlaceholderText: {
+    fontSize: Metrics.smallFontSize,
+    color: Colors.textMedium,
+    textAlign: 'center',
+    marginTop: Metrics.smallSpacing,
   },
   continueButton: {
     marginTop: Metrics.baseSpacing,

@@ -29,7 +29,7 @@ const LoginScreen = ({ navigation }) => {
   const emailInputRef = useRef(null);
   const passwordInputRef = useRef(null);
   
-  const { signIn, resendVerificationCode } = useContext(AuthContext);
+  const { signIn, resendVerificationCode, enterVisitorMode } = useContext(AuthContext);
   
   const handleSignIn = async () => {
     Keyboard.dismiss();
@@ -98,6 +98,10 @@ const LoginScreen = ({ navigation }) => {
   
   const handleSignUp = () => {
     navigation.navigate('Signup');
+  };
+  
+  const handleVisitorMode = () => {
+    enterVisitorMode();
   };
   
   const renderSignInTab = () => (
@@ -171,6 +175,15 @@ const LoginScreen = ({ navigation }) => {
           <Icon name="apple" size={20} color={Colors.textDark} />
         </TouchableOpacity>
       </View>
+      
+      <TouchableOpacity
+        style={styles.visitorButton}
+        onPress={handleVisitorMode}
+      >
+        <Text style={styles.visitorButtonText}>
+          Continuar como Visitante
+        </Text>
+      </TouchableOpacity>
     </>
   );
   
@@ -419,6 +432,15 @@ const styles = StyleSheet.create({
   bottomLink: {
     color: Colors.primary,
     fontWeight: '600',
+  },
+  visitorButton: {
+    marginTop: Metrics.baseSpacing,
+    alignItems: 'center',
+  },
+  visitorButtonText: {
+    color: Colors.primary,
+    fontSize: Metrics.baseFontSize,
+    fontWeight: '500',
   },
 });
 
