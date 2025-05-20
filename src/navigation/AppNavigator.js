@@ -13,6 +13,7 @@ import MyCoursesScreen from '../screens/main/MyCoursesScreen';
 import CourseDetailScreen from '../screens/main/CourseDetailScreen';
 import CourseEnrollmentScreen from '../screens/main/CourseEnrollmentScreen';
 import QRScannerScreen from '../screens/main/QRScannerScreen';
+import ServerConfigScreen from '../screens/main/ServerConfigScreen';
 
 // Recipe Screens
 import RecipeDetailScreen from '../screens/recipe/RecipeDetailScreen';
@@ -71,6 +72,7 @@ const ProfileStackScreen = () => (
     <ProfileStack.Screen name="ProfileHome" component={ProfileScreen} />
     <ProfileStack.Screen name="MyCourses" component={MyCoursesScreen} />
     <ProfileStack.Screen name="SavedScaledRecipes" component={SavedScaledRecipesScreen} />
+    <ProfileStack.Screen name="ServerConfig" component={ServerConfigScreen} />
   </ProfileStack.Navigator>
 );
 

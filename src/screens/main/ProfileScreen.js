@@ -62,6 +62,12 @@ const ProfileScreen = ({ navigation }) => {
       description: 'Tu lista de compras de ingredientes',
     },
     {
+      id: 'server_config',
+      icon: 'server',
+      title: 'Configuración del Servidor',
+      description: 'Conectar con tu servidor backend',
+    },
+    {
       id: 'settings',
       icon: 'settings',
       title: 'Configuración',
@@ -86,6 +92,9 @@ const ProfileScreen = ({ navigation }) => {
     } else if (id === 'saved_scaled_recipes') {
       // Navigate to Saved Scaled Recipes screen
       navigation.navigate('SavedScaledRecipes');
+    } else if (id === 'server_config') {
+      // Navigate to Server Configuration screen
+      navigation.navigate('ServerConfig');
     }
   };
 
