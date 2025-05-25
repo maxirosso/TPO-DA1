@@ -14,6 +14,20 @@ export default {
   xLargeSpacing: 32,
   xxLargeSpacing: 40,
   
+  // Padding
+  basePadding: 8,
+  smallPadding: 4,
+  mediumPadding: 16,
+  largePadding: 24,
+  xLargePadding: 32,
+  
+  // Margins
+  baseMargin: 8,
+  smallMargin: 4,
+  mediumMargin: 16,
+  largeMargin: 24,
+  xLargeMargin: 32,
+  
   // Border radius
   baseBorderRadius: 8,
   smallBorderRadius: 4,

@@ -5,8 +5,20 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 // Determinar si estamos en un emulador
 const isAndroidEmulator = Platform.OS === 'android' && !__DEV__;
 
-// Configurar la URL base de la API dependiendo del entorno
-let API_BASE_URL;
+// Variable para almacenar la URL de la API
+let API_BASE_URL = 'http://localhost:8080'; // Default value until properly initialized
+
+// Configuración de la API
+const apiConfig = {
+  get API_BASE_URL() {
+    return API_BASE_URL;
+  },
+  TIMEOUT: 15000, // Tiempo de espera máximo para las solicitudes en ms
+  DEFAULT_HEADERS: {
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+  }
+};
 
 // Función para cambiar la URL API en tiempo de ejecución
 export const changeApiUrl = async (newUrl) => {
@@ -34,7 +46,7 @@ export const getSavedApiUrl = async () => {
 };
 
 // Inicialización de la URL API
-const initializeApiUrl = async () => {
+export const initializeApiUrl = async () => {
   // Verificar si hay una URL guardada
   const savedUrl = await getSavedApiUrl();
   
@@ -62,13 +74,8 @@ const initializeApiUrl = async () => {
 };
 
 // Ejecutar inicialización
-initializeApiUrl();
+(async () => {
+  await initializeApiUrl();
+})();
 
-export default {
-  API_BASE_URL,
-  TIMEOUT: 15000, // Tiempo de espera máximo para las solicitudes en ms
-  DEFAULT_HEADERS: {
-    'Content-Type': 'application/json',
-    'Accept': 'application/json',
-  }
-}; 
+export default apiConfig; 
