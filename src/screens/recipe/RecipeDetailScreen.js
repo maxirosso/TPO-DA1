@@ -17,16 +17,19 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Feather';
 import Slider from '@react-native-community/slider';
 import { Rating } from 'react-native-ratings';
+import { useSelector, useDispatch } from 'react-redux';
 
 import Button from '../../components/common/Button';
 import Colors from '../../themes/colors';
 import Metrics from '../../themes/metrics';
+import { toggleFavorite } from '../../store/actions/recipeActions';
+import { selectIsFavorite } from '../../store/selectors/recipeSelectors';
 
 const { width } = Dimensions.get('window');
 
 const RecipeDetailScreen = ({ navigation, route }) => {
+  const dispatch = useDispatch();
   const [activeTab, setActiveTab] = useState('ingredients');
-  const [isFavorite, setIsFavorite] = useState(false);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [reviewText, setReviewText] = useState('');
   const [reviewRating, setReviewRating] = useState(5);
@@ -44,6 +47,9 @@ const RecipeDetailScreen = ({ navigation, route }) => {
   
   // Obtener el ID o datos iniciales de la receta de los parámetros de navegación
   const recipeFromParams = route.params?.recipe || {};
+  
+  // Get favorite status from Redux store
+  const isFavorite = useSelector(state => selectIsFavorite(state, recipeFromParams.id));
   
   // Estado para almacenar los datos completos de la receta
   const [recipe, setRecipe] = useState({
@@ -118,8 +124,7 @@ const RecipeDetailScreen = ({ navigation, route }) => {
   }, [recipeFromParams.id]);
   
   const handleFavoriteToggle = () => {
-    setIsFavorite(!isFavorite);
-    // Aquí iría la lógica para guardar en favoritos
+    dispatch(toggleFavorite(recipe.id));
   };
 
   const openReviewModal = () => {
@@ -340,9 +345,10 @@ const RecipeDetailScreen = ({ navigation, route }) => {
               onPress={handleFavoriteToggle}
             >
               <Icon
-                name={isFavorite ? 'heart' : 'heart'}
+                name="heart"
                 size={20}
                 color={isFavorite ? Colors.error : Colors.card}
+                style={isFavorite ? { textShadowColor: Colors.error, textShadowRadius: 1 } : {}}
               />
             </TouchableOpacity>
             

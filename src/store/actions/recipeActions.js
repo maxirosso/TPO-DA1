@@ -1,4 +1,5 @@
 import { recipeService } from '../../services/api';
+import { loadFavoritesFromStorage } from '../reducers/recipeReducer';
 
 // Action Types
 export const RECIPES_LOADING = 'RECIPES_LOADING';
@@ -9,6 +10,7 @@ export const RECIPE_DETAIL_SUCCESS = 'RECIPE_DETAIL_SUCCESS';
 export const RECIPE_DETAIL_ERROR = 'RECIPE_DETAIL_ERROR';
 export const SAVE_RECIPE_SUCCESS = 'SAVE_RECIPE_SUCCESS';
 export const TOGGLE_FAVORITE = 'TOGGLE_FAVORITE';
+export const LOAD_FAVORITES_SUCCESS = 'LOAD_FAVORITES_SUCCESS';
 
 // Action Creators
 export const fetchRecipes = () => async (dispatch) => {
@@ -67,3 +69,17 @@ export const toggleFavorite = (recipeId) => ({
   type: TOGGLE_FAVORITE,
   payload: recipeId
 });
+
+export const loadFavorites = () => async (dispatch) => {
+  try {
+    const favorites = await loadFavoritesFromStorage();
+    dispatch({
+      type: LOAD_FAVORITES_SUCCESS,
+      payload: favorites
+    });
+    return favorites;
+  } catch (error) {
+    console.error('Load favorites error:', error);
+    return [];
+  }
+};

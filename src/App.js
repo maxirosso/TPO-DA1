@@ -3,7 +3,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { NavigationContainer } from '@react-navigation/native';
 import { StatusBar } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Provider } from 'react-redux';
+import { Provider, useDispatch } from 'react-redux';
 import store from './store/store';
 import 'react-native-gesture-handler'; // Add this import for React Navigation
 import { View, ActivityIndicator } from 'react-native';
@@ -18,7 +18,11 @@ import { AuthContext, AuthProvider } from './context/AuthContext';
 // Services
 import { authService } from './services/auth';
 
-const App = () => {
+// Actions
+import { loadFavorites } from './store/actions/recipeActions';
+
+const AppContent = () => {
+  const dispatch = useDispatch();
   const [isLoading, setIsLoading] = useState(true);
   const [userToken, setUserToken] = useState(null);
   const [isVisitor, setIsVisitor] = useState(false);
@@ -109,6 +113,9 @@ const App = () => {
     const bootstrapAsync = async () => {
       setIsLoading(true);
       try {
+        // Load favorites from storage
+        dispatch(loadFavorites());
+        
         const isAuthenticated = await authService.isAuthenticated();
         if (isAuthenticated) {
           const token = await AsyncStorage.getItem('user_token');
@@ -122,7 +129,7 @@ const App = () => {
     };
 
     bootstrapAsync();
-  }, []);
+  }, [dispatch]);
 
   // Simple loading screen
   if (isLoading) {
@@ -137,15 +144,21 @@ const App = () => {
   }
 
   return (
+    <AuthContext.Provider value={authContext}>
+      <SafeAreaProvider>
+        <NavigationContainer>
+          <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+          {userToken != null || isVisitor ? <AppNavigator /> : <AuthNavigator />}
+        </NavigationContainer>
+      </SafeAreaProvider>
+    </AuthContext.Provider>
+  );
+};
+
+const App = () => {
+  return (
     <Provider store={store}>
-      <AuthContext.Provider value={authContext}>
-        <SafeAreaProvider>
-          <NavigationContainer>
-            <StatusBar barStyle="dark-content" backgroundColor="#fff" />
-            {userToken != null || isVisitor ? <AppNavigator /> : <AuthNavigator />}
-          </NavigationContainer>
-        </SafeAreaProvider>
-      </AuthContext.Provider>
+      <AppContent />
     </Provider>
   );
 };

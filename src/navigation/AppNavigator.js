@@ -14,6 +14,12 @@ import CourseDetailScreen from '../screens/main/CourseDetailScreen';
 import CourseEnrollmentScreen from '../screens/main/CourseEnrollmentScreen';
 import QRScannerScreen from '../screens/main/QRScannerScreen';
 import ServerConfigScreen from '../screens/main/ServerConfigScreen';
+import MyRecipesScreen from '../screens/main/MyRecipesScreen';
+import AccountSettingsScreen from '../screens/main/AccountSettingsScreen';
+import AppSettingsScreen from '../screens/main/AppSettingsScreen';
+import HelpSupportScreen from '../screens/main/HelpSupportScreen';
+import AboutScreen from '../screens/main/AboutScreen';
+import ShoppingListScreen from '../screens/main/ShoppingListScreen';
 
 // Recipe Screens
 import RecipeDetailScreen from '../screens/recipe/RecipeDetailScreen';
@@ -70,9 +76,16 @@ const ProfileStackScreen = () => (
       headerShown: false,
     }}>
     <ProfileStack.Screen name="ProfileHome" component={ProfileScreen} />
+    <ProfileStack.Screen name="MyRecipes" component={MyRecipesScreen} />
     <ProfileStack.Screen name="MyCourses" component={MyCoursesScreen} />
     <ProfileStack.Screen name="SavedScaledRecipes" component={SavedScaledRecipesScreen} />
+    <ProfileStack.Screen name="ShoppingList" component={ShoppingListScreen} />
+    <ProfileStack.Screen name="AccountSettings" component={AccountSettingsScreen} />
+    <ProfileStack.Screen name="AppSettings" component={AppSettingsScreen} />
+    <ProfileStack.Screen name="HelpSupport" component={HelpSupportScreen} />
+    <ProfileStack.Screen name="About" component={AboutScreen} />
     <ProfileStack.Screen name="ServerConfig" component={ServerConfigScreen} />
+    <ProfileStack.Screen name="RecipeDetail" component={RecipeDetailScreen} />
   </ProfileStack.Navigator>
 );
 

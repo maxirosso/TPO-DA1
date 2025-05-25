@@ -1,3 +1,4 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
     RECIPES_LOADING,
     RECIPES_SUCCESS,
@@ -6,8 +7,31 @@ import {
     RECIPE_DETAIL_SUCCESS,
     RECIPE_DETAIL_ERROR,
     SAVE_RECIPE_SUCCESS,
-    TOGGLE_FAVORITE
+    TOGGLE_FAVORITE,
+    LOAD_FAVORITES_SUCCESS
   } from '../actions/recipeActions';
+
+  const FAVORITES_STORAGE_KEY = '@favorites';
+
+  // Helper function to save favorites to AsyncStorage
+  const saveFavoritesToStorage = async (favorites) => {
+    try {
+      await AsyncStorage.setItem(FAVORITES_STORAGE_KEY, JSON.stringify(favorites));
+    } catch (error) {
+      console.error('Error saving favorites to storage:', error);
+    }
+  };
+
+  // Helper function to load favorites from AsyncStorage
+  export const loadFavoritesFromStorage = async () => {
+    try {
+      const favoritesJson = await AsyncStorage.getItem(FAVORITES_STORAGE_KEY);
+      return favoritesJson ? JSON.parse(favoritesJson) : [];
+    } catch (error) {
+      console.error('Error loading favorites from storage:', error);
+      return [];
+    }
+  };
   
   const initialState = {
     recipes: [],
@@ -74,13 +98,24 @@ import {
         const recipeId = action.payload;
         const isFavorite = state.favorites.includes(recipeId);
         
+        const newFavorites = isFavorite 
+          ? state.favorites.filter(id => id !== recipeId)
+          : [...state.favorites, recipeId];
+
+        // Save to AsyncStorage
+        saveFavoritesToStorage(newFavorites);
+        
         return {
           ...state,
-          favorites: isFavorite 
-            ? state.favorites.filter(id => id !== recipeId)
-            : [...state.favorites, recipeId]
+          favorites: newFavorites
         };
       }
+
+      case LOAD_FAVORITES_SUCCESS:
+        return {
+          ...state,
+          favorites: action.payload
+        };
         
       default:
         return state;
