@@ -94,11 +94,11 @@ const RecipeDetailScreen = ({ navigation, route }) => {
           return;
         }
         
-        // Importar dinámicamente el servicio API para evitar dependencias circulares
-        const { recipeService } = await import('../../services/api');
-        
-        // Obtener la receta completa
-        const fullRecipe = await recipeService.getRecipeById(recipeId);
+        // Importar el objeto api correctamente
+        const { api } = await import('../../services/api');
+        // Obtener la receta completa usando el método correcto
+        const response = await api.recipes.getById(recipeId);
+        const fullRecipe = response?.data || response;
         
         // Verificar que la receta tiene todos los campos necesarios
         if (!fullRecipe || typeof fullRecipe !== 'object') {
@@ -123,8 +123,15 @@ const RecipeDetailScreen = ({ navigation, route }) => {
     loadRecipeDetails();
   }, [recipeFromParams.id]);
   
-  const handleFavoriteToggle = () => {
-    dispatch(toggleFavorite(recipe.id));
+  const handleFavoriteToggle = async () => {
+    try {
+      setIsSubmitting(true);
+      await dispatch(toggleFavorite(recipe.id));
+    } catch (error) {
+      console.error('Error toggling favorite:', error);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const openReviewModal = () => {
@@ -343,13 +350,18 @@ const RecipeDetailScreen = ({ navigation, route }) => {
             <TouchableOpacity
               style={[styles.iconButton, isFavorite && styles.activeIconButton]}
               onPress={handleFavoriteToggle}
+              disabled={isSubmitting}
             >
-              <Icon
-                name="heart"
-                size={20}
-                color={isFavorite ? Colors.error : Colors.card}
-                style={isFavorite ? { textShadowColor: Colors.error, textShadowRadius: 1 } : {}}
-              />
+              {isSubmitting ? (
+                <ActivityIndicator size="small" color={Colors.card} />
+              ) : (
+                <Icon
+                  name="heart"
+                  size={20}
+                  color={isFavorite ? Colors.error : Colors.card}
+                  style={isFavorite ? { textShadowColor: Colors.error, textShadowRadius: 1 } : {}}
+                />
+              )}
             </TouchableOpacity>
             
             <TouchableOpacity 

@@ -18,21 +18,6 @@ import Metrics from '../../themes/metrics';
 const { width } = Dimensions.get('window');
 const SCAN_AREA_SIZE = width * 0.7;
 
-// Mock function to simulate scanning a QR code
-const mockScanQR = (callback) => {
-  // Simulate a delay for scanning
-  setTimeout(() => {
-    // Simulate a QR code value
-    const qrValue = {
-      type: 'course_attendance',
-      courseId: '1',
-      locationId: 'loc1',
-      sessionDate: new Date().toISOString().split('T')[0],
-    };
-    callback(qrValue);
-  }, 3000);
-};
-
 const QRScannerScreen = ({ navigation, route }) => {
   const { courseId } = route.params || {};
   const [scanning, setScanning] = useState(true);
@@ -40,41 +25,12 @@ const QRScannerScreen = ({ navigation, route }) => {
   const [scanResult, setScanResult] = useState(null);
   const [processingAttendance, setProcessingAttendance] = useState(false);
 
-  // Mock QR scanning when component mounts
-  useEffect(() => {
-    if (scanning && !scanned) {
-      mockScanQR((result) => {
-        setScanned(true);
-        setScanResult(result);
-        setScanning(false);
-
-        // Validate QR code
-        if (result.type === 'course_attendance' && result.courseId === courseId) {
-          handleValidQRCode(result);
-        } else {
-          Alert.alert(
-            'Código QR Inválido',
-            'El código QR escaneado no corresponde al curso seleccionado o no es un código de asistencia válido.',
-            [
-              {
-                text: 'Intentar Nuevamente',
-                onPress: () => {
-                  setScanned(false);
-                  setScanning(true);
-                  setScanResult(null);
-                }
-              },
-              {
-                text: 'Cancelar',
-                onPress: () => navigation.goBack(),
-                style: 'cancel',
-              }
-            ]
-          );
-        }
-      });
-    }
-  }, [scanning, scanned, courseId]);
+  // Aquí deberías integrar el escaneo real con la cámara y el backend
+  // useEffect(() => {
+  //   if (scanning && !scanned) {
+  //     // Integrar con la cámara y backend aquí
+  //   }
+  // }, [scanning, scanned, courseId]);
 
   const handleValidQRCode = (result) => {
     setProcessingAttendance(true);

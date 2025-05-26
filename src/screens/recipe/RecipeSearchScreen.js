@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -17,112 +17,36 @@ import Icon from 'react-native-vector-icons/Feather';
 import RecipeCard from '../../components/recipe/RecipeCard';
 import Colors from '../../themes/colors';
 import Metrics from '../../themes/metrics';
-
-// Dummy data for recipe search
-const allRecipes = [
-  {
-    id: '1',
-    title: 'Tazón Mediterráneo',
-    imageUrl: 'https://images.unsplash.com/photo-1527515637462-cff94eecc1ac',
-    time: 25,
-    tags: ['Saludable', 'Almuerzo', 'Vegetariano'],
-    user: 'Chef María',
-    ingredients: [
-      {name: 'quinoa', amount: '1 taza'},
-      {name: 'tomate', amount: '1 taza', preparation: 'partido en cubos'},
-      {name: 'pepino', amount: '1', preparation: 'cortado en cubos'},
-      {name: 'aceitunas', amount: '1/2 taza'},
-      {name: 'queso feta', amount: '1/4 taza', preparation: 'desmenuzado'}
-    ],
-    dateAdded: '2023-05-15',
-  },
-  {
-    id: '2',
-    title: 'Tostada de Aguacate',
-    imageUrl: 'https://images.unsplash.com/photo-1565299507177-b0ac66763828',
-    time: 10,
-    tags: ['Desayuno', 'Rápido', 'Vegetariano'],
-    user: 'Carlos Gómez',
-    ingredients: [
-      {name: 'pan integral', amount: '2 rebanadas'},
-      {name: 'aguacate', amount: '1', preparation: 'maduro'},
-      {name: 'tomate', amount: '1', preparation: 'en rodajas'},
-      {name: 'huevo', amount: '1', preparation: 'frito o pochado'}
-    ],
-    dateAdded: '2023-06-22',
-  },
-  {
-    id: '3',
-    title: 'Tazón de Batido de Bayas',
-    imageUrl: 'https://images.unsplash.com/photo-1557837931-97fdbe7cb9a4',
-    time: 15,
-    tags: ['Desayuno', 'Vegano', 'Sin Gluten'],
-    user: 'Ana Hernández',
-    ingredients: [
-      {name: 'bayas mixtas', amount: '1 taza', preparation: 'congeladas'},
-      {name: 'plátano', amount: '1', preparation: 'congelado en trozos'},
-      {name: 'leche de almendras', amount: '1/2 taza'},
-      {name: 'granola', amount: '1/4 taza', preparation: 'sin gluten'}
-    ],
-    dateAdded: '2023-07-10',
-  },
-  {
-    id: '4',
-    title: 'Salmón a la Parrilla',
-    imageUrl: 'https://images.unsplash.com/photo-1551183053-bf91a1d81141',
-    time: 30,
-    tags: ['Cena', 'Proteína', 'Pescado'],
-    user: 'Chef Roberto',
-    ingredients: [
-      {name: 'salmón', amount: '4 filetes', preparation: '150g cada uno'},
-      {name: 'limón', amount: '1'},
-      {name: 'eneldo', amount: '2 cucharadas', preparation: 'fresco, picado'},
-      {name: 'ajo', amount: '2 dientes', preparation: 'picados'},
-      {name: 'aceite de oliva', amount: '2 cucharadas'}
-    ],
-    dateAdded: '2023-08-05',
-  },
-  {
-    id: '5',
-    title: 'Pimientos Rellenos de Quinua',
-    imageUrl: 'https://images.unsplash.com/photo-1564834744159-ff0ea41ba4b9',
-    time: 45,
-    tags: ['Cena', 'Vegetariano', 'Sin Gluten'],
-    user: 'Laura Martínez',
-    ingredients: [
-      {name: 'pimientos', amount: '4', preparation: 'grandes, variados colores'},
-      {name: 'quinua', amount: '1 taza'},
-      {name: 'cebolla', amount: '1', preparation: 'picada finamente'},
-      {name: 'tomate', amount: '2', preparation: 'picados'},
-      {name: 'queso', amount: '1/2 taza', preparation: 'rallado'}
-    ],
-    dateAdded: '2023-09-12',
-  },
-  {
-    id: '6',
-    title: 'Ensalada de Verduras Frescas',
-    imageUrl: 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd',
-    time: 15,
-    tags: ['Almuerzo', 'Vegano', 'Rápido'],
-    user: 'Chef María',
-    ingredients: [
-      {name: 'lechuga', amount: '4 tazas', preparation: 'mixta'},
-      {name: 'tomate', amount: '2', preparation: 'cortados en cubos'},
-      {name: 'pepino', amount: '1', preparation: 'en rodajas finas'},
-      {name: 'zanahoria', amount: '1', preparation: 'rallada'},
-      {name: 'aguacate', amount: '1', preparation: 'en cubos'}
-    ],
-    dateAdded: '2023-10-18',
-  },
-];
+import dataService from '../../services/dataService';
 
 const RecipeSearchScreen = ({ navigation }) => {
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchType, setSearchType] = useState('name'); // 'name', 'ingredient', 'tag', 'user'
+  const [searchType, setSearchType] = useState('name'); // 'name', 'ingredient', 'tag', 'user', 'exclude'
   const [sortType, setSortType] = useState('alphabetical'); // 'alphabetical', 'newest', 'user'
   const [filterModalVisible, setFilterModalVisible] = useState(false);
   const [excludeIngredient, setExcludeIngredient] = useState('');
-  const [filteredRecipes, setFilteredRecipes] = useState(allRecipes);
+  const [filteredRecipes, setFilteredRecipes] = useState([]);
+  const [allRecipes, setAllRecipes] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    loadAllRecipes();
+  }, []);
+
+  const loadAllRecipes = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const recipes = await dataService.getAllRecipes();
+      setAllRecipes(recipes);
+    } catch (err) {
+      setError('No se pudieron cargar las recetas.');
+      setAllRecipes([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Filter recipes based on search criteria
   const filterRecipes = () => {
@@ -142,6 +66,13 @@ const RecipeSearchScreen = ({ navigation }) => {
             )
           );
           break;
+        case 'exclude':
+          results = results.filter(recipe =>
+            !recipe.ingredients.some(ingredient =>
+              ingredient.name.toLowerCase().includes(searchQuery.toLowerCase())
+            )
+          );
+          break;
         case 'tag':
           results = results.filter(recipe =>
             recipe.tags.some(tag =>
@@ -157,8 +88,8 @@ const RecipeSearchScreen = ({ navigation }) => {
       }
     }
 
-    // Additional filter for excluding ingredients
-    if (excludeIngredient.trim() !== '') {
+    // Additional filter for excluding ingredients (when using other search types)
+    if (excludeIngredient.trim() !== '' && searchType !== 'exclude') {
       results = results.filter(recipe =>
         !recipe.ingredients.some(ingredient =>
           ingredient.name.toLowerCase().includes(excludeIngredient.toLowerCase())
@@ -263,6 +194,8 @@ const RecipeSearchScreen = ({ navigation }) => {
                 ? "Buscar por ingrediente..."
                 : searchType === 'tag'
                 ? "Buscar por etiqueta..."
+                : searchType === 'exclude'
+                ? "Buscar por ingredientes excluidos..."
                 : "Buscar por usuario..."
             }
             placeholderTextColor={Colors.textMedium}
@@ -312,6 +245,23 @@ const RecipeSearchScreen = ({ navigation }) => {
               ]}
             >
               Ingrediente
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[
+              styles.filterOption,
+              searchType === 'exclude' && styles.activeFilterOption,
+            ]}
+            onPress={() => handleFilterChange('exclude')}
+          >
+            <Text
+              style={[
+                styles.filterOptionText,
+                searchType === 'exclude' && styles.activeFilterOptionText,
+              ]}
+            >
+              Excluir Ingrediente
             </Text>
           </TouchableOpacity>
 

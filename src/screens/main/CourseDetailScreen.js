@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -16,71 +16,67 @@ import LinearGradient from 'react-native-linear-gradient';
 import Button from '../../components/common/Button';
 import Colors from '../../themes/colors';
 import Metrics from '../../themes/metrics';
-
-// Sample data for a cooking course
-const courseData = {
-  id: '1',
-  title: 'Cocina Italiana Básica',
-  imageUrl: 'https://images.unsplash.com/photo-1556910103-1c02745aae4d',
-  level: 'Principiante',
-  price: 49.99,
-  duration: '4 semanas',
-  schedule: 'Lunes y Miércoles, 18:00 - 20:00',
-  modality: 'Presencial',
-  description: 'Aprende los fundamentos de la cocina italiana, desde pastas auténticas hasta salsas clásicas. Este curso te llevará por un viaje culinario a través de Italia sin salir de tu ciudad.',
-  topics: [
-    'Introducción a la cocina italiana y sus regiones',
-    'Técnicas de preparación de pastas frescas',
-    'Salsas clásicas italianas',
-    'Risottos perfectos',
-    'Postres italianos tradicionales',
-  ],
-  requirements: [
-    'No se requiere experiencia previa en cocina',
-    'Delantal y utensilios básicos de cocina (opcional)',
-    'Ingredientes para prácticas en casa (lista será proporcionada)',
-  ],
-  instructor: {
-    name: 'Chef Marco Rossi',
-    avatar: 'https://images.unsplash.com/photo-1560250097-0b93528c311a',
-    bio: 'Chef italiano con más de 15 años de experiencia en restaurantes de Italia y España. Especialista en cocina tradicional italiana.',
-  },
-  locations: [
-    {
-      id: 'loc1',
-      name: 'Sede Central',
-      address: 'Av. Principal 1234, Centro',
-      availableSeats: 5,
-      discount: 0,
-    },
-    {
-      id: 'loc2',
-      name: 'Sede Norte',
-      address: 'Calle 45 #789, Zona Norte',
-      availableSeats: 3,
-      discount: 10,
-    },
-    {
-      id: 'loc3',
-      name: 'Sede Sur',
-      address: 'Av. Sur 567, Zona Sur',
-      availableSeats: 0,
-      discount: 0,
-    },
-  ],
-  startDate: '2023-11-15',
-  endDate: '2023-12-13',
-  rating: 4.8,
-  reviewCount: 45,
-};
+import dataService from '../../services/dataService';
 
 const CourseDetailScreen = ({ navigation, route }) => {
   const [activeTab, setActiveTab] = useState('details');
   const [selectedLocation, setSelectedLocation] = useState(null);
   const [isLocationModalVisible, setIsLocationModalVisible] = useState(false);
+  const [course, setCourse] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  // In a real app, you would get the course data from route.params or API
-  const course = courseData;
+  useEffect(() => {
+    loadCourse();
+  }, []);
+
+  const loadCourse = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const courseId = route.params?.courseId;
+      if (courseId) {
+        const courseData = await dataService.getCourseById(courseId);
+        if (courseData) {
+          setCourse({
+            id: courseData.idCurso,
+            idCurso: courseData.idCurso,
+            title: courseData.descripcion,
+            descripcion: courseData.descripcion,
+            contenidos: courseData.contenidos ? courseData.contenidos.split(',') : [],
+            requerimientos: courseData.requerimientos ? courseData.requerimientos.split(',') : [],
+            duracion: courseData.duracion,
+            duration: courseData.duracion,
+            precio: courseData.precio,
+            price: courseData.precio,
+            modalidad: courseData.modalidad,
+            category: courseData.modalidad,
+            imageUrl: 'https://via.placeholder.com/300x200?text=Curso+Culinario',
+            startDate: courseData.fechaInicio,
+            endDate: courseData.fechaFin,
+            location: courseData.sede ? courseData.sede.nombreSede : 'Sede por confirmar',
+            instructor: 'Chef Profesional',
+            status: 'active',
+            nextSession: courseData.fechaInicio,
+            totalHours: courseData.duracion,
+            topics: courseData.contenidos ? courseData.contenidos.split(',') : []
+          });
+        } else {
+          setError('No se encontró información del curso.');
+        }
+      } else if (route.params?.course) {
+        setCourse(route.params.course);
+      } else {
+        setError('No se encontró información del curso.');
+      }
+    } catch (err) {
+      console.error('Error loading course:', err);
+      setError('No se pudo cargar el curso.');
+      setCourse(null);
+    } finally {
+      setLoading(false);
+    }
+  };
   
   const handleEnroll = () => {
     if (!selectedLocation) {
@@ -109,10 +105,10 @@ const CourseDetailScreen = ({ navigation, route }) => {
   };
   
   const calculateFinalPrice = () => {
-    if (!selectedLocation) return course.price;
+    if (!selectedLocation) return course.precio;
     
-    const discountAmount = (course.price * selectedLocation.discount) / 100;
-    return (course.price - discountAmount).toFixed(2);
+    const discountAmount = (course.precio * selectedLocation.discount) / 100;
+    return (course.precio - discountAmount).toFixed(2);
   };
 
   const renderLocationItem = ({ item }) => (
@@ -165,7 +161,7 @@ const CourseDetailScreen = ({ navigation, route }) => {
         </View>
 
         <Image
-          source={{ uri: course.imageUrl }}
+          source={{ uri: course?.imageUrl }}
           style={styles.courseImage}
           resizeMode="cover"
         />
@@ -174,13 +170,13 @@ const CourseDetailScreen = ({ navigation, route }) => {
           <View style={styles.courseHeader}>
             <View>
               <View style={styles.levelBadge}>
-                <Text style={styles.levelText}>{course.level}</Text>
+                <Text style={styles.levelText}>{course?.level}</Text>
               </View>
-              <Text style={styles.courseTitle}>{course.title}</Text>
+              <Text style={styles.courseTitle}>{course?.title}</Text>
             </View>
             <View style={styles.priceContainer}>
               {selectedLocation && selectedLocation.discount > 0 && (
-                <Text style={styles.originalPrice}>${course.price}</Text>
+                <Text style={styles.originalPrice}>${course.precio}</Text>
               )}
               <Text style={styles.coursePrice}>${calculateFinalPrice()}</Text>
             </View>
@@ -188,17 +184,17 @@ const CourseDetailScreen = ({ navigation, route }) => {
 
           <View style={styles.instructorContainer}>
             <Image
-              source={{ uri: course.instructor.avatar }}
+              source={{ uri: course?.instructor?.avatar }}
               style={styles.instructorAvatar}
             />
             <View style={styles.instructorInfo}>
               <Text style={styles.instructorName}>
-                {course.instructor.name}
+                {course?.instructor?.name}
               </Text>
               <View style={styles.ratingContainer}>
                 <Icon name="star" size={16} color={Colors.warning} />
                 <Text style={styles.ratingText}>
-                  {course.rating} ({course.reviewCount} reseñas)
+                  {course?.rating} ({course?.reviewCount} reseñas)
                 </Text>
               </View>
             </View>
@@ -209,7 +205,7 @@ const CourseDetailScreen = ({ navigation, route }) => {
               <Icon name="calendar" size={18} color={Colors.primary} />
               <View style={styles.infoContent}>
                 <Text style={styles.infoLabel}>Duración</Text>
-                <Text style={styles.infoValue}>{course.duration}</Text>
+                <Text style={styles.infoValue}>{course?.duracion}</Text>
               </View>
             </View>
 
@@ -217,7 +213,7 @@ const CourseDetailScreen = ({ navigation, route }) => {
               <Icon name="clock" size={18} color={Colors.primary} />
               <View style={styles.infoContent}>
                 <Text style={styles.infoLabel}>Horario</Text>
-                <Text style={styles.infoValue}>{course.schedule}</Text>
+                <Text style={styles.infoValue}>{course?.schedule}</Text>
               </View>
             </View>
 
@@ -225,7 +221,7 @@ const CourseDetailScreen = ({ navigation, route }) => {
               <Icon name="map-pin" size={18} color={Colors.primary} />
               <View style={styles.infoContent}>
                 <Text style={styles.infoLabel}>Modalidad</Text>
-                <Text style={styles.infoValue}>{course.modality}</Text>
+                <Text style={styles.infoValue}>{course?.modalidad}</Text>
               </View>
             </View>
 
@@ -233,7 +229,7 @@ const CourseDetailScreen = ({ navigation, route }) => {
               <Icon name="calendar" size={18} color={Colors.primary} />
               <View style={styles.infoContent}>
                 <Text style={styles.infoLabel}>Inicia</Text>
-                <Text style={styles.infoValue}>{new Date(course.startDate).toLocaleDateString()}</Text>
+                <Text style={styles.infoValue}>{new Date(course?.startDate).toLocaleDateString()}</Text>
               </View>
             </View>
           </View>
@@ -312,10 +308,10 @@ const CourseDetailScreen = ({ navigation, route }) => {
           {activeTab === 'details' && (
             <View style={styles.tabContent}>
               <Text style={styles.descriptionTitle}>Descripción del Curso</Text>
-              <Text style={styles.descriptionText}>{course.description}</Text>
+              <Text style={styles.descriptionText}>{course?.descripcion}</Text>
 
               <Text style={styles.requirementsTitle}>Requisitos</Text>
-              {course.requirements.map((requirement, index) => (
+              {course?.requerimientos.map((requirement, index) => (
                 <View key={index} style={styles.requirementItem}>
                   <View style={styles.bulletPoint} />
                   <Text style={styles.requirementText}>{requirement}</Text>
@@ -327,7 +323,7 @@ const CourseDetailScreen = ({ navigation, route }) => {
           {activeTab === 'topics' && (
             <View style={styles.tabContent}>
               <Text style={styles.topicsTitle}>Contenido del Curso</Text>
-              {course.topics.map((topic, index) => (
+              {course?.contenidos.map((topic, index) => (
                 <View key={index} style={styles.topicItem}>
                   <View style={styles.topicNumber}>
                     <Text style={styles.topicNumberText}>{index + 1}</Text>
@@ -342,14 +338,14 @@ const CourseDetailScreen = ({ navigation, route }) => {
             <View style={styles.tabContent}>
               <View style={styles.instructorDetailContainer}>
                 <Image
-                  source={{ uri: course.instructor.avatar }}
+                  source={{ uri: course?.instructor?.avatar }}
                   style={styles.instructorDetailAvatar}
                 />
                 <Text style={styles.instructorDetailName}>
-                  {course.instructor.name}
+                  {course?.instructor?.name}
                 </Text>
                 <Text style={styles.instructorBio}>
-                  {course.instructor.bio}
+                  {course?.instructor?.bio}
                 </Text>
               </View>
             </View>
@@ -376,7 +372,7 @@ const CourseDetailScreen = ({ navigation, route }) => {
             </View>
             
             <FlatList
-              data={course.locations}
+              data={course?.locations}
               renderItem={renderLocationItem}
               keyExtractor={(item) => item.id}
               contentContainerStyle={styles.locationsList}

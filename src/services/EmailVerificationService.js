@@ -24,7 +24,7 @@ class EmailVerificationService {
   static async storeVerificationCode(email, code) {
     try {
       // Intentar guardar el código en el backend
-      const response = await axios.post(`${API_BASE_URL}/auth/store-code`, { 
+      const response = await axios.post(`${apiConfig.API_BASE_URL}/auth/store-code`, { 
         email, 
         code 
       });
@@ -158,7 +158,7 @@ class EmailVerificationService {
   static async sendVerificationEmail(email, code) {
     try {
       // Intentar enviar el correo a través del backend
-      const response = await axios.post(`${API_BASE_URL}/auth/send-verification`, { 
+      const response = await axios.post(`${apiConfig.API_BASE_URL}/auth/send-verification`, { 
         email, 
         code 
       });
@@ -208,7 +208,7 @@ class EmailVerificationService {
   static async startVerification(email) {
     try {
       // Intentar iniciar verificación desde el backend (generará y enviará código)
-      const response = await axios.post(`${API_BASE_URL}/auth/start-verification`, { 
+      const response = await axios.post(`${apiConfig.API_BASE_URL}/auth/start-verification`, { 
         email 
       });
       return response.data && response.data.success;

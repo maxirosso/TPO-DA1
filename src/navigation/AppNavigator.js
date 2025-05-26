@@ -20,6 +20,7 @@ import AppSettingsScreen from '../screens/main/AppSettingsScreen';
 import HelpSupportScreen from '../screens/main/HelpSupportScreen';
 import AboutScreen from '../screens/main/AboutScreen';
 import ShoppingListScreen from '../screens/main/ShoppingListScreen';
+import DatabaseTablesScreen from '../screens/main/DatabaseTablesScreen';
 
 // Recipe Screens
 import RecipeDetailScreen from '../screens/recipe/RecipeDetailScreen';
@@ -86,6 +87,7 @@ const ProfileStackScreen = () => (
     <ProfileStack.Screen name="About" component={AboutScreen} />
     <ProfileStack.Screen name="ServerConfig" component={ServerConfigScreen} />
     <ProfileStack.Screen name="RecipeDetail" component={RecipeDetailScreen} />
+    <ProfileStack.Screen name="DatabaseTables" component={DatabaseTablesScreen} />
   </ProfileStack.Navigator>
 );
 

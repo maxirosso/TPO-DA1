@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -12,93 +12,46 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/Feather';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import Button from '../../components/common/Button';
 import Colors from '../../themes/colors';
 import Metrics from '../../themes/metrics';
-
-// Sample courses data
-const enrolledCourses = [
-  {
-    id: '1',
-    title: 'Cocina Italiana Básica',
-    imageUrl: 'https://images.unsplash.com/photo-1556910103-1c02745aae4d',
-    location: 'Sede Central',
-    startDate: '2023-11-15',
-    endDate: '2023-12-13',
-    nextSession: '2023-11-20T18:00:00',
-    progress: 25, // percentage
-    status: 'active',
-    attendance: [
-      { date: '2023-11-15', attended: true },
-      { date: '2023-11-20', attended: false },
-      { date: '2023-11-22', attended: false },
-      { date: '2023-11-27', attended: false },
-    ],
-    instructor: 'Chef Marco Rossi',
-  },
-  {
-    id: '2',
-    title: 'Pastelería Francesa',
-    imageUrl: 'https://images.unsplash.com/photo-1563729784474-d77dbb933a9e',
-    location: 'Sede Norte',
-    startDate: '2023-10-05',
-    endDate: '2023-11-09',
-    nextSession: null,
-    progress: 100, // percentage
-    status: 'completed',
-    attendance: [
-      { date: '2023-10-05', attended: true },
-      { date: '2023-10-10', attended: true },
-      { date: '2023-10-12', attended: true },
-      { date: '2023-10-17', attended: true },
-      { date: '2023-10-19', attended: true },
-      { date: '2023-10-24', attended: true },
-      { date: '2023-10-26', attended: true },
-      { date: '2023-10-31', attended: true },
-      { date: '2023-11-02', attended: false },
-      { date: '2023-11-07', attended: true },
-      { date: '2023-11-09', attended: true },
-    ],
-    instructor: 'Chef Sophie Laurent',
-  },
-  {
-    id: '3',
-    title: 'Cocina Vegana',
-    imageUrl: 'https://images.unsplash.com/photo-1511690656952-34342bb7c2f2',
-    location: 'Sede Sur',
-    startDate: '2023-09-10',
-    endDate: '2023-10-15',
-    nextSession: null,
-    progress: 75, // percentage
-    status: 'cancelled',
-    attendance: [
-      { date: '2023-09-10', attended: true },
-      { date: '2023-09-15', attended: true },
-      { date: '2023-09-20', attended: true },
-      { date: '2023-09-25', attended: false },
-      { date: '2023-09-30', attended: false },
-      { date: '2023-10-05', attended: false },
-    ],
-    instructor: 'Chef Ana Vargas',
-  },
-];
-
-const upcomingCourses = [
-  {
-    id: '4',
-    title: 'Platos Navideños',
-    imageUrl: 'https://images.unsplash.com/photo-1608835291093-394b0c943a75',
-    location: 'Sede Central',
-    startDate: '2023-12-01',
-    endDate: '2023-12-22',
-    status: 'upcoming',
-    instructor: 'Chef Roberto Méndez',
-  },
-];
+import dataService from '../../services/dataService';
 
 const MyCoursesScreen = ({ navigation }) => {
   const [activeTab, setActiveTab] = useState('active');
+  const [enrolledCourses, setEnrolledCourses] = useState([]);
+  const [upcomingCourses, setUpcomingCourses] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    loadCourses();
+  }, []);
+
+  const loadCourses = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      let userId = null;
+      const userData = await AsyncStorage.getItem('user_data');
+      if (userData) {
+        const parsed = JSON.parse(userData);
+        userId = parsed.id || parsed.idUsuario;
+      }
+      if (!userId) throw new Error('Usuario no autenticado');
+      const userCourses = await dataService.getUserCourses(userId);
+      setEnrolledCourses(userCourses.filter(c => c.status === 'active'));
+      setUpcomingCourses(userCourses.filter(c => c.status === 'upcoming'));
+    } catch (err) {
+      setError('No se pudieron cargar tus cursos.');
+      setEnrolledCourses([]);
+      setUpcomingCourses([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const getFilteredCourses = () => {
     switch (activeTab) {

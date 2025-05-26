@@ -25,7 +25,7 @@ import { AuthContext } from '../../context/AuthContext';
 
 const ProfileScreen = ({ navigation }) => {
   const { signOut } = useContext(AuthContext);
-  
+
   // User state management
   const [user, setUser] = useState({
     name: 'Sarah Johnson',
@@ -115,6 +115,13 @@ const ProfileScreen = ({ navigation }) => {
       badge: null,
     },
     {
+      id: 'database_tables',
+      icon: 'database',
+      title: 'Base de Datos',
+      description: 'Ver todas las tablas de la base de datos',
+      badge: null,
+    },
+    {
       id: 'account_settings',
       icon: 'user',
       title: 'Configuración de Cuenta',
@@ -167,6 +174,9 @@ const ProfileScreen = ({ navigation }) => {
         break;
       case 'shopping_list':
         navigation.navigate('ShoppingList');
+        break;
+      case 'database_tables':
+        navigation.navigate('DatabaseTables');
         break;
       case 'account_settings':
         navigation.navigate('AccountSettings', { user, onUserUpdate: saveUserData });
@@ -429,19 +439,19 @@ const ProfileScreen = ({ navigation }) => {
 
           <View style={styles.userInfo}>
             <View style={styles.nameContainer}>
-              <Text style={styles.userName}>{user.name}</Text>
+          <Text style={styles.userName}>{user.name}</Text>
               <View style={[styles.accountBadge, { backgroundColor: getAccountTypeBadge().color + '20' }]}>
                 <Text style={[styles.accountBadgeText, { color: getAccountTypeBadge().color }]}>
                   {getAccountTypeBadge().text}
                 </Text>
               </View>
             </View>
-            <Text style={styles.userHandle}>{user.username}</Text>
-            <Text style={styles.userBio}>{user.bio}</Text>
+          <Text style={styles.userHandle}>{user.username}</Text>
+          <Text style={styles.userBio}>{user.bio}</Text>
 
             <View style={styles.userDetails}>
               <View style={styles.detailRow}>
-                <Icon name="map-pin" size={14} color={Colors.textMedium} />
+            <Icon name="map-pin" size={14} color={Colors.textMedium} />
                 <Text style={styles.detailText}>{user.location}</Text>
               </View>
               <View style={styles.detailRow}>

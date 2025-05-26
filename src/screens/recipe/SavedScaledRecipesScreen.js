@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -11,86 +11,38 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Feather';
 import LinearGradient from 'react-native-linear-gradient';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import Colors from '../../themes/colors';
 import Metrics from '../../themes/metrics';
 
-// Mock data for saved scaled recipes
-const mockSavedRecipes = [
-  {
-    id: '1',
-    originalId: '101',
-    title: 'Tazón Mediterráneo (x3)',
-    imageUrl: 'https://images.unsplash.com/photo-1527515637462-cff94eecc1ac',
-    scaleFactor: 3,
-    servings: 6,
-    savedDate: '2023-11-10T15:30:00',
-    ingredients: [
-      { name: 'quinoa cocida', originalAmount: '1 taza', scaledAmount: '3 tazas' },
-      { name: 'tomates cherry', originalAmount: '1 taza', scaledAmount: '3 tazas' },
-      { name: 'pepino', originalAmount: '1', scaledAmount: '3' },
-      { name: 'aceitunas Kalamata', originalAmount: '1/2 taza', scaledAmount: '1 1/2 tazas' },
-      { name: 'queso feta', originalAmount: '1/4 taza', scaledAmount: '3/4 taza' },
-    ],
-    scalingType: 'portion', // 'portion' or 'ingredient'
-  },
-  {
-    id: '2',
-    originalId: '102',
-    title: 'Galletas de Chocolate (1/2)',
-    imageUrl: 'https://images.unsplash.com/photo-1499636136210-6598fdd9d6ec',
-    scaleFactor: 0.5,
-    servings: 12,
-    savedDate: '2023-11-08T10:15:00',
-    ingredients: [
-      { name: 'harina', originalAmount: '2 tazas', scaledAmount: '1 taza' },
-      { name: 'azúcar', originalAmount: '1 taza', scaledAmount: '1/2 taza' },
-      { name: 'mantequilla', originalAmount: '200g', scaledAmount: '100g' },
-      { name: 'huevos', originalAmount: '2', scaledAmount: '1' },
-      { name: 'chips de chocolate', originalAmount: '1 taza', scaledAmount: '1/2 taza' },
-    ],
-    scalingType: 'portion',
-  },
-  {
-    id: '3',
-    originalId: '103',
-    title: 'Sopa de Tomate (x4)',
-    imageUrl: 'https://images.unsplash.com/photo-1547592180-85f173990554',
-    scaleFactor: 4,
-    servings: 8,
-    savedDate: '2023-11-05T18:45:00',
-    ingredients: [
-      { name: 'tomates', originalAmount: '500g', scaledAmount: '2kg' },
-      { name: 'cebolla', originalAmount: '1', scaledAmount: '4' },
-      { name: 'ajo', originalAmount: '2 dientes', scaledAmount: '8 dientes' },
-      { name: 'caldo de verduras', originalAmount: '2 tazas', scaledAmount: '8 tazas' },
-      { name: 'aceite de oliva', originalAmount: '2 cucharadas', scaledAmount: '8 cucharadas' },
-    ],
-    scalingType: 'portion',
-  },
-  {
-    id: '4',
-    originalId: '104',
-    title: 'Ensalada de Pollo (basada en 500g de pollo)',
-    imageUrl: 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd',
-    scaleFactor: 1.25,
-    servings: 5,
-    savedDate: '2023-11-01T12:30:00',
-    ingredients: [
-      { name: 'pollo a la parrilla', originalAmount: '400g', scaledAmount: '500g' },
-      { name: 'lechuga', originalAmount: '1 cabeza', scaledAmount: '1 1/4 cabeza' },
-      { name: 'tomates', originalAmount: '2', scaledAmount: '2.5' },
-      { name: 'pepinos', originalAmount: '1', scaledAmount: '1.25' },
-      { name: 'aderezo', originalAmount: '1/4 taza', scaledAmount: '0.3 taza' },
-    ],
-    scalingType: 'ingredient',
-    baseIngredient: 'pollo a la parrilla',
-    baseIngredientAmount: '500g',
-  },
-];
-
 const SavedScaledRecipesScreen = ({ navigation }) => {
-  const [recipes, setRecipes] = useState(mockSavedRecipes);
+  const [savedRecipes, setSavedRecipes] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    loadSavedRecipes();
+  }, []);
+
+  const loadSavedRecipes = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      // Si tienes endpoint real, úsalo aquí
+      const saved = await AsyncStorage.getItem('saved_scaled_recipes');
+      if (saved) {
+        setSavedRecipes(JSON.parse(saved));
+      } else {
+        setSavedRecipes([]);
+      }
+    } catch (err) {
+      setError('No se pudieron cargar las recetas escaladas.');
+      setSavedRecipes([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleRecipePress = (recipe) => {
     navigation.navigate('RecipeDetail', { 
@@ -118,7 +70,7 @@ const SavedScaledRecipesScreen = ({ navigation }) => {
           style: 'destructive',
           onPress: () => {
             // Remove the recipe from state
-            setRecipes(recipes.filter(recipe => recipe.id !== recipeId));
+            setSavedRecipes(savedRecipes.filter(recipe => recipe.id !== recipeId));
           },
         },
       ]
@@ -219,13 +171,13 @@ const SavedScaledRecipesScreen = ({ navigation }) => {
             Tus recetas personalizadas con cantidades ajustadas (máximo 10)
           </Text>
           <View style={styles.countContainer}>
-            <Text style={styles.countText}>{recipes.length}/10</Text>
+            <Text style={styles.countText}>{savedRecipes.length}/10</Text>
           </View>
         </View>
       </LinearGradient>
       
       <FlatList
-        data={recipes}
+        data={savedRecipes}
         renderItem={renderRecipeItem}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.recipesList}

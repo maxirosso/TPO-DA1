@@ -9,11 +9,14 @@ import {
   TextInput,
   KeyboardAvoidingView,
   Platform,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Feather';
 import LinearGradient from 'react-native-linear-gradient';
 import * as ImagePicker from 'react-native-image-picker';
+import NetInfo from '@react-native-community/netinfo';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import Button from '../../components/common/Button';
 import Input from '../../components/common/Input';
@@ -32,6 +35,7 @@ const AddRecipeScreen = ({ navigation }) => {
   const [ingredients, setIngredients] = useState(['']);
   const [instructions, setInstructions] = useState(['']);
   const [selectedCategories, setSelectedCategories] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
 
   const difficultyOptions = ['Fácil', 'Medio', 'Difícil'];
   const categoryOptions = [
@@ -115,22 +119,228 @@ const AddRecipeScreen = ({ navigation }) => {
     }
   };
 
-  const handleSaveRecipe = () => {
-    console.log({
-      title,
-      description,
-      prepTime,
-      cookTime,
-      servings,
-      calories,
+  const checkNetworkCost = async () => {
+    try {
+      const netInfo = await NetInfo.fetch();
+      
+      // Check if connected
+      if (!netInfo.isConnected) {
+        Alert.alert(
+          'Sin Conexión',
+          'No hay conexión a internet. La receta se guardará localmente y se subirá cuando tengas conexión.',
+          [{ text: 'Entendido' }]
+        );
+        return 'offline';
+      }
+
+      // Check connection type
+      const connectionType = netInfo.type;
+      const isWiFi = connectionType === 'wifi';
+      
+      if (!isWiFi) {
+        return new Promise((resolve) => {
+          Alert.alert(
+            'Conexión de Datos Móviles',
+            'Estás usando datos móviles que pueden tener costo. ¿Deseas continuar o esperar a tener WiFi gratuito?',
+            [
+              {
+                text: 'Esperar WiFi',
+                style: 'cancel',
+                onPress: () => resolve('wait')
+              },
+              {
+                text: 'Usar Datos',
+                onPress: () => resolve('paid')
+              }
+            ]
+          );
+        });
+      }
+
+      return 'free';
+    } catch (error) {
+      console.log('Error checking network:', error);
+      return 'unknown';
+    }
+  };
+
+  const saveRecipeLocally = async (recipeData) => {
+    try {
+      const pendingRecipes = await AsyncStorage.getItem('pendingRecipes');
+      const recipes = pendingRecipes ? JSON.parse(pendingRecipes) : [];
+      
+      const newRecipe = {
+        ...recipeData,
+        id: Date.now().toString(),
+        status: 'pending_upload',
+        createdAt: new Date().toISOString(),
+      };
+      
+      recipes.push(newRecipe);
+      await AsyncStorage.setItem('pendingRecipes', JSON.stringify(recipes));
+      
+      Alert.alert(
+        'Receta Guardada',
+        'Tu receta se ha guardado localmente y se subirá automáticamente cuando tengas conexión WiFi.',
+        [{ text: 'OK', onPress: () => navigation.goBack() }]
+      );
+    } catch (error) {
+      Alert.alert('Error', 'No se pudo guardar la receta localmente');
+    }
+  };
+
+  const uploadRecipe = async (recipeData) => {
+    try {
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      // Save to local recipes with pending approval status
+      const myRecipes = await AsyncStorage.getItem('myRecipes');
+      const recipes = myRecipes ? JSON.parse(myRecipes) : [];
+      
+      const newRecipe = {
+        ...recipeData,
+        id: Date.now().toString(),
+        status: 'pending_approval', // pending_approval, approved, rejected
+        createdAt: new Date().toISOString(),
+        views: 0,
+        likes: 0,
+      };
+      
+      recipes.push(newRecipe);
+      await AsyncStorage.setItem('myRecipes', JSON.stringify(recipes));
+      
+      Alert.alert(
+        'Receta Enviada',
+        'Tu receta ha sido enviada y está pendiente de aprobación. Una vez aprobada por nuestro equipo, será visible para otros usuarios.',
+        [{ text: 'OK', onPress: () => navigation.goBack() }]
+      );
+    } catch (error) {
+      Alert.alert('Error', 'No se pudo subir la receta. Se guardará localmente.');
+      await saveRecipeLocally(recipeData);
+    }
+  };
+
+  const handleSaveRecipe = async () => {
+    // Validation
+    if (!title.trim()) {
+      Alert.alert('Error', 'El título de la receta es obligatorio');
+      return;
+    }
+
+    if (!description.trim()) {
+      Alert.alert('Error', 'La descripción de la receta es obligatoria');
+      return;
+    }
+
+    if (ingredients.filter(ing => ing.trim()).length === 0) {
+      Alert.alert('Error', 'Debes agregar al menos un ingrediente');
+      return;
+    }
+
+    if (instructions.filter(inst => inst.trim()).length === 0) {
+      Alert.alert('Error', 'Debes agregar al menos una instrucción');
+      return;
+    }
+
+    setIsLoading(true);
+
+    // Check for existing recipe with same name
+    try {
+      const myRecipes = await AsyncStorage.getItem('myRecipes');
+      const recipes = myRecipes ? JSON.parse(myRecipes) : [];
+      const existingRecipe = recipes.find(recipe => 
+        recipe.title.toLowerCase() === title.toLowerCase()
+      );
+
+      if (existingRecipe) {
+        Alert.alert(
+          'Receta Existente',
+          `Ya tienes una receta llamada "${title}". ¿Qué deseas hacer?`,
+          [
+            { text: 'Cancelar', style: 'cancel', onPress: () => setIsLoading(false) },
+            { 
+              text: 'Reemplazar', 
+              style: 'destructive',
+              onPress: () => proceedWithSave(true, existingRecipe.id)
+            },
+            { 
+              text: 'Editar Existente', 
+              onPress: () => {
+                setIsLoading(false);
+                // Load existing recipe data for editing
+                loadExistingRecipe(existingRecipe);
+              }
+            }
+          ]
+        );
+        return;
+      }
+
+      await proceedWithSave(false);
+    } catch (error) {
+      console.log('Error checking existing recipes:', error);
+      await proceedWithSave(false);
+    }
+  };
+
+  const proceedWithSave = async (isReplacement = false, replaceId = null) => {
+    const recipeData = {
+      title: title.trim(),
+      description: description.trim(),
+      prepTime: parseInt(prepTime) || 0,
+      cookTime: parseInt(cookTime) || 0,
+      servings: parseInt(servings) || 1,
+      calories: parseInt(calories) || 0,
       difficulty,
-      recipeImage,
-      ingredients: ingredients.filter(ingredient => ingredient.trim() !== ''),
-      instructions: instructions.filter(instruction => instruction.trim() !== ''),
-      categories: selectedCategories,
-    });
-    
-    navigation.goBack();
+      imageUrl: recipeImage || 'https://images.unsplash.com/photo-1546548970-71785318a17b',
+      ingredients: ingredients.filter(ing => ing.trim()).map(ing => ({
+        name: ing.trim(),
+        amount: '1',
+        preparation: ''
+      })),
+      instructions: instructions.filter(inst => inst.trim()).map((inst, index) => ({
+        step: index + 1,
+        text: inst.trim()
+      })),
+      tags: selectedCategories,
+      category: selectedCategories[0] || 'Otros',
+      isReplacement,
+      replaceId,
+    };
+
+    const networkStatus = await checkNetworkCost();
+
+    switch (networkStatus) {
+      case 'offline':
+        await saveRecipeLocally(recipeData);
+        break;
+      case 'wait':
+        await saveRecipeLocally(recipeData);
+        break;
+      case 'free':
+      case 'paid':
+        await uploadRecipe(recipeData);
+        break;
+      default:
+        await uploadRecipe(recipeData);
+    }
+
+    setIsLoading(false);
+  };
+
+  const loadExistingRecipe = (recipe) => {
+    setTitle(recipe.title);
+    setDescription(recipe.description);
+    setPrepTime(recipe.prepTime?.toString() || '');
+    setCookTime(recipe.cookTime?.toString() || '');
+    setServings(recipe.servings?.toString() || '');
+    setCalories(recipe.calories?.toString() || '');
+    setDifficulty(recipe.difficulty || 'Medio');
+    setRecipeImage(recipe.imageUrl);
+    setIngredients(recipe.ingredients?.map(ing => ing.name) || ['']);
+    setInstructions(recipe.instructions?.map(inst => inst.text) || ['']);
+    setSelectedCategories(recipe.tags || []);
   };
 
   return (
@@ -367,9 +577,10 @@ const AddRecipeScreen = ({ navigation }) => {
             ))}
 
             <Button
-              title="Guardar Receta"
+              title={isLoading ? "Guardando..." : "Guardar Receta"}
               onPress={handleSaveRecipe}
               style={styles.saveRecipeButton}
+              disabled={isLoading}
               fullWidth
             />
           </View>

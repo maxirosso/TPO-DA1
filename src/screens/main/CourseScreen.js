@@ -14,367 +14,85 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/Feather';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import Button from '../../components/common/Button';
 import Colors from '../../themes/colors';
 import Metrics from '../../themes/metrics';
 import { AuthContext } from '../../context/AuthContext';
-
-// Mock data for company locations
-const companyLocations = [
-  {
-    id: '1',
-    name: 'Sede Palermo',
-    address: 'Av. Santa Fe 3421, Palermo, CABA',
-    phone: '+54 11 4567-8901',
-    email: 'palermo@chefnet.com',
-    coordinates: { lat: -34.5875, lng: -58.3974 },
-    facilities: ['Cocina profesional', 'Equipamiento completo', 'Estacionamiento'],
-    capacity: 24,
-  },
-  {
-    id: '2',
-    name: 'Sede Recoleta',
-    address: 'Av. Callao 1234, Recoleta, CABA',
-    phone: '+54 11 4567-8902',
-    email: 'recoleta@chefnet.com',
-    coordinates: { lat: -34.5936, lng: -58.3962 },
-    facilities: ['Cocina gourmet', 'Bodega de vinos', 'Salón de eventos'],
-    capacity: 16,
-  },
-  {
-    id: '3',
-    name: 'Sede Belgrano',
-    address: 'Av. Cabildo 2567, Belgrano, CABA',
-    phone: '+54 11 4567-8903',
-    email: 'belgrano@chefnet.com',
-    coordinates: { lat: -34.5627, lng: -58.4583 },
-    facilities: ['Laboratorio de pastelería', 'Horno industrial', 'Cámara frigorífica'],
-    capacity: 20,
-  },
-];
-
-// Enhanced course data with multiple locations and detailed information
-const allCourses = [
-  {
-    id: '1',
-    title: 'Cocina Italiana Básica',
-    imageUrl: 'https://images.unsplash.com/photo-1556910103-1c02745aae4d',
-    category: 'Almuerzo',
-    level: 'Principiante',
-    shortDescription: 'Aprende los fundamentos de la cocina italiana, desde pastas auténticas hasta salsas clásicas.',
-    fullDescription: 'Un curso completo que te enseñará las técnicas tradicionales de la cocina italiana. Aprenderás a preparar pastas frescas, salsas clásicas como carbonara y bolognesa, y platos principales como osso buco y risotto. Este curso incluye técnicas de amasado, cocción al dente, y secretos de la nonna italiana.',
-    instructor: {
-      name: 'Chef Marco Rossi',
-      avatar: 'https://images.unsplash.com/photo-1560250097-0b93528c311a',
-      experience: '15 años de experiencia',
-      bio: 'Chef italiano con formación en Roma y Milán. Especialista en cocina tradicional del norte de Italia.',
-    },
-    basePrice: 30000,
-    duration: '6 semanas',
-    totalHours: 24,
-    startDate: '2024-02-15',
-    endDate: '2024-03-28',
-    requirements: ['Delantal', 'Gorro de cocina', 'Cuaderno de notas'],
-    providedMaterials: ['Ingredientes frescos', 'Utensilios básicos', 'Recetario impreso'],
-    topics: [
-      'Historia y fundamentos de la cocina italiana',
-      'Preparación de pasta fresca (tagliatelle, ravioli, gnocchi)',
-      'Salsas tradicionales (carbonara, amatriciana, pesto)',
-      'Técnicas de cocción y timing',
-      'Risottos clásicos',
-      'Presentación y maridajes'
-    ],
-    practicalActivities: [
-      'Preparación de 3 tipos de pasta fresca',
-      'Elaboración de 5 salsas clásicas',
-      'Cocción de risotto perfecto',
-      'Menú completo italiano de 3 pasos'
-    ],
-    instructions: [
-      'Llegar 15 minutos antes del inicio',
-      'Traer delantal y gorro limpios',
-      'Cabello recogido obligatorio',
-      'No usar perfumes fuertes',
-      'Uñas cortas y sin esmalte'
-    ],
-    isPopular: true,
-    locations: [
-      {
-        locationId: '1',
-        schedule: 'Martes y Jueves 18:00-20:00',
-        price: 25000,
-        discount: 17,
-        promotion: 'Descuento por inauguración',
-        maxStudents: 12,
-        currentStudents: 8,
-        availableSeats: 4,
-      },
-      {
-        locationId: '2',
-        schedule: 'Sábados 10:00-14:00',
-        price: 28000,
-        discount: 7,
-        promotion: 'Descuento fin de semana',
-        maxStudents: 10,
-        currentStudents: 6,
-        availableSeats: 4,
-      }
-    ],
-    modality: 'Presencial',
-    status: 'available', // available, full, completed, cancelled
-  },
-  {
-    id: '2',
-    title: 'Cocina Basada en Plantas',
-    imageUrl: 'https://images.unsplash.com/photo-1516685018646-549198525c1b',
-    category: 'Almuerzo',
-    level: 'Todos los Niveles',
-    shortDescription: 'Domina el arte de crear comidas deliciosas y nutritivas basadas en plantas.',
-    fullDescription: 'Descubre cómo crear platos vegetarianos y veganos llenos de sabor y nutrición. Aprenderás técnicas de cocción, combinaciones de sabores y presentación profesional. Este curso revolucionará tu forma de ver la cocina sin productos animales.',
-    instructor: {
-      name: 'Chef Sarah Green',
-      avatar: 'https://images.unsplash.com/photo-1611432579699-484f7990b127',
-      experience: '10 años de experiencia',
-      bio: 'Especialista en cocina plant-based con certificación internacional en nutrición vegana.',
-    },
-    basePrice: 22000,
-    duration: '4 semanas',
-    totalHours: 16,
-    startDate: '2024-02-10',
-    endDate: '2024-03-02',
-    requirements: ['Ingredientes básicos (lista proporcionada)'],
-    providedMaterials: ['Recetario digital', 'Videos tutoriales', 'Guía nutricional'],
-    topics: [
-      'Fundamentos de la nutrición vegetal',
-      'Proteínas vegetales y combinaciones',
-      'Técnicas de marinado y condimentación',
-      'Sustitutos de ingredientes animales',
-      'Fermentación básica',
-      'Presentación creativa'
-    ],
-    practicalActivities: [
-      'Preparación de leches vegetales',
-      'Elaboración de quesos veganos',
-      'Hamburguesas y albóndigas vegetales',
-      'Postres sin lácteos ni huevos'
-    ],
-    instructions: [
-      'Curso 100% virtual',
-      'Conexión estable a internet requerida',
-      'Cámara encendida durante las clases',
-      'Ingredientes preparados antes de cada sesión'
-    ],
-    isPopular: true,
-    locations: [
-      {
-        locationId: 'virtual',
-        schedule: 'Sábados 10:00-13:00',
-        price: 22000,
-        discount: 0,
-        promotion: null,
-        maxStudents: 25,
-        currentStudents: 18,
-        availableSeats: 7,
-      }
-    ],
-    modality: 'Virtual',
-    status: 'available',
-  },
-  {
-    id: '3',
-    title: 'Cenas Gourmet',
-    imageUrl: 'https://images.unsplash.com/photo-1551183053-bf91a1d81141',
-    category: 'Cena',
-    level: 'Avanzado',
-    shortDescription: 'Aprende a preparar cenas elegantes y sofisticadas para ocasiones especiales.',
-    fullDescription: 'Un curso avanzado para crear menús de cena gourmet. Incluye técnicas de alta cocina, maridajes y presentación profesional. Dirigido a cocineros con experiencia previa que buscan perfeccionar sus habilidades.',
-    instructor: {
-      name: 'Chef Antoine Dubois',
-      avatar: 'https://images.unsplash.com/photo-1583394838336-acd977736f90',
-      experience: '20 años de experiencia',
-      bio: 'Chef francés con estrella Michelin. Especialista en alta cocina y técnicas moleculares.',
-    },
-    basePrice: 45000,
-    duration: '8 semanas',
-    totalHours: 32,
-    startDate: '2024-03-01',
-    endDate: '2024-04-26',
-    requirements: ['Experiencia previa en cocina', 'Cuchillos profesionales', 'Mandil profesional'],
-    providedMaterials: ['Ingredientes premium', 'Equipamiento profesional', 'Certificado de finalización'],
-    topics: [
-      'Técnicas de alta cocina francesa',
-      'Maridajes con vinos y espirituosos',
-      'Presentación gourmet y emplatado',
-      'Menús de temporada y estacionales',
-      'Cocina molecular básica',
-      'Gestión de costos en alta cocina'
-    ],
-    practicalActivities: [
-      'Menú degustación de 7 pasos',
-      'Técnicas de sous vide',
-      'Elaboración de espumas y geles',
-      'Cena completa para 4 comensales'
-    ],
-    instructions: [
-      'Experiencia mínima de 2 años requerida',
-      'Evaluación previa obligatoria',
-      'Uniforme completo de chef',
-      'Puntualidad estricta',
-      'Compromiso de asistencia 100%'
-    ],
-    isPopular: false,
-    locations: [
-      {
-        locationId: '2',
-        schedule: 'Viernes 19:00-22:00',
-        price: 35000,
-        discount: 22,
-        promotion: 'Descuento por lanzamiento',
-        maxStudents: 8,
-        currentStudents: 3,
-        availableSeats: 5,
-      }
-    ],
-    modality: 'Presencial',
-    status: 'available',
-  },
-  {
-    id: '4',
-    title: 'Pastelería Francesa',
-    imageUrl: 'https://images.unsplash.com/photo-1571877227200-a0d98ea607e9',
-    category: 'Cena',
-    level: 'Intermedio',
-    shortDescription: 'Domina las técnicas clásicas de la pastelería francesa.',
-    fullDescription: 'Aprende a crear postres franceses clásicos como macarons, éclairs, tartas y mousses con técnicas profesionales. Este curso te dará las bases sólidas para convertirte en un pastelero experto.',
-    instructor: {
-      name: 'Chef Marie Leclerc',
-      avatar: 'https://images.unsplash.com/photo-1594736797933-d0401ba2fe65',
-      experience: '12 años de experiencia',
-      bio: 'Maître Pâtissière formada en París. Especialista en técnicas clásicas francesas.',
-    },
-    basePrice: 32000,
-    duration: '6 semanas',
-    totalHours: 24,
-    startDate: '2024-02-18',
-    endDate: '2024-03-31',
-    requirements: ['Delantal', 'Manga pastelera', 'Espátulas básicas'],
-    providedMaterials: ['Ingredientes premium', 'Moldes especializados', 'Kit de decoración'],
-    topics: [
-      'Masas básicas francesas (pâte brisée, sablée, feuilletée)',
-      'Cremas y rellenos clásicos',
-      'Técnicas de decoración profesional',
-      'Métodos de horneado y control de temperatura',
-      'Macarons perfectos',
-      'Conservación y presentación'
-    ],
-    practicalActivities: [
-      'Elaboración de 5 tipos de masas',
-      'Preparación de cremas básicas',
-      'Decoración con manga y boquillas',
-      'Proyecto final: tarta personalizada'
-    ],
-    instructions: [
-      'Cabello completamente recogido',
-      'Uñas cortas sin esmalte',
-      'Ropa cómoda y cerrada',
-      'Puntualidad estricta por tiempos de horneado',
-      'Traer recipientes para llevar preparaciones'
-    ],
-    isPopular: true,
-    locations: [
-      {
-        locationId: '3',
-        schedule: 'Domingos 14:00-17:00',
-        price: 28000,
-        discount: 12,
-        promotion: 'Descuento estudiantes',
-        maxStudents: 10,
-        currentStudents: 9,
-        availableSeats: 1,
-      }
-    ],
-    modality: 'Presencial',
-    status: 'available',
-  },
-];
-
-// Mock enrolled courses for student
-const enrolledCourses = [
-  {
-    courseId: '4',
-    locationId: '3',
-    enrollmentDate: '2024-01-15',
-    paymentAmount: 28000,
-    paymentMethod: 'Tarjeta de crédito ****1234',
-    status: 'active', // active, completed, cancelled
-    attendancePercentage: 85,
-    attendanceRecord: [
-      { date: '2024-02-18', attended: true },
-      { date: '2024-02-25', attended: true },
-      { date: '2024-03-03', attended: false },
-      { date: '2024-03-10', attended: true },
-      { date: '2024-03-17', attended: true },
-    ],
-    nextClass: '2024-03-24 14:00',
-    remainingClasses: 2,
-    canCancel: true,
-    cancellationDeadline: '2024-02-08',
-    refundPercentage: 0, // Based on current date vs start date
-  }
-];
-
-// Course categories
-const courseCategories = [
-  'Todos los cursos',
-  'Populares', 
-  'Almuerzo',
-  'Cena',
-  'Mis Cursos',
-];
+import dataService from '../../services/dataService';
 
 const CourseScreen = ({ navigation }) => {
   const [selectedCategory, setSelectedCategory] = useState('Todos los cursos');
-  const [filteredCourses, setFilteredCourses] = useState(allCourses);
+  const [allCourses, setAllCourses] = useState([]);
+  const [filteredCourses, setFilteredCourses] = useState([]);
+  const [enrolledCourses, setEnrolledCourses] = useState([]);
+  const [categories, setCategories] = useState(['Todos los cursos']);
   const [cancelModalVisible, setCancelModalVisible] = useState(false);
   const [selectedCourseToCancel, setSelectedCourseToCancel] = useState(null);
   const [locationModalVisible, setLocationModalVisible] = useState(false);
   const [selectedCourse, setSelectedCourse] = useState(null);
   const { user } = useContext(AuthContext);
-  
-  // Mock user type - in real app this would come from auth context
   const [userType, setUserType] = useState('student'); // 'visitor', 'user', 'student'
-  const [accountBalance, setAccountBalance] = useState(15000); // Student account balance
+  const [accountBalance, setAccountBalance] = useState(15000);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    loadCourses();
+  }, []);
 
   useEffect(() => {
     filterCourses();
-  }, [selectedCategory]);
+  }, [selectedCategory, allCourses, enrolledCourses]);
+
+  const loadCourses = async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      let userId = user?.id || user?.idUsuario;
+      if (!userId) {
+        const userData = await AsyncStorage.getItem('user_data');
+        if (userData) {
+          const parsed = JSON.parse(userData);
+          userId = parsed.id || parsed.idUsuario;
+        }
+      }
+      // Si no hay userId, usar 1 por defecto
+      const numericUserId = userId ? parseInt(userId, 10) : 1;
+      // Load available courses
+      const courses = await dataService.getAllCourses(numericUserId);
+      setAllCourses(courses);
+      // Extract unique categories from course modalities
+      const uniqueCategories = [
+        'Todos los cursos',
+        ...Array.from(new Set(courses.map(c => c.modalidad || 'Otros')))
+      ];
+      setCategories(uniqueCategories);
+      // Load enrolled courses si userId es válido
+      if (userId) {
+        const enrolled = await dataService.getUserCourses(numericUserId);
+        setEnrolledCourses(enrolled);
+      }
+      // Set user type based on user data
+      if (user) {
+        setUserType(user.tipo || 'visitor');
+      }
+    } catch (err) {
+      setError('No se pudieron cargar los cursos. Intenta nuevamente.');
+      console.error('Error loading courses:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const filterCourses = () => {
     let filtered = [...allCourses];
-    
-    switch (selectedCategory) {
-      case 'Todos los cursos':
-        filtered = allCourses;
-        break;
-      case 'Populares':
-        filtered = allCourses.filter(course => course.isPopular);
-        break;
-      case 'Almuerzo':
-        filtered = allCourses.filter(course => course.category === 'Almuerzo');
-        break;
-      case 'Cena':
-        filtered = allCourses.filter(course => course.category === 'Cena');
-        break;
-      case 'Mis Cursos':
-        filtered = allCourses.filter(course => 
-          enrolledCourses.some(enrolled => enrolled.courseId === course.id)
-        );
-        break;
-      default:
-        filtered = allCourses;
+    if (selectedCategory !== 'Todos los cursos') {
+      filtered = allCourses.filter(course => 
+        course.modalidad === selectedCategory
+      );
     }
-    
     setFilteredCourses(filtered);
   };
 
@@ -401,7 +119,7 @@ const CourseScreen = ({ navigation }) => {
     if (locationId === 'virtual') {
       return { name: 'Virtual', address: 'Online' };
     }
-    return companyLocations.find(loc => loc.id === locationId);
+    return allCourses.find(loc => loc.id === locationId);
   };
 
   const handleCoursePress = (course) => {
@@ -442,141 +160,76 @@ const CourseScreen = ({ navigation }) => {
     }
   };
 
-  const handleEnrollCourse = (course, location) => {
+  const handleEnrollCourse = async (course, location) => {
     setLocationModalVisible(false);
     
-    if (location.availableSeats <= 0) {
+    if (!user || userType !== 'student') {
       Alert.alert(
-        'Curso Completo',
-        'Este curso ya no tiene cupos disponibles en esta sede. Te notificaremos si se abren nuevos cupos.',
-        [{ text: 'OK' }]
+        'Acceso Restringido',
+        'Debes ser un estudiante registrado para inscribirte en cursos.',
+        [
+          { text: 'Cancelar', style: 'cancel' },
+          { 
+            text: 'Ir a Perfil', 
+            onPress: () => navigation.navigate('Profile')
+          }
+        ]
       );
       return;
     }
 
-    const finalPrice = location.price;
-    const locationInfo = getLocationInfo(location.locationId);
-
-    Alert.alert(
-      'Confirmar Inscripción',
-      `Curso: ${course.title}\nSede: ${locationInfo.name}\nHorario: ${location.schedule}\nPrecio: ${formatPrice(finalPrice)}\n\n${location.promotion ? `Promoción: ${location.promotion}\n` : ''}El pago se realizará con tu tarjeta de crédito registrada.`,
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        { 
-          text: 'Inscribirse', 
-          onPress: () => processEnrollment(course, location)
-        }
-      ]
-    );
-  };
-
-  const processEnrollment = async (course, location) => {
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Convert IDs to integers
+      const numericUserId = parseInt(user.id || user.idUsuario, 10);
+      const numericCronogramaId = parseInt(course.idCronograma, 10);
+
+      const result = await dataService.enrollInCourse(numericUserId, numericCronogramaId);
       
-      // Simulate payment processing
-      const success = Math.random() > 0.1; // 90% success rate
-      
-      if (success) {
-        // Add to enrolled courses
-        const newEnrollment = {
-          courseId: course.id,
-          locationId: location.locationId,
-          enrollmentDate: new Date().toISOString().split('T')[0],
-          paymentAmount: location.price,
-          paymentMethod: 'Tarjeta de crédito ****1234',
-          status: 'active',
-          attendancePercentage: 0,
-          attendanceRecord: [],
-          nextClass: course.startDate + ' ' + location.schedule.split(' ')[2],
-          remainingClasses: course.totalHours / 4, // Assuming 4 hours per class
-          canCancel: true,
-          cancellationDeadline: course.startDate,
-          refundPercentage: calculateRefundPercentage(course.startDate),
-        };
-        
-        enrolledCourses.push(newEnrollment);
-        
+      if (result) {
         Alert.alert(
           'Inscripción Exitosa',
           `Te has inscrito exitosamente al curso "${course.title}".\n\nRecibirás un email con:\n• Detalles del curso\n• Requisitos e instrucciones\n• Factura de pago\n• Información de la sede`,
           [{ text: 'OK' }]
         );
         
-        filterCourses();
-      } else {
-        Alert.alert(
-          'Error en el Pago',
-          'No se pudo procesar el pago con tu tarjeta de crédito. Verifica los datos de tu tarjeta o intenta con otro método de pago.',
-          [{ text: 'OK' }]
-        );
+        // Refresh course list
+        loadCourses();
       }
     } catch (error) {
       Alert.alert(
         'Error',
-        'Ups, parece que ha habido un error al procesar tu inscripción. Por favor, intenta nuevamente.',
+        'No se pudo procesar tu inscripción. Por favor, intenta nuevamente.',
         [{ text: 'OK' }]
       );
     }
   };
 
-  const handleCancelCourse = (course) => {
-    const enrollment = enrolledCourses.find(e => e.courseId === course.id);
+  const handleCancelCourse = async (course) => {
+    const enrollment = enrolledCourses.find(e => e.idCurso === course.idCurso);
     if (!enrollment) return;
 
     const refundPercentage = calculateRefundPercentage(course.startDate);
-    const refundAmount = (enrollment.paymentAmount * refundPercentage) / 100;
+    const refundAmount = (course.precio * refundPercentage) / 100;
 
-    setSelectedCourseToCancel({ course, enrollment, refundPercentage, refundAmount });
-    setCancelModalVisible(true);
-  };
-
-  const confirmCancelCourse = async (useAccountCredit = false) => {
-    try {
-      setCancelModalVisible(false);
-      
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      const success = Math.random() > 0.2; // 80% success rate
-      
-      if (success) {
-        const { course, enrollment, refundAmount } = selectedCourseToCancel;
-        
-        // Remove from enrolled courses
-        const index = enrolledCourses.findIndex(e => e.courseId === course.id);
-        if (index > -1) {
-          enrolledCourses.splice(index, 1);
+    Alert.alert(
+      'Cancelar Inscripción',
+      `¿Estás seguro que deseas cancelar tu inscripción?\n\nReembolso: ${refundPercentage}% (${formatPrice(refundAmount)})`,
+      [
+        { text: 'No', style: 'cancel' },
+        { 
+          text: 'Sí, Cancelar',
+          onPress: async () => {
+            try {
+              await dataService.cancelEnrollment(enrollment.idInscripcion, true);
+              Alert.alert('Inscripción Cancelada', 'Tu inscripción ha sido cancelada exitosamente.');
+              loadCourses();
+            } catch (error) {
+              Alert.alert('Error', 'No se pudo cancelar la inscripción. Por favor, intenta nuevamente.');
+            }
+          }
         }
-        
-        // Update account balance if using credit
-        if (useAccountCredit && refundAmount > 0) {
-          setAccountBalance(prev => prev + refundAmount);
-        }
-        
-        Alert.alert(
-          'Baja Exitosa',
-          `Te has dado de baja del curso "${course.title}" exitosamente.\n\n${refundAmount > 0 ? `Reintegro: ${formatPrice(refundAmount)}\n${useAccountCredit ? 'Acreditado en tu cuenta corriente' : 'Se procesará en tu tarjeta de crédito en 5-7 días hábiles'}` : 'No corresponde reintegro según las políticas de cancelación.'}`,
-          [{ text: 'OK' }]
-        );
-      } else {
-        Alert.alert(
-          'Error',
-          'Ups, parece que ha habido un error al procesar tu baja. Por favor, intenta nuevamente o contacta con atención al cliente.',
-          [{ text: 'OK' }]
-        );
-      }
-      
-      setSelectedCourseToCancel(null);
-      filterCourses();
-    } catch (error) {
-      Alert.alert(
-        'Error',
-        'Ups, parece que ha habido un error al procesar tu baja. Por favor, intenta nuevamente.',
-        [{ text: 'OK' }]
-      );
-    }
+      ]
+    );
   };
 
   const renderCategoryItem = ({ item }) => (
@@ -598,143 +251,39 @@ const CourseScreen = ({ navigation }) => {
     </TouchableOpacity>
   );
 
-  const renderCourseCard = (course) => {
-    const canViewDetails = userType === 'student';
-    const enrollment = enrolledCourses.find(e => e.courseId === course.id);
-    const isEnrolled = !!enrollment;
-    
-    // Get best price across all locations
-    const bestLocation = course.locations.reduce((best, current) => 
-      current.price < best.price ? current : best
-    );
-    
-    return (
-      <TouchableOpacity 
-        key={course.id} 
-        style={styles.courseCard}
-        onPress={() => handleCoursePress(course)}
-        activeOpacity={0.8}
-      >
-        <Image
-          source={{ uri: course.imageUrl }}
-          style={styles.courseImage}
-          resizeMode="cover"
-        />
-        <View style={styles.courseContent}>
-          <View style={styles.courseHeader}>
-            <Text style={styles.courseTitle}>{course.title}</Text>
-            <View style={[
-              styles.levelBadge,
-              course.level === 'Principiante' ? styles.beginnerBadge : 
-              course.level === 'Avanzado' ? styles.advancedBadge : styles.intermediateBadge
-            ]}>
-              <Text style={styles.levelText}>{course.level}</Text>
-            </View>
+  const renderCourseCard = ({ item: course }) => (
+    <TouchableOpacity
+      style={styles.courseCard}
+      onPress={() => handleCoursePress(course)}
+    >
+      <Image
+        source={{ uri: course.imageUrl }}
+        style={styles.courseImage}
+      />
+      <View style={styles.courseInfo}>
+        <Text style={styles.courseTitle}>{course.title}</Text>
+        <Text style={styles.courseDescription} numberOfLines={2}>
+          {course.descripcion}
+        </Text>
+        <View style={styles.courseDetails}>
+          <View style={styles.detailItem}>
+            <Icon name="clock" size={16} color={Colors.textSecondary} />
+            <Text style={styles.detailText}>{course.duracion || 'No especificado'} horas</Text>
           </View>
-          
-          <Text style={styles.courseDescription}>
-            {canViewDetails ? course.fullDescription : course.shortDescription}
-          </Text>
-          
-          {canViewDetails && (
-            <View style={styles.courseDetails}>
-              <View style={styles.detailRow}>
-                <Icon name="clock" size={14} color={Colors.textMedium} />
-                <Text style={styles.detailText}>{course.duration} • {course.totalHours}h totales</Text>
-              </View>
-              <View style={styles.detailRow}>
-                <Icon name="map-pin" size={14} color={Colors.textMedium} />
-                <Text style={styles.detailText}>
-                  {course.modality} • {course.locations.length} sede{course.locations.length > 1 ? 's' : ''} disponible{course.locations.length > 1 ? 's' : ''}
-                </Text>
-              </View>
-              <View style={styles.detailRow}>
-                <Icon name="users" size={14} color={Colors.textMedium} />
-                <Text style={styles.detailText}>
-                  {course.locations.reduce((total, loc) => total + loc.availableSeats, 0)} cupos disponibles
-                </Text>
-              </View>
-              {isEnrolled && (
-                <View style={styles.enrollmentInfo}>
-                  <View style={styles.detailRow}>
-                    <Icon name="check-circle" size={14} color={Colors.success} />
-                    <Text style={[styles.detailText, { color: Colors.success }]}>
-                      Inscrito • {enrollment.attendancePercentage}% asistencia
-                    </Text>
-                  </View>
-                  <View style={styles.detailRow}>
-                    <Icon name="calendar" size={14} color={Colors.primary} />
-                    <Text style={[styles.detailText, { color: Colors.primary }]}>
-                      Próxima clase: {enrollment.nextClass}
-                    </Text>
-                  </View>
-                </View>
-              )}
-            </View>
-          )}
-          
-          <View style={styles.courseFooter}>
-            <View style={styles.instructorContainer}>
-              <Image
-                source={{ uri: course.instructor.avatar }}
-                style={styles.instructorAvatar}
-              />
-              <View>
-                <Text style={styles.instructorName}>{course.instructor.name}</Text>
-                {canViewDetails && (
-                  <Text style={styles.instructorExperience}>{course.instructor.experience}</Text>
-                )}
-              </View>
-            </View>
-            
-            <View style={styles.priceContainer}>
-              {bestLocation.discount > 0 && (
-                <Text style={styles.originalPrice}>{formatPrice(course.basePrice)}</Text>
-              )}
-              <Text style={styles.coursePrice}>
-                Desde {formatPrice(bestLocation.price)}
-              </Text>
-              {bestLocation.discount > 0 && (
-                <Text style={styles.discountBadge}>-{bestLocation.discount}%</Text>
-              )}
-            </View>
+          <View style={styles.detailItem}>
+            <Icon name="map-pin" size={16} color={Colors.textSecondary} />
+            <Text style={styles.detailText}>{course.modalidad || 'No especificado'}</Text>
           </View>
-          
-          {canViewDetails && (
-            <View style={styles.actionContainer}>
-              {isEnrolled ? (
-                <View style={styles.enrolledActions}>
-                  <Button
-                    title="Ver Detalles"
-                    onPress={() => navigation.navigate('CourseDetail', { 
-                      course, 
-                      enrollment,
-                      isEnrolled: true 
-                    })}
-                    style={styles.detailButton}
-                    size="small"
-                  />
-                  <Button
-                    title="Cancelar Curso"
-                    onPress={() => handleCancelCourse(course)}
-                    style={styles.cancelButton}
-                    textStyle={styles.cancelButtonText}
-                    size="small"
-                  />
-                </View>
-              ) : (
-                <Button
-                  title={course.locations.length > 1 ? 'Ver Sedes' : 'Inscribirse'}
-                  onPress={() => handleCoursePress(course)}
-                  style={styles.buyButton}
-                />
-              )}
-            </View>
-          )}
         </View>
-      </TouchableOpacity>
-    );
-  };
+        <View style={styles.courseFooter}>
+          <Text style={styles.coursePrice}>{course.precio !== '-' ? formatPrice(course.precio) : 'No especificado'}</Text>
+          <Text style={styles.availableSeats}>
+            {course.availableSeats} cupos disponibles
+          </Text>
+        </View>
+      </View>
+    </TouchableOpacity>
+  );
 
   const renderLocationModal = () => (
     <Modal
@@ -851,7 +400,7 @@ const CourseScreen = ({ navigation }) => {
                   title="Reintegro a Tarjeta"
                   onPress={() => confirmCancelCourse(false)}
                   style={styles.modalConfirmButton}
-                  size="small"
+                size="small"
                 />
                 <Button
                   title="Crédito en Cuenta"
@@ -915,7 +464,7 @@ const CourseScreen = ({ navigation }) => {
         </View>
         
         <FlatList
-          data={courseCategories}
+          data={categories}
           renderItem={renderCategoryItem}
           keyExtractor={(item) => item}
           horizontal
@@ -929,7 +478,7 @@ const CourseScreen = ({ navigation }) => {
         showsVerticalScrollIndicator={false}
       >
         {filteredCourses.length > 0 ? (
-          filteredCourses.map(course => renderCourseCard(course))
+          filteredCourses.map(course => renderCourseCard({ item: course }))
         ) : (
           <View style={styles.emptyContainer}>
             <Icon name="book-open" size={48} color={Colors.textLight} />
@@ -1050,138 +599,47 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 180,
   },
-  courseContent: {
+  courseInfo: {
     padding: Metrics.mediumSpacing,
-  },
-  courseHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: Metrics.baseSpacing,
   },
   courseTitle: {
     fontSize: Metrics.largeFontSize,
     fontWeight: '600',
     color: Colors.textDark,
-    flex: 1,
-    marginRight: Metrics.baseSpacing,
-  },
-  levelBadge: {
-    paddingHorizontal: Metrics.baseSpacing,
-    paddingVertical: 4,
-    borderRadius: Metrics.baseBorderRadius,
-  },
-  beginnerBadge: {
-    backgroundColor: Colors.success + '20',
-  },
-  intermediateBadge: {
-    backgroundColor: Colors.warning + '20',
-  },
-  advancedBadge: {
-    backgroundColor: Colors.error + '20',
-  },
-  levelText: {
-    fontSize: Metrics.smallFontSize,
-    fontWeight: '500',
-    color: Colors.textDark,
+    marginBottom: Metrics.baseSpacing,
   },
   courseDescription: {
     fontSize: Metrics.baseFontSize,
     color: Colors.textMedium,
     lineHeight: Metrics.mediumLineHeight,
-    marginBottom: Metrics.mediumSpacing,
   },
   courseDetails: {
-    marginBottom: Metrics.mediumSpacing,
-  },
-  detailRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: Metrics.smallSpacing,
+    marginBottom: Metrics.mediumSpacing,
+  },
+  detailItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginRight: Metrics.baseSpacing,
   },
   detailText: {
     fontSize: Metrics.smallFontSize,
     color: Colors.textMedium,
-    marginLeft: Metrics.smallSpacing,
-  },
-  enrollmentInfo: {
-    backgroundColor: Colors.success + '10',
-    padding: Metrics.baseSpacing,
-    borderRadius: Metrics.baseBorderRadius,
-    marginTop: Metrics.baseSpacing,
   },
   courseFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: Metrics.mediumSpacing,
-  },
-  instructorContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  instructorAvatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    marginRight: Metrics.baseSpacing,
-  },
-  instructorName: {
-    fontSize: Metrics.baseFontSize,
-    fontWeight: '500',
-    color: Colors.textDark,
-  },
-  instructorExperience: {
-    fontSize: Metrics.smallFontSize,
-    color: Colors.textMedium,
-  },
-  priceContainer: {
-    alignItems: 'flex-end',
-  },
-  originalPrice: {
-    fontSize: Metrics.smallFontSize,
-    color: Colors.textLight,
-    textDecorationLine: 'line-through',
   },
   coursePrice: {
     fontSize: Metrics.largeFontSize,
     fontWeight: '600',
     color: Colors.primary,
   },
-  discountBadge: {
+  availableSeats: {
     fontSize: Metrics.smallFontSize,
-    color: Colors.success,
-    fontWeight: '500',
-  },
-  actionContainer: {
-    flexDirection: 'row',
-  },
-  buyButton: {
-    flex: 1,
-    height: 44,
-  },
-  enrolledActions: {
-    flexDirection: 'row',
-    flex: 1,
-  },
-  detailButton: {
-    flex: 1,
-    height: 44,
-    marginRight: Metrics.baseSpacing,
-    backgroundColor: Colors.primary + '20',
-    borderWidth: 1,
-    borderColor: Colors.primary,
-  },
-  cancelButton: {
-    flex: 1,
-    height: 44,
-    backgroundColor: Colors.error + '20',
-    borderWidth: 1,
-    borderColor: Colors.error,
-  },
-  cancelButtonText: {
-    color: Colors.error,
+    color: Colors.textMedium,
   },
   emptyContainer: {
     alignItems: 'center',
@@ -1307,10 +765,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-  },
-  availableSeats: {
-    fontSize: Metrics.smallFontSize,
-    color: Colors.textMedium,
   },
   locationDiscount: {
     fontSize: Metrics.smallFontSize,

@@ -1,5 +1,6 @@
 import { recipeService } from '../../services/api';
 import { loadFavoritesFromStorage } from '../reducers/recipeReducer';
+import { Alert } from 'react-native';
 
 // Action Types
 export const RECIPES_LOADING = 'RECIPES_LOADING';
@@ -65,10 +66,35 @@ export const saveRecipe = (recipeData) => async (dispatch) => {
   }
 };
 
-export const toggleFavorite = (recipeId) => ({
-  type: TOGGLE_FAVORITE,
-  payload: recipeId
-});
+export const toggleFavorite = (recipeId) => async (dispatch, getState) => {
+  try {
+    const { api } = await import('../../services/api');
+    const isFavorite = getState().recipes.favorites.includes(recipeId);
+    
+    if (isFavorite) {
+      await api.recipeList.remove(recipeId);
+    } else {
+      await api.recipeList.addById(recipeId);
+    }
+    
+    dispatch({
+      type: TOGGLE_FAVORITE,
+      payload: recipeId
+    });
+
+    Alert.alert(
+      'Éxito',
+      isFavorite ? 'Receta removida de favoritos' : 'Receta agregada a favoritos'
+    );
+  } catch (error) {
+    console.error('Error toggling favorite:', error);
+    Alert.alert(
+      'Error',
+      'No se pudo actualizar la lista de favoritos. Por favor, intenta nuevamente.'
+    );
+    throw error;
+  }
+};
 
 export const loadFavorites = () => async (dispatch) => {
   try {

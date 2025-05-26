@@ -18,67 +18,13 @@ import RecipeCard from '../../components/recipe/RecipeCard';
 import Button from '../../components/common/Button';
 import Colors from '../../themes/colors';
 import Metrics from '../../themes/metrics';
+import dataService from '../../services/dataService';
 
 const MyRecipesScreen = ({ navigation }) => {
   const [myRecipes, setMyRecipes] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState('Todas');
-
-  // Mock user recipes data
-  const mockMyRecipes = [
-    {
-      id: 'user_1',
-      title: 'Mi Pasta Especial',
-      imageUrl: 'https://images.unsplash.com/photo-1621996346565-e3dbc353d2e5',
-      time: 30,
-      tags: ['Pasta', 'Italiano', 'Cena'],
-      category: 'Cena',
-      status: 'published', // published, draft, private
-      views: 245,
-      likes: 18,
-      createdDate: '2024-03-10',
-      lastModified: '2024-03-12',
-    },
-    {
-      id: 'user_2',
-      title: 'Ensalada de Quinoa Casera',
-      imageUrl: 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd',
-      time: 20,
-      tags: ['Saludable', 'Vegetariano', 'Almuerzo'],
-      category: 'Almuerzo',
-      status: 'published',
-      views: 156,
-      likes: 23,
-      createdDate: '2024-03-08',
-      lastModified: '2024-03-08',
-    },
-    {
-      id: 'user_3',
-      title: 'Brownies de Chocolate',
-      imageUrl: 'https://images.unsplash.com/photo-1606313564200-e75d5e30476c',
-      time: 45,
-      tags: ['Postre', 'Chocolate', 'Dulce'],
-      category: 'Postres',
-      status: 'draft',
-      views: 0,
-      likes: 0,
-      createdDate: '2024-03-15',
-      lastModified: '2024-03-15',
-    },
-    {
-      id: 'user_4',
-      title: 'Smoothie Verde Energético',
-      imageUrl: 'https://images.unsplash.com/photo-1623065422902-30a2d299bbe4',
-      time: 10,
-      tags: ['Bebida', 'Saludable', 'Desayuno'],
-      category: 'Bebidas',
-      status: 'private',
-      views: 12,
-      likes: 3,
-      createdDate: '2024-03-05',
-      lastModified: '2024-03-06',
-    },
-  ];
+  const [error, setError] = useState(null);
 
   const categories = ['Todas', 'Desayuno', 'Almuerzo', 'Cena', 'Postres', 'Bebidas', 'Aperitivos'];
 
@@ -88,17 +34,13 @@ const MyRecipesScreen = ({ navigation }) => {
 
   const loadMyRecipes = async () => {
     setLoading(true);
+    setError(null);
     try {
-      const savedRecipes = await AsyncStorage.getItem('myRecipes');
-      if (savedRecipes) {
-        setMyRecipes(JSON.parse(savedRecipes));
-      } else {
-        setMyRecipes(mockMyRecipes);
-        await AsyncStorage.setItem('myRecipes', JSON.stringify(mockMyRecipes));
-      }
-    } catch (error) {
-      console.log('Error loading my recipes:', error);
-      setMyRecipes(mockMyRecipes);
+      const allRecipes = await dataService.getAllRecipes();
+      setMyRecipes(allRecipes);
+    } catch (err) {
+      setError('No se pudieron cargar tus recetas. Intenta nuevamente.');
+      setMyRecipes([]);
     } finally {
       setLoading(false);
     }
@@ -168,6 +110,8 @@ const MyRecipesScreen = ({ navigation }) => {
       case 'published': return Colors.success;
       case 'draft': return Colors.warning;
       case 'private': return Colors.primary;
+      case 'pending_approval': return Colors.warning;
+      case 'rejected': return Colors.error;
       default: return Colors.textMedium;
     }
   };
@@ -177,6 +121,8 @@ const MyRecipesScreen = ({ navigation }) => {
       case 'published': return 'Publicada';
       case 'draft': return 'Borrador';
       case 'private': return 'Privada';
+      case 'pending_approval': return 'Pendiente';
+      case 'rejected': return 'Rechazada';
       default: return status;
     }
   };

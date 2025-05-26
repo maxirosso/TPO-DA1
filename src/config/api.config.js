@@ -57,18 +57,21 @@ export const initializeApiUrl = async () => {
   
   // URL predeterminada basada en entorno
   if (__DEV__) {
-    if (isAndroidEmulator) {
+    if (Platform.OS === 'android') {
       // Para emulador Android, usar 10.0.2.2 que redirige a localhost de la máquina host
       API_BASE_URL = 'http://10.0.2.2:8080';
+      await AsyncStorage.setItem('custom_api_url', 'http://10.0.2.2:8080');
+      return;
     } else if (Platform.OS === 'ios') {
-      // Para iOS simulator, puedes usar localhost
       API_BASE_URL = 'http://localhost:8080';
+      await AsyncStorage.setItem('custom_api_url', 'http://localhost:8080');
+      return;
     } else {
-      // Para dispositivo físico Android o cualquier otro caso
-      API_BASE_URL = 'http://localhost:8080'; // Usamos localhost como predeterminado, pero probablemente no funcione en dispositivos físicos
+      API_BASE_URL = 'http://localhost:8080';
+      await AsyncStorage.setItem('custom_api_url', 'http://localhost:8080');
+      return;
     }
   } else {
-    // Ambiente de producción
     API_BASE_URL = 'https://tu-dominio-produccion.com/api';
   }
 };

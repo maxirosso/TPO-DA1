@@ -10,6 +10,8 @@ import {
   Image,
   StatusBar,
   ActivityIndicator,
+  Alert,
+  RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Feather';
@@ -20,124 +22,7 @@ import RecipeCard from '../../components/recipe/RecipeCard';
 import Colors from '../../themes/colors';
 import Metrics from '../../themes/metrics';
 import { AuthContext } from '../../context/AuthContext';
-
-// Datos ficticios para recetas
-const popularRecipes = [
-  {
-    id: '1',
-    title: 'Tazón Mediterráneo',
-    imageUrl: 'https://images.unsplash.com/photo-1527515637462-cff94eecc1ac',
-    time: 25,
-    category: 'Almuerzo',
-  },
-  {
-    id: '2',
-    title: 'Tostada de Aguacate',
-    imageUrl: 'https://images.unsplash.com/photo-1565299507177-b0ac66763828',
-    time: 10,
-    category: 'Desayuno',
-  },
-  {
-    id: '3',
-    title: 'Tazón de Batido de Bayas',
-    imageUrl: 'https://images.unsplash.com/photo-1557837931-97fdbe7cb9a4',
-    time: 15,
-    category: 'Desayuno',
-  },
-  {
-    id: '4',
-    title: 'Salmón a la Parrilla',
-    imageUrl: 'https://images.unsplash.com/photo-1551183053-bf91a1d81141',
-    time: 30,
-    category: 'Cena',
-  },
-  {
-    id: '5',
-    title: 'Pimientos Rellenos de Quinua',
-    imageUrl: 'https://images.unsplash.com/photo-1564834744159-ff0ea41ba4b9',
-    time: 45,
-    category: 'Cena',
-  },
-  {
-    id: '6',
-    title: 'Ensalada de Verduras Frescas',
-    imageUrl: 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd',
-    time: 15,
-    category: 'Almuerzo',
-  },
-  {
-    id: '8',
-    title: 'Tiramisu Clásico',
-    imageUrl: 'https://images.unsplash.com/photo-1571877227200-a0d98ea607e9',
-    time: 240,
-    category: 'Postres',
-  },
-  {
-    id: '9',
-    title: 'Guacamole Casero',
-    imageUrl: 'https://images.unsplash.com/photo-1600335895229-6e75511892c8',
-    time: 15,
-    category: 'Aperitivos',
-  },
-  {
-    id: '10',
-    title: 'Smoothie de Frutas',
-    imageUrl: 'https://images.unsplash.com/photo-1623065422902-30a2d299bbe4',
-    time: 10,
-    category: 'Bebidas',
-  },
-];
-
-const recentlyAddedRecipes = [
-  {
-    id: '6',
-    title: 'Ensalada de Verduras Frescas',
-    imageUrl: 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd',
-    time: 15,
-    tags: ['Saludable', 'Vegano'],
-    category: 'Almuerzo',
-  },
-  {
-    id: '4',
-    title: 'Salmón a la Parrilla',
-    imageUrl: 'https://images.unsplash.com/photo-1551183053-bf91a1d81141',
-    time: 30,
-    tags: ['Proteína', 'Cena'],
-    category: 'Cena',
-  },
-  {
-    id: '5',
-    title: 'Pimientos Rellenos de Quinua',
-    imageUrl: 'https://images.unsplash.com/photo-1564834744159-ff0ea41ba4b9',
-    time: 45,
-    tags: ['Vegetariano', 'Cena'],
-    category: 'Cena',
-  },
-  {
-    id: '8',
-    title: 'Tiramisu Clásico',
-    imageUrl: 'https://images.unsplash.com/photo-1571877227200-a0d98ea607e9',
-    time: 240,
-    tags: ['Dulce', 'Italiano'],
-    category: 'Postres',
-  },
-  {
-    id: '9',
-    title: 'Guacamole Casero',
-    imageUrl: 'https://images.unsplash.com/photo-1600335895229-6e75511892c8',
-    time: 15,
-    tags: ['Rápido', 'Mexicano'],
-    category: 'Aperitivos',
-  },
-  {
-    id: '10',
-    title: 'Smoothie de Frutas',
-    imageUrl: 'https://images.unsplash.com/photo-1623065422902-30a2d299bbe4',
-    time: 10,
-    tags: ['Refrescante', 'Saludable'],
-    category: 'Bebidas',
-  },
-];
+import dataService from '../../services/dataService';
 
 // Filtros de categorías
 const categories = [
@@ -153,82 +38,196 @@ const categories = [
 const HomeScreen = ({ navigation }) => {
   const [selectedCategory, setSelectedCategory] = useState('Todas las Recetas');
   const [searchQuery, setSearchQuery] = useState('');
-  const [filteredPopularRecipes, setFilteredPopularRecipes] = useState(popularRecipes);
-  const [filteredRecentRecipes, setFilteredRecentRecipes] = useState(recentlyAddedRecipes);
+  const [latestRecipes, setLatestRecipes] = useState([]);
+  const [popularRecipes, setPopularRecipes] = useState([]);
+  const [filteredPopularRecipes, setFilteredPopularRecipes] = useState([]);
+  const [filteredRecentRecipes, setFilteredRecentRecipes] = useState([]);
   const { isVisitor, exitVisitorMode } = useContext(AuthContext);
   const [isConnected, setIsConnected] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
+  const [backendAvailable, setBackendAvailable] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState(null);
 
-  // Mostrar solo las 3 recetas más recientes
-  const getLatestThreeRecipes = () => {
-    // Ordenar por id descendente (simulando fecha de creación más reciente)
-    const sorted = [...recentlyAddedRecipes].sort((a, b) => Number(b.id) - Number(a.id));
-    return sorted.slice(0, 3);
+  // Initialize data service and load recipes
+  useEffect(() => {
+    initializeData();
+    setupNetworkListener();
+  }, []);
+
+  const initializeData = async () => {
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      console.log('🔄 Inicializando conexión con backend...');
+      
+      // Initialize data service
+      await dataService.initialize();
+      setBackendAvailable(dataService.useBackend);
+      
+      console.log(`📡 Backend disponible: ${dataService.useBackend}`);
+
+      // Load latest recipes (3 most recent)
+      console.log('📥 Cargando últimas recetas...');
+      const latest = await dataService.getLatestRecipes();
+      console.log(`✅ Últimas recetas cargadas: ${latest?.length || 0}`);
+      setLatestRecipes(latest || []);
+
+      // Load all recipes for popular section
+      console.log('📥 Cargando todas las recetas...');
+      const allRecipes = await dataService.getAllRecipes();
+      console.log(`✅ Todas las recetas cargadas: ${allRecipes?.length || 0}`);
+      setPopularRecipes(allRecipes || []);
+
+      // Apply initial filter
+      filterRecipesByCategory(selectedCategory, latest || [], allRecipes || []);
+
+    } catch (error) {
+      console.error('❌ Error loading data:', error);
+      setError(error.message);
+      
+      // Show user-friendly error message
+      Alert.alert(
+        'Error de Conexión',
+        'No se pudieron cargar las recetas desde el servidor. Usando datos locales.',
+        [
+          { 
+            text: 'Reintentar', 
+            onPress: () => initializeData() 
+          },
+          { 
+            text: 'Continuar', 
+            style: 'cancel' 
+          }
+        ]
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const setupNetworkListener = () => {
+    const unsubscribe = NetInfo.addEventListener(state => {
+      console.log(`🌐 Estado de conexión: ${state.isConnected}`);
+      setIsConnected(state.isConnected);
+      
+      // If connection is restored, try to sync data
+      if (state.isConnected && !backendAvailable) {
+        console.log('🔄 Conexión restaurada, verificando backend...');
+        dataService.checkBackendAvailability().then(available => {
+          if (available) {
+            console.log('✅ Backend disponible, sincronizando datos...');
+            setBackendAvailable(true);
+            dataService.syncPendingData();
+            loadRecipes();
+          }
+        });
+      }
+    });
+
+    return unsubscribe;
+  };
+
+  const loadRecipes = async () => {
+    try {
+      console.log('🔄 Recargando recetas...');
+      const latest = await dataService.getLatestRecipes();
+      const allRecipes = await dataService.getAllRecipes();
+      
+      setLatestRecipes(latest || []);
+      setPopularRecipes(allRecipes || []);
+      
+      // Apply current filters
+      filterRecipesByCategory(selectedCategory, latest || [], allRecipes || []);
+      
+      console.log('✅ Recetas recargadas exitosamente');
+    } catch (error) {
+      console.error('❌ Error reloading recipes:', error);
+    }
+  };
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await loadRecipes();
+    setRefreshing(false);
   };
 
   // Aplicar filtro cuando cambia la categoría seleccionada
-  React.useEffect(() => {
-    filterRecipesByCategory(selectedCategory);
-  }, [selectedCategory]);
-
-  // Chequeo de conexión al iniciar
   useEffect(() => {
-    const checkConnection = async () => {
-      try {
-        const state = await NetInfo.fetch();
-        setIsConnected(state.isConnected);
-      } catch (error) {
-        setIsConnected(false);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    const unsubscribe = NetInfo.addEventListener(state => {
-      setIsConnected(state.isConnected);
-    });
-    checkConnection();
-    return () => unsubscribe();
-  }, []);
+    filterRecipesByCategory(selectedCategory, latestRecipes, popularRecipes);
+  }, [selectedCategory, popularRecipes, latestRecipes]);
 
   // Filtrar recetas por categoría
-  const filterRecipesByCategory = (category) => {
+  const filterRecipesByCategory = (category, latest = latestRecipes, popular = popularRecipes) => {
+    console.log(`🔍 Filtrando por categoría: ${category}`);
+    
     if (category === 'Todas las Recetas') {
-      setFilteredPopularRecipes(popularRecipes);
-      setFilteredRecentRecipes(getLatestThreeRecipes());
+      setFilteredPopularRecipes(popular);
+      setFilteredRecentRecipes(latest);
     } else {
-      setFilteredPopularRecipes(
-        popularRecipes.filter(recipe => recipe.category === category)
-      );
-      setFilteredRecentRecipes(
-        getLatestThreeRecipes().filter(recipe => recipe.category === category)
-      );
+      const categoryFilter = (recipe) => {
+        // Handle different data structures from backend vs mock
+        const recipeCategory = recipe.tipoReceta?.descripcion || recipe.category;
+        return recipeCategory === category;
+      };
+      
+      const filteredPopular = popular.filter(categoryFilter);
+      const filteredLatest = latest.filter(categoryFilter);
+      
+      console.log(`📊 Recetas populares filtradas: ${filteredPopular.length}`);
+      console.log(`📊 Recetas recientes filtradas: ${filteredLatest.length}`);
+      
+      setFilteredPopularRecipes(filteredPopular);
+      setFilteredRecentRecipes(filteredLatest);
     }
   };
 
   const handleRecipePress = (recipe) => {
-    console.log('Navegando a receta desde HomeScreen:', JSON.stringify(recipe));
-    navigation.navigate('RecipeDetail', { recipe });
+    console.log('🍽️ Navegando a receta:', recipe.nombreReceta || recipe.title);
+    
+    // Normalize recipe data for navigation
+    const normalizedRecipe = {
+      id: recipe.idReceta || recipe.id,
+      title: recipe.nombreReceta || recipe.title,
+      imageUrl: recipe.fotoPrincipal || recipe.imageUrl,
+      description: recipe.descripcionReceta || recipe.description,
+      servings: recipe.porciones || recipe.servings,
+      time: recipe.tiempo || recipe.time || 30,
+      ingredients: recipe.ingredientes || recipe.ingredients || [],
+      instructions: recipe.pasos || recipe.instructions || [],
+      author: recipe.usuario || recipe.author,
+      category: recipe.tipoReceta?.descripcion || recipe.category,
+      rating: recipe.calificacionPromedio || recipe.rating,
+      reviews: recipe.calificaciones || recipe.reviews || [],
+    };
+
+    navigation.navigate('RecipeDetail', { recipe: normalizedRecipe });
   };
 
   const handleProfilePress = () => {
     if (isVisitor) {
-      navigation.navigate('Login');
+      exitVisitorMode();
     } else {
       navigation.navigate('ProfileTab');
     }
   };
 
+  const handleSearchPress = () => {
+    navigation.navigate('RecipeSearch');
+  };
+
   const renderCategoryItem = ({ item }) => (
     <TouchableOpacity
       style={[
-        styles.categoryButton,
-        selectedCategory === item && styles.selectedCategoryButton,
+        styles.categoryItem,
+        selectedCategory === item && styles.selectedCategoryItem,
       ]}
       onPress={() => setSelectedCategory(item)}
     >
       <Text
         style={[
-          styles.categoryButtonText,
+          styles.categoryText,
           selectedCategory === item && styles.selectedCategoryText,
         ]}
       >
@@ -239,34 +238,95 @@ const HomeScreen = ({ navigation }) => {
 
   const renderPopularRecipe = ({ item }) => (
     <RecipeCard
-      id={item.id}
-      title={item.title}
-      imageUrl={item.imageUrl}
-      time={item.time}
+      id={item.idReceta || item.id}
+      title={item.nombreReceta || item.title}
+      imageUrl={item.fotoPrincipal || item.imageUrl}
+      time={item.tiempo || item.time || 30}
+      category={item.tipoReceta?.descripcion || item.category}
+      rating={item.calificacionPromedio || item.rating}
       type="grid"
-      onPress={handleRecipePress}
-      style={styles.popularRecipeCard}
+      onPress={() => handleRecipePress(item)}
+    />
+  );
+
+  const renderRecentRecipe = ({ item }) => (
+    <RecipeCard
+      id={item.idReceta || item.id}
+      title={item.nombreReceta || item.title}
+      imageUrl={item.fotoPrincipal || item.imageUrl}
+      time={item.tiempo || item.time || 30}
+      tags={item.tags || [item.tipoReceta?.descripcion || item.category]}
+      rating={item.calificacionPromedio || item.rating}
+      type="list"
+      onPress={() => handleRecipePress(item)}
     />
   );
 
   const renderOfflineMessage = () => (
     <View style={styles.offlineContainer}>
-      <Icon name="wifi-off" size={24} color={Colors.error} />
+      <Icon name="wifi-off" size={48} color={Colors.error} />
+      <Text style={styles.offlineTitle}>Sin Conexión</Text>
       <Text style={styles.offlineText}>
-        No hay conexión a internet. La aplicación no puede ser utilizada sin conexión.
+        No se puede usar la aplicación sin conexión a internet.
+        {'\n'}Verifica tu conexión e intenta nuevamente.
       </Text>
+      <TouchableOpacity 
+        style={styles.retryButton}
+        onPress={initializeData}
+      >
+        <Text style={styles.retryButtonText}>Reintentar</Text>
+      </TouchableOpacity>
     </View>
   );
 
-  if (!isConnected) {
-    return (
-      <SafeAreaView style={styles.container} edges={['top']}>
-        <View style={styles.loadingContainer}>
-          <Icon name="wifi-off" size={48} color={Colors.error} />
-          <Text style={styles.offlineText}>
-            No hay conexión a internet. No se puede usar la aplicación.
+  const renderConnectionStatus = () => {
+    if (!isConnected) {
+      return (
+        <View style={styles.connectionBanner}>
+          <Icon name="wifi-off" size={16} color={Colors.error} />
+          <Text style={styles.connectionText}>Sin conexión - Usando datos locales</Text>
+        </View>
+      );
+    } else if (!backendAvailable) {
+      return (
+        <View style={[styles.connectionBanner, { backgroundColor: Colors.warning + '20' }]}>
+          <Icon name="server" size={16} color={Colors.warning} />
+          <Text style={[styles.connectionText, { color: Colors.warning }]}>
+            Servidor no disponible - Usando datos locales
           </Text>
         </View>
+      );
+    } else if (backendAvailable) {
+      return (
+        <View style={[styles.connectionBanner, { backgroundColor: Colors.success + '20' }]}>
+          <Icon name="check-circle" size={16} color={Colors.success} />
+          <Text style={[styles.connectionText, { color: Colors.success }]}>
+            Conectado al servidor
+          </Text>
+        </View>
+      );
+    }
+    return null;
+  };
+
+  const renderEmptyState = (message) => (
+    <View style={styles.emptySection}>
+      <Icon name="search" size={32} color={Colors.textMedium} />
+      <Text style={styles.emptyText}>{message}</Text>
+      {!backendAvailable && (
+        <TouchableOpacity style={styles.retryButton} onPress={initializeData}>
+          <Text style={styles.retryButtonText}>Reintentar conexión</Text>
+        </TouchableOpacity>
+      )}
+    </View>
+  );
+
+  // Show offline message if no connection and no cached data
+  if (!isConnected && latestRecipes.length === 0 && !isLoading) {
+    return (
+      <SafeAreaView style={styles.container} edges={['top']}>
+        <StatusBar backgroundColor={Colors.gradientStart} barStyle="dark-content" />
+        {renderOfflineMessage()}
       </SafeAreaView>
     );
   }
@@ -275,114 +335,132 @@ const HomeScreen = ({ navigation }) => {
     <SafeAreaView style={styles.container} edges={['top']}>
       <StatusBar backgroundColor={Colors.gradientStart} barStyle="dark-content" />
       
-      {!isConnected && renderOfflineMessage()}
-      
+      {renderConnectionStatus()}
+
       <LinearGradient
         colors={[Colors.gradientStart, Colors.gradientEnd]}
         style={styles.headerContainer}
       >
         <View style={styles.headerContent}>
-          <Text style={styles.headerTitle}>ChefNet</Text>
-          <TouchableOpacity onPress={handleProfilePress}>
-            <Image
-              source={{ 
-                uri: isVisitor 
-                  ? 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde'
-                  : 'https://images.unsplash.com/photo-1580489944761-15a19d654956?ixlib=rb-4.0.3'
-              }}
-              style={styles.profileImage}
+          <View style={styles.welcomeSection}>
+            <Text style={styles.welcomeText}>¡Hola!</Text>
+            <Text style={styles.welcomeSubtext}>
+              {isVisitor ? 'Modo Visitante' : '¿Qué vamos a cocinar hoy?'}
+            </Text>
+          </View>
+          <TouchableOpacity
+            style={styles.profileButton}
+            onPress={handleProfilePress}
+          >
+            <Icon
+              name={isVisitor ? 'log-in' : 'user'}
+              size={24}
+              color={Colors.textDark}
             />
           </TouchableOpacity>
         </View>
-        
-        <TouchableOpacity 
-          style={styles.searchContainer}
-          onPress={() => navigation.navigate('RecipeSearch')}
-          activeOpacity={0.8}
-        >
-          <Icon name="search" size={20} color={Colors.textMedium} style={styles.searchIcon} />
-          <Text 
-            style={[styles.searchInput, { color: Colors.textMedium }]}
-            numberOfLines={1}
-          >
+
+        <TouchableOpacity style={styles.searchContainer} onPress={handleSearchPress}>
+          <Icon name="search" size={20} color={Colors.textMedium} />
+          <Text style={styles.searchPlaceholder}>
             Buscar recetas, ingredientes...
           </Text>
         </TouchableOpacity>
-        
-        <FlatList
-          data={categories}
-          renderItem={renderCategoryItem}
-          keyExtractor={(item) => item}
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.categoriesContainer}
-        />
       </LinearGradient>
-      
+
       <ScrollView 
-        style={styles.content}
+        style={styles.content} 
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={[Colors.primary]}
+            tintColor={Colors.primary}
+          />
+        }
       >
-        {isVisitor && (
-          <View style={styles.visitorBanner}>
-            <Text style={styles.visitorBannerText}>
-              Estás navegando como visitante. Inicia sesión para acceder a todas las funciones.
+        {/* Categories */}
+        <View style={styles.categoriesSection}>
+          <FlatList
+            data={categories}
+            renderItem={renderCategoryItem}
+            keyExtractor={(item) => item}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.categoriesList}
+          />
+        </View>
+
+        {isLoading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={Colors.primary} />
+            <Text style={styles.loadingText}>
+              {backendAvailable ? 'Cargando recetas del servidor...' : 'Cargando datos locales...'}
             </Text>
-            <TouchableOpacity
-              style={styles.visitorBannerButton}
-              onPress={() => navigation.navigate('Login')}
-            >
-              <Text style={styles.visitorBannerButtonText}>Iniciar Sesión</Text>
+          </View>
+        ) : error ? (
+          <View style={styles.errorContainer}>
+            <Icon name="alert-circle" size={48} color={Colors.error} />
+            <Text style={styles.errorTitle}>Error de Conexión</Text>
+            <Text style={styles.errorText}>{error}</Text>
+            <TouchableOpacity style={styles.retryButton} onPress={initializeData}>
+              <Text style={styles.retryButtonText}>Reintentar</Text>
             </TouchableOpacity>
           </View>
-        )}
-        
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Recetas Populares</Text>
-          <TouchableOpacity onPress={() => navigation.navigate('RecipeSearch')}>
-            <Text style={styles.seeAllText}>Ver todas</Text>
-          </TouchableOpacity>
-        </View>
-        
-        {filteredPopularRecipes.length > 0 ? (
-        <FlatList
-            data={filteredPopularRecipes}
-          renderItem={renderPopularRecipe}
-          keyExtractor={(item) => item.id}
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.popularRecipesContainer}
-        />
         ) : (
-          <View style={styles.emptyStateContainer}>
-            <Text style={styles.emptyStateText}>No hay recetas en esta categoría</Text>
-          </View>
+          <>
+            {/* Latest Recipes */}
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>Últimas Recetas</Text>
+                <Text style={styles.sectionSubtitle}>
+                  {backendAvailable 
+                    ? `${filteredRecentRecipes.length} recetas de la comunidad` 
+                    : 'Datos locales'
+                  }
+                </Text>
+              </View>
+              
+              {filteredRecentRecipes.length > 0 ? (
+                <FlatList
+                  data={filteredRecentRecipes}
+                  renderItem={renderRecentRecipe}
+                  keyExtractor={(item) => (item.idReceta || item.id).toString()}
+                  scrollEnabled={false}
+                />
+              ) : (
+                renderEmptyState('No hay recetas recientes para esta categoría')
+              )}
+            </View>
+
+            {/* Popular Recipes */}
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>Recetas Populares</Text>
+                <Text style={styles.sectionSubtitle}>
+                  {backendAvailable 
+                    ? `${filteredPopularRecipes.length} recetas disponibles` 
+                    : 'Datos locales'
+                  }
+                </Text>
+              </View>
+              
+              {filteredPopularRecipes.length > 0 ? (
+                <FlatList
+                  data={filteredPopularRecipes}
+                  renderItem={renderPopularRecipe}
+                  keyExtractor={(item) => (item.idReceta || item.id).toString()}
+                  numColumns={2}
+                  scrollEnabled={false}
+                  columnWrapperStyle={styles.recipeRow}
+                />
+              ) : (
+                renderEmptyState('No hay recetas populares para esta categoría')
+              )}
+            </View>
+          </>
         )}
-        
-        <Text style={[styles.sectionTitle, styles.recentTitle]}>
-          Agregadas Recientemente
-        </Text>
-        
-        {filteredRecentRecipes.length > 0 ? (
-          filteredRecentRecipes.map((recipe) => (
-          <RecipeCard
-            key={recipe.id}
-              id={recipe.id}
-            title={recipe.title}
-            imageUrl={recipe.imageUrl}
-            time={recipe.time}
-            tags={recipe.tags}
-            type="list"
-              onPress={handleRecipePress}
-          />
-          ))
-        ) : (
-          <View style={styles.emptyStateContainer}>
-            <Text style={styles.emptyStateText}>No hay recetas recientes en esta categoría</Text>
-          </View>
-        )}
-        
-        <View style={styles.bottomPadding} />
       </ScrollView>
     </SafeAreaView>
   );
@@ -393,6 +471,20 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.background,
   },
+  connectionBanner: {
+    backgroundColor: Colors.error + '20',
+    paddingVertical: Metrics.smallSpacing,
+    paddingHorizontal: Metrics.mediumSpacing,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  connectionText: {
+    fontSize: Metrics.smallFontSize,
+    color: Colors.error,
+    marginLeft: Metrics.smallSpacing,
+    fontWeight: '500',
+  },
   headerContainer: {
     paddingHorizontal: Metrics.mediumSpacing,
     paddingBottom: Metrics.mediumSpacing,
@@ -402,17 +494,28 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginTop: Metrics.mediumSpacing,
-    marginBottom: Metrics.largeSpacing,
+    marginBottom: Metrics.mediumSpacing,
   },
-  headerTitle: {
-    fontSize: Metrics.xxLargeFontSize,
+  welcomeSection: {
+    flex: 1,
+  },
+  welcomeText: {
+    fontSize: Metrics.xLargeFontSize,
     fontWeight: '600',
     color: Colors.textDark,
+    marginBottom: 4,
   },
-  profileImage: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+  welcomeSubtext: {
+    fontSize: Metrics.baseFontSize,
+    color: Colors.textMedium,
+  },
+  profileButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: Colors.card + '40',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   searchContainer: {
     flexDirection: 'row',
@@ -420,125 +523,134 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.card,
     borderRadius: Metrics.roundedFull,
     paddingHorizontal: Metrics.mediumSpacing,
-    marginBottom: Metrics.mediumSpacing,
     paddingVertical: Metrics.mediumSpacing,
   },
-  searchIcon: {
-    marginRight: Metrics.baseSpacing,
-  },
-  searchInput: {
-    flex: 1,
+  searchPlaceholder: {
+    marginLeft: Metrics.baseSpacing,
     fontSize: Metrics.baseFontSize,
+    color: Colors.textMedium,
+    flex: 1,
   },
-  categoriesContainer: {
-    paddingRight: Metrics.mediumSpacing,
+  content: {
+    flex: 1,
   },
-  categoryButton: {
+  categoriesSection: {
+    paddingVertical: Metrics.mediumSpacing,
+  },
+  categoriesList: {
+    paddingHorizontal: Metrics.mediumSpacing,
+  },
+  categoryItem: {
     backgroundColor: Colors.card,
     paddingVertical: Metrics.baseSpacing,
     paddingHorizontal: Metrics.mediumSpacing,
     borderRadius: Metrics.roundedFull,
-    marginRight: Metrics.mediumSpacing,
+    marginRight: Metrics.baseSpacing,
   },
-  selectedCategoryButton: {
+  selectedCategoryItem: {
     backgroundColor: Colors.primary,
   },
-  categoryButtonText: {
-    color: Colors.textDark,
+  categoryText: {
     fontSize: Metrics.baseFontSize,
+    color: Colors.textDark,
+    fontWeight: '500',
   },
   selectedCategoryText: {
     color: Colors.card,
   },
-  content: {
-    flex: 1,
-    paddingHorizontal: Metrics.mediumSpacing,
-    paddingTop: Metrics.mediumSpacing,
+  section: {
+    marginBottom: Metrics.largeSpacing,
   },
   sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    paddingHorizontal: Metrics.mediumSpacing,
     marginBottom: Metrics.mediumSpacing,
   },
   sectionTitle: {
     fontSize: Metrics.largeFontSize,
     fontWeight: '600',
     color: Colors.textDark,
+    marginBottom: 4,
   },
-  seeAllText: {
-    color: Colors.textDark,
+  sectionSubtitle: {
     fontSize: Metrics.baseFontSize,
+    color: Colors.textMedium,
   },
-  popularRecipesContainer: {
-    paddingRight: Metrics.mediumSpacing,
+  recipeRow: {
+    justifyContent: 'space-between',
+    paddingHorizontal: Metrics.mediumSpacing,
   },
-  popularRecipeCard: {
-    width: 160,
-    marginRight: Metrics.mediumSpacing,
-  },
-  recentTitle: {
-    marginTop: Metrics.largeSpacing,
-    marginBottom: Metrics.mediumSpacing,
-  },
-  bottomPadding: {
-    height: Metrics.xxLargeSpacing,
-  },
-  emptyStateContainer: {
+  loadingContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    padding: Metrics.largeSpacing,
-    backgroundColor: Colors.card,
-    borderRadius: Metrics.mediumBorderRadius,
-    marginBottom: Metrics.mediumSpacing,
+    paddingVertical: Metrics.xLargeSpacing,
   },
-  emptyStateText: {
+  loadingText: {
+    marginTop: Metrics.mediumSpacing,
     fontSize: Metrics.baseFontSize,
     color: Colors.textMedium,
     textAlign: 'center',
   },
-  visitorBanner: {
-    backgroundColor: Colors.primary + '10',
-    borderRadius: Metrics.mediumBorderRadius,
-    padding: Metrics.mediumSpacing,
-    marginBottom: Metrics.mediumSpacing,
-    flexDirection: 'row',
+  errorContainer: {
     alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  visitorBannerText: {
-    flex: 1,
-    fontSize: Metrics.smallFontSize,
-    color: Colors.textDark,
-    marginRight: Metrics.baseSpacing,
-  },
-  visitorBannerButton: {
-    backgroundColor: Colors.primary,
-    paddingVertical: Metrics.smallSpacing,
-    paddingHorizontal: Metrics.mediumSpacing,
-    borderRadius: Metrics.roundedFull,
-  },
-  visitorBannerButtonText: {
-    color: Colors.card,
-    fontSize: Metrics.smallFontSize,
-    fontWeight: '500',
-  },
-  loadingContainer: {
-    flex: 1,
     justifyContent: 'center',
+    paddingVertical: Metrics.xLargeSpacing,
+    paddingHorizontal: Metrics.mediumSpacing,
+  },
+  errorTitle: {
+    fontSize: Metrics.largeFontSize,
+    fontWeight: '600',
+    color: Colors.textDark,
+    marginTop: Metrics.mediumSpacing,
+    marginBottom: Metrics.baseSpacing,
+  },
+  errorText: {
+    fontSize: Metrics.baseFontSize,
+    color: Colors.textMedium,
+    textAlign: 'center',
+    marginBottom: Metrics.largeSpacing,
+  },
+  emptySection: {
     alignItems: 'center',
+    paddingVertical: Metrics.largeSpacing,
+    paddingHorizontal: Metrics.mediumSpacing,
+  },
+  emptyText: {
+    fontSize: Metrics.baseFontSize,
+    color: Colors.textMedium,
+    textAlign: 'center',
+    marginTop: Metrics.mediumSpacing,
+    marginBottom: Metrics.mediumSpacing,
   },
   offlineContainer: {
-    backgroundColor: Colors.error + '10',
-    padding: Metrics.mediumSpacing,
-    flexDirection: 'row',
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    paddingHorizontal: Metrics.largeSpacing,
+  },
+  offlineTitle: {
+    fontSize: Metrics.largeFontSize,
+    fontWeight: '600',
+    color: Colors.textDark,
+    marginTop: Metrics.mediumSpacing,
+    marginBottom: Metrics.baseSpacing,
   },
   offlineText: {
-    color: Colors.error,
-    marginLeft: Metrics.smallSpacing,
+    fontSize: Metrics.baseFontSize,
+    color: Colors.textMedium,
     textAlign: 'center',
+    lineHeight: Metrics.mediumLineHeight,
+    marginBottom: Metrics.largeSpacing,
+  },
+  retryButton: {
+    backgroundColor: Colors.primary,
+    paddingVertical: Metrics.mediumSpacing,
+    paddingHorizontal: Metrics.largeSpacing,
+    borderRadius: Metrics.baseBorderRadius,
+  },
+  retryButtonText: {
+    color: Colors.card,
+    fontSize: Metrics.baseFontSize,
+    fontWeight: '600',
   },
 });
 

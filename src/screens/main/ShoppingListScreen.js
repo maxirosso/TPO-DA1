@@ -31,7 +31,8 @@ const ShoppingListScreen = ({ navigation }) => {
     notes: '',
   });
   const [selectedCategory, setSelectedCategory] = useState('Todos');
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   const categories = [
     'Todos',
@@ -53,80 +54,27 @@ const ShoppingListScreen = ({ navigation }) => {
     'al gusto', 'pizca'
   ];
 
-  // Mock shopping list data
-  const mockShoppingList = [
-    {
-      id: '1',
-      name: 'Tomates',
-      quantity: '1',
-      unit: 'kg',
-      category: 'Frutas y Verduras',
-      notes: 'Maduros para salsa',
-      completed: false,
-      addedDate: '2024-03-15',
-      fromRecipe: 'Pasta Italiana',
-    },
-    {
-      id: '2',
-      name: 'Pechuga de Pollo',
-      quantity: '500',
-      unit: 'g',
-      category: 'Carnes y Pescados',
-      notes: 'Sin piel',
-      completed: false,
-      addedDate: '2024-03-15',
-      fromRecipe: 'Pollo al Horno',
-    },
-    {
-      id: '3',
-      name: 'Leche',
-      quantity: '1',
-      unit: 'L',
-      category: 'Lácteos',
-      notes: 'Descremada',
-      completed: true,
-      addedDate: '2024-03-14',
-      fromRecipe: null,
-    },
-    {
-      id: '4',
-      name: 'Pan Integral',
-      quantity: '1',
-      unit: 'unidades',
-      category: 'Panadería',
-      notes: 'De semillas',
-      completed: false,
-      addedDate: '2024-03-15',
-      fromRecipe: null,
-    },
-    {
-      id: '5',
-      name: 'Aceite de Oliva',
-      quantity: '500',
-      unit: 'ml',
-      category: 'Despensa',
-      notes: 'Extra virgen',
-      completed: false,
-      addedDate: '2024-03-15',
-      fromRecipe: 'Ensalada Mediterránea',
-    },
-  ];
-
   useEffect(() => {
     loadShoppingList();
   }, []);
 
   const loadShoppingList = async () => {
+    setLoading(true);
+    setError(null);
     try {
+      // Aquí deberías usar el endpoint real del backend para la lista de compras
+      // Por ahora, uso almacenamiento local real
       const savedList = await AsyncStorage.getItem('shoppingList');
       if (savedList) {
         setShoppingList(JSON.parse(savedList));
       } else {
-        setShoppingList(mockShoppingList);
+        setShoppingList([]);
       }
     } catch (error) {
-      console.log('Error loading shopping list:', error);
-      setShoppingList(mockShoppingList);
+      setError('No se pudo cargar la lista de compras.');
+      setShoppingList([]);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -541,7 +489,21 @@ const ShoppingListScreen = ({ navigation }) => {
 
       {/* Shopping List */}
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {Object.keys(groupedItems).length === 0 ? (
+        {loading ? (
+          <View style={styles.loadingContainer}>
+            <Text style={styles.loadingText}>Cargando lista...</Text>
+          </View>
+        ) : error ? (
+          <View style={styles.errorContainer}>
+            <Text style={styles.errorText}>{error}</Text>
+            <Button
+              title="Recargar"
+              onPress={loadShoppingList}
+              style={styles.reloadButton}
+              iconName="refresh"
+            />
+          </View>
+        ) : Object.keys(groupedItems).length === 0 ? (
           <View style={styles.emptyContainer}>
             <Icon name="shopping-cart" size={48} color={Colors.textLight} />
             <Text style={styles.emptyTitle}>Lista vacía</Text>
@@ -892,6 +854,30 @@ const styles = StyleSheet.create({
   },
   bottomPadding: {
     height: Metrics.xxLargeSpacing,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    fontSize: Metrics.mediumFontSize,
+    fontWeight: '600',
+    color: Colors.textDark,
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  errorText: {
+    fontSize: Metrics.mediumFontSize,
+    fontWeight: '600',
+    color: Colors.error,
+    marginBottom: Metrics.mediumSpacing,
+  },
+  reloadButton: {
+    minWidth: 200,
   },
 });
 

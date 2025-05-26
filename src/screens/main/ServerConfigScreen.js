@@ -14,6 +14,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { changeApiUrl, getSavedApiUrl } from '../../config/api.config';
 import axios from 'axios';
+import apiConfig from '../../config/api.config';
 
 const ServerConfigScreen = ({ navigation }) => {
   const [apiUrl, setApiUrl] = useState('');
@@ -44,7 +45,7 @@ const ServerConfigScreen = ({ navigation }) => {
     
     try {
       // Intentar hacer una petición simple
-      const response = await axios.get(`${apiUrl}/health`, { timeout: 5000 });
+      const response = await axios.get(`${apiUrl}/getAllRecetas`, { timeout: 5000 });
       
       if (response.status === 200) {
         setTestResult({ 
@@ -86,7 +87,7 @@ const ServerConfigScreen = ({ navigation }) => {
   
   const getLocalIpSuggestions = () => {
     const suggestions = [
-      'http://localhost:8080',
+      apiConfig.API_BASE_URL,
       'http://10.0.2.2:8080', // Para emulador Android
       'http://127.0.0.1:8080'
     ];
