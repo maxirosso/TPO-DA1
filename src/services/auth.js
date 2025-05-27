@@ -76,52 +76,47 @@ initializeTestUsers();
 export const authService = {
   login: async (email, password) => {
     try {
-      // Intentar inicializar usuarios de prueba por si no se han creado
       await initializeTestUsers();
-      
-      // Intentar login con el backend
       try {
-        const response = await axios.post(`${apiConfig.API_BASE_URL}/auth/login`, {
-          email,
-          password
-        });
-        
-        if (response.data && response.data.token) {
-          const token = response.data.token;
-          const user = response.data.user || {
-            id: response.data.id,
-            email: email,
-            name: response.data.name || email.split('@')[0]
+        // Always use Axios for login to ensure correct form data
+        const params = new URLSearchParams();
+        params.append('mail', email);
+        params.append('password', password);
+        console.log('Login request body:', params.toString()); // Debug log
+        const response = await axios.post(
+          `${apiConfig.API_BASE_URL}/login`,
+          params.toString(), // send as plain string
+          { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
+        );
+        if (response.data) {
+          const user = response.data;
+          // Map backend user data to expected format
+          const mappedUser = {
+            id: user.idUsuario || user.id,
+            nombre: user.nombre || user.name,
+            mail: user.mail || user.email,
+            nickname: user.nickname || user.username,
+            tipo: user.tipo || 'comun', // comun, visitante, alumno
+            ...user
           };
-          
-          // Store user data and token
-          await AsyncStorage.setItem(USER_STORAGE_KEY, JSON.stringify(user));
-          await AsyncStorage.setItem(TOKEN_STORAGE_KEY, token);
-          
-          return { user, token };
+          await AsyncStorage.setItem(USER_STORAGE_KEY, JSON.stringify(mappedUser));
+          return { user: mappedUser, token: null };
         } else {
           throw new Error('Invalid response from server');
         }
       } catch (error) {
         console.error('Login error with backend:', error);
-        
-        // Si es error 401, significa credenciales incorrectas
         if (error.response && error.response.status === 401) {
-          // Intentar autenticación local antes de fallar
           const localAuthResult = await attemptLocalAuthentication(email, password);
           if (localAuthResult) {
             return localAuthResult;
           }
           throw new Error('Invalid credentials');
         }
-        
-        // Para otros errores (ej. conexión), intentar autenticación local
         const localAuthResult = await attemptLocalAuthentication(email, password);
         if (localAuthResult) {
           return localAuthResult;
         }
-        
-        // Si también falla localmente, lanzar error original
         throw error;
       }
     } catch (error) {
@@ -132,46 +127,56 @@ export const authService = {
   
   register: async (userData) => {
     try {
-      // Intentar registro con el backend
+      // Validate username (nickname) is present and non-empty
+      if (!userData.username || typeof userData.username !== 'string' || userData.username.trim() === '') {
+        throw new Error('El nombre de usuario (nickname) es obligatorio.');
+      }
+      // Attempt registration with the backend using the correct endpoint and payload
       try {
-        const response = await axios.post(`${apiConfig.API_BASE_URL}/auth/register`, userData);
-        
-        if (response.data && response.data.success) {
-          return response.data;
+        // Map frontend fields to backend expected fields
+        const backendPayload = {
+          mail: userData.email,
+          password: userData.password,
+          nombre: userData.name || userData.username.trim(),
+          nickname: userData.username.trim(),
+        };
+        const response = await axios.post(`${apiConfig.API_BASE_URL}/registrarUsuario`, backendPayload);
+        if (response.data && typeof response.data === 'string' && response.data.includes('exitosamente')) {
+          return { success: true };
+        } else if (response.data && typeof response.data === 'string' && response.data.includes('Ya existe')) {
+          throw new Error('Email already registered');
+        } else if (response.data && typeof response.data === 'string' && response.data.includes('nickname')) {
+          throw new Error('El nombre de usuario (nickname) es obligatorio.');
         } else {
           throw new Error(response.data?.message || 'Error during registration');
         }
       } catch (error) {
         console.error('Registration error with backend:', error);
-        
         // Fallback a modo local para desarrollo/testing
         const { email, password, username, name } = userData;
-        
+        if (!username || typeof username !== 'string' || username.trim() === '') {
+          throw new Error('El nombre de usuario (nickname) es obligatorio.');
+        }
         // Check if user already exists
         const pendingUsersStr = await AsyncStorage.getItem(PENDING_USERS_KEY);
         const pendingUsers = pendingUsersStr ? JSON.parse(pendingUsersStr) : {};
-        
         if (pendingUsers[email]) {
           throw new Error('Email already registered');
         }
-        
         // Store the new user data
         pendingUsers[email] = {
           id: Date.now().toString(),
           email,
           password,
-          username,
-          name: name || username || '',
+          username: username.trim(),
+          name: name || username.trim(),
           createdAt: new Date().toISOString(),
           isVerified: true
         };
-        
         // Save to storage
         await AsyncStorage.setItem(PENDING_USERS_KEY, JSON.stringify(pendingUsers));
-        
         // Auto-verify the email for development
         await authService.markEmailAsVerified(email);
-        
         return { email, success: true };
       }
     } catch (error) {
@@ -270,18 +275,18 @@ export const authService = {
       // Intenta actualizar el perfil en el backend
       try {
         const response = await axios.put(`${apiConfig.API_BASE_URL}/usuarios/perfil`, {
-          email,
-          ...profileData
+          email: email,
+          nombre: profileData.name,
+          ...('direccion' in profileData ? { direccion: profileData.direccion } : {}),
+          ...('avatar' in profileData ? { avatar: profileData.avatar } : {}),
+          ...('medioPago' in profileData ? { medioPago: profileData.medioPago } : {})
         });
-        
         return response.data && response.data.success;
       } catch (error) {
         console.error('Complete profile error with backend:', error);
-        
         // Fallback local
         const pendingUsersStr = await AsyncStorage.getItem(PENDING_USERS_KEY);
         const pendingUsers = pendingUsersStr ? JSON.parse(pendingUsersStr) : {};
-        
         // Update user profile data
         if (pendingUsers[email]) {
           pendingUsers[email] = {
@@ -289,11 +294,9 @@ export const authService = {
             ...profileData,
             profileCompleted: true
           };
-          
           await AsyncStorage.setItem(PENDING_USERS_KEY, JSON.stringify(pendingUsers));
           return true;
         }
-        
         return false;
       }
     } catch (error) {

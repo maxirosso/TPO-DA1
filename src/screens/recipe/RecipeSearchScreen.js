@@ -34,6 +34,13 @@ const RecipeSearchScreen = ({ navigation }) => {
     loadAllRecipes();
   }, []);
 
+  useEffect(() => {
+    // Show all recipes initially with proper sorting
+    if (allRecipes.length > 0) {
+      performSearch(''); // This will apply current sorting to all recipes
+    }
+  }, [allRecipes, sortType]);
+
   const loadAllRecipes = async () => {
     setLoading(true);
     setError(null);
@@ -48,77 +55,143 @@ const RecipeSearchScreen = ({ navigation }) => {
     }
   };
 
-  // Filter recipes based on search criteria
-  const filterRecipes = () => {
-    let results = [...allRecipes];
 
-    if (searchQuery.trim() !== '') {
-      switch (searchType) {
-        case 'name':
-          results = results.filter(recipe =>
-            recipe.title.toLowerCase().includes(searchQuery.toLowerCase())
-          );
-          break;
-        case 'ingredient':
-          results = results.filter(recipe =>
-            recipe.ingredients.some(ingredient =>
-              ingredient.name.toLowerCase().includes(searchQuery.toLowerCase())
-            )
-          );
-          break;
-        case 'exclude':
-          results = results.filter(recipe =>
-            !recipe.ingredients.some(ingredient =>
-              ingredient.name.toLowerCase().includes(searchQuery.toLowerCase())
-            )
-          );
-          break;
-        case 'tag':
-          results = results.filter(recipe =>
-            recipe.tags.some(tag =>
-              tag.toLowerCase().includes(searchQuery.toLowerCase())
-            )
-          );
-          break;
-        case 'user':
-          results = results.filter(recipe =>
-            recipe.user.toLowerCase().includes(searchQuery.toLowerCase())
-          );
-          break;
-      }
-    }
 
-    // Additional filter for excluding ingredients (when using other search types)
-    if (excludeIngredient.trim() !== '' && searchType !== 'exclude') {
-      results = results.filter(recipe =>
-        !recipe.ingredients.some(ingredient =>
-          ingredient.name.toLowerCase().includes(excludeIngredient.toLowerCase())
-        )
-      );
-    }
-
-    // Apply sorting
-    switch (sortType) {
-      case 'alphabetical':
-        results.sort((a, b) => a.title.localeCompare(b.title));
-        break;
-      case 'newest':
-        results.sort((a, b) => new Date(b.dateAdded) - new Date(a.dateAdded));
-        break;
-      case 'user':
-        results.sort((a, b) => a.user.localeCompare(b.user));
-        break;
-    }
-
-    setFilteredRecipes(results);
-  };
-
-  const handleSearch = (text) => {
+  const handleSearch = async (text) => {
     setSearchQuery(text);
     if (text.trim() === '') {
       setFilteredRecipes(allRecipes);
     } else {
-      filterRecipes();
+      // Trigger search with current search type and new query
+      await performSearch(text);
+    }
+  };
+
+  const performSearch = async (query = searchQuery) => {
+    if (query.trim() === '') {
+      // Apply sorting to all recipes when no search query
+      let sortedRecipes = [...allRecipes];
+      switch (sortType) {
+        case 'alphabetical':
+          sortedRecipes.sort((a, b) => a.title.localeCompare(b.title));
+          break;
+        case 'newest':
+          sortedRecipes.sort((a, b) => new Date(b.fecha || b.date || 0) - new Date(a.fecha || a.date || 0));
+          break;
+        case 'user':
+          sortedRecipes.sort((a, b) => (a.author || '').localeCompare(b.author || ''));
+          break;
+      }
+      setFilteredRecipes(sortedRecipes);
+      return;
+    }
+
+    setLoading(true);
+    try {
+      let results = [];
+      // Map frontend sortType to backend orden parameter
+      let orden;
+      if (sortType === 'newest') {
+        orden = 'newest';
+      } else if (sortType === 'user') {
+        orden = 'user';
+      } else {
+        orden = 'alphabetical';
+      }
+
+      switch (searchType) {
+        case 'name':
+          results = await dataService.searchRecipesByName(query, orden);
+          // Fallback to local search if backend returns empty
+          if (results.length === 0) {
+            results = allRecipes.filter(recipe =>
+              recipe.title.toLowerCase().includes(query.toLowerCase())
+            );
+          }
+          break;
+        case 'ingredient':
+          results = await dataService.searchRecipesByIngredient(query, orden);
+          // Fallback to local search if backend returns empty  
+          if (results.length === 0) {
+            results = allRecipes.filter(recipe =>
+              recipe.ingredients.some(ingredient =>
+                ingredient.name.toLowerCase().includes(query.toLowerCase())
+              )
+            );
+          }
+          break;
+        case 'exclude':
+          results = await dataService.searchRecipesWithoutIngredient(query, orden);
+          // Fallback to local search if backend returns empty
+          if (results.length === 0) {
+            results = allRecipes.filter(recipe =>
+              !recipe.ingredients.some(ingredient =>
+                ingredient.name.toLowerCase().includes(query.toLowerCase())
+              )
+            );
+          }
+          break;
+        case 'tag':
+          // For tag search, filter locally from all recipes
+          results = allRecipes.filter(recipe =>
+            recipe.category && recipe.category.toLowerCase().includes(query.toLowerCase())
+          );
+          break;
+        case 'user':
+          results = await dataService.searchRecipesByUser(query, orden);
+          // Fallback to local search if backend returns empty
+          if (results.length === 0) {
+            results = allRecipes.filter(recipe =>
+              recipe.author && recipe.author.toLowerCase().includes(query.toLowerCase())
+            );
+          }
+          break;
+        default:
+          results = allRecipes;
+      }
+
+      // Additional filter for excluding ingredients (when using other search types)
+      if (excludeIngredient.trim() !== '' && searchType !== 'exclude') {
+        const excludedResults = await dataService.searchRecipesWithoutIngredient(excludeIngredient, orden);
+        // Get intersection of results and excludedResults
+        results = results.filter(recipe => 
+          excludedResults.some(excluded => excluded.id === recipe.id)
+        );
+      }
+
+      // Apply local sorting for tag search and fallback cases
+      if (searchType === 'tag' || results.length > 0) {
+        // Check if results need local sorting (fallback cases or tag search)
+        const needsLocalSorting = searchType === 'tag' || 
+          (results.length > 0 && results.some(r => !r.fecha)); // No fecha means local data
+        
+        if (needsLocalSorting) {
+          switch (sortType) {
+            case 'alphabetical':
+              results.sort((a, b) => a.title.localeCompare(b.title));
+              break;
+            case 'newest':
+              results.sort((a, b) => new Date(b.fecha || b.date || 0) - new Date(a.fecha || a.date || 0));
+              break;
+            case 'user':
+              results.sort((a, b) => (a.author || '').localeCompare(b.author || ''));
+              break;
+          }
+        }
+      }
+
+      // Debug log to verify sorting
+      console.log(`Final results for "${query}" with sort "${sortType}":`, 
+        results.map(r => `${r.title} (${r.author}) - ${r.fecha}`));
+
+      setFilteredRecipes(results);
+      console.log(`Search results for "${query}":`, results.length, 'recipes found');
+    } catch (error) {
+      console.error('Error performing search:', error);
+      setError('Error al buscar recetas');
+      setFilteredRecipes([]);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -140,22 +213,26 @@ const RecipeSearchScreen = ({ navigation }) => {
     });
   };
 
-  const handleFilterChange = (type) => {
+  const handleFilterChange = async (type) => {
     setSearchType(type);
-    filterRecipes();
+    if (searchQuery.trim() !== '') {
+      await performSearch();
+    }
   };
 
-  const handleSortChange = (type) => {
+  const handleSortChange = async (type) => {
     setSortType(type);
-    filterRecipes();
+    if (searchQuery.trim() !== '') {
+      await performSearch();
+    }
   };
 
   const toggleFilterModal = () => {
     setFilterModalVisible(!filterModalVisible);
   };
 
-  const applyFilters = () => {
-    filterRecipes();
+  const applyFilters = async () => {
+    await performSearch();
     setFilterModalVisible(false);
   };
 
@@ -363,7 +440,7 @@ const RecipeSearchScreen = ({ navigation }) => {
           <TouchableOpacity
             onPress={() => {
               setExcludeIngredient('');
-              filterRecipes();
+              performSearch();
             }}
           >
             <Icon name="x" size={16} color={Colors.error} />

@@ -2,11 +2,11 @@ import { Platform } from 'react-native';
 import { DevSettings } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// Determinar si estamos en un emulador
-const isAndroidEmulator = Platform.OS === 'android' && !__DEV__;
-
-// Variable para almacenar la URL de la API
-let API_BASE_URL = 'http://localhost:8080'; // Default value until properly initialized
+// Set API_BASE_URL for emulator/dev environments
+let API_BASE_URL = 'http://localhost:8080';
+if (Platform.OS === 'android') {
+  API_BASE_URL = 'http://10.0.2.2:8080';
+}
 
 // Configuración de la API
 const apiConfig = {

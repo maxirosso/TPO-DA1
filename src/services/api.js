@@ -77,7 +77,13 @@ class ApiService {
     };
 
     // Add body for POST/PUT requests
-    if (config.body && typeof config.body === 'object') {
+    if (
+      config.body &&
+      typeof config.body === 'object' &&
+      config.headers &&
+      config.headers['Content-Type'] &&
+      config.headers['Content-Type'].includes('application/json')
+    ) {
       config.body = JSON.stringify(config.body);
     }
 
@@ -214,6 +220,7 @@ export const api = {
     forgotPassword: (mail) => apiService.postForm('/recuperarClave', { mail }),
     resetPassword: (mail) => apiService.postForm('/recuperarContrasena', { mail }),
     upgradeToStudent: (idUsuario, studentData) => apiService.put(`/cambiarAAlumno/${idUsuario}`, studentData),
+    createEmpresaUser: (userData) => apiService.post('/crearUsuarioEmpresa', userData),
   },
 
   // Recipe endpoints (matching Spring Boot controller)
@@ -235,6 +242,7 @@ export const api = {
     scaleByIngredient: (idReceta, nombreIngrediente, nuevaCantidad) => 
       apiService.postForm(`/ajustarPorIngrediente/${idReceta}`, { nombreIngrediente, nuevaCantidad }),
     getSuggestions: (idTipo) => apiService.get('/sugerenciasRecetas', { idTipo }),
+    approve: (idReceta, aprobar = true) => apiService.put('/aprobarReceta/' + idReceta, null, { aprobar }),
   },
 
   // Course endpoints (matching Spring Boot controller)
@@ -249,28 +257,19 @@ export const api = {
     unenroll: (idAlumno, idCronograma) => apiService.delete('/cancelarInscripcion', { idAlumno, idCronograma }),
     cancelEnrollment: (idInscripcion, reintegroEnTarjeta) => 
       apiService.postForm(`/baja/${idInscripcion}`, { reintegroEnTarjeta }),
-    markAttendance: (qrCode) => apiService.postForm('/attendance', { qrCode }),
+    // Note: markAttendance endpoint not implemented in backend controller
   },
 
-  // Venue endpoints
-  venues: {
-    getAll: () => apiService.get('/getAllSedes'),
-    getById: (id) => apiService.get(`/getSedeById/${id}`),
-  },
+  // Note: Venue endpoints not implemented in backend controller
 
   // Student endpoints
   students: {
     register: (mail, idUsuario, medioPago, dniFrente, dniFondo, tramite) => 
       apiService.postForm('/registrarAlumno', { mail, idUsuario, medioPago, dniFrente, dniFondo, tramite }),
-    getById: (id) => apiService.get(`/getAlumnoById/${id}`),
-    getAll: () => apiService.get('/getAllAlumnos'),
+    // Note: getById and getAll endpoints not implemented in backend controller
   },
 
-  // Recipe type endpoints
-  recipeTypes: {
-    getAll: () => apiService.get('/getAllTiposReceta'),
-    getById: (id) => apiService.get(`/getTipoRecetaById/${id}`),
-  },
+  // Note: Recipe type endpoints not implemented in backend controller
 
   // Rating endpoints
   ratings: {
@@ -281,8 +280,8 @@ export const api = {
 
   // User endpoints
   users: {
-    getProfile: (idUsuario) => apiService.get(`/users/${idUsuario}`),
-    updateProfile: (userData) => apiService.put('/users/profile', userData),
+    getByEmail: (mail) => apiService.get('/getUsuarioByEmail', { mail }),
+    updateProfile: (userData) => apiService.put('/usuarios/perfil', userData),
   },
 
   // Reviews endpoints (matching Spring Boot controller)

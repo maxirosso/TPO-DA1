@@ -26,13 +26,15 @@ const AppContent = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [userToken, setUserToken] = useState(null);
   const [isVisitor, setIsVisitor] = useState(false);
+  const [currentUser, setCurrentUser] = useState(null);
 
   // Authentication functions
   const authContext = React.useMemo(() => ({
     signIn: async (email, password) => {
       try {
         const result = await authService.login(email, password);
-        setUserToken(result.token);
+        setUserToken('dummy-token');
+        setCurrentUser(result.user);
         setIsVisitor(false);
         return result;
       } catch (e) {
@@ -45,6 +47,7 @@ const AppContent = () => {
       try {
         await authService.logout();
         setUserToken(null);
+        setCurrentUser(null);
         setIsVisitor(false);
       } catch (e) {
         console.log('Sign out error:', e);
@@ -86,7 +89,8 @@ const AppContent = () => {
         if (result) {
           try {
             const loginResult = await authService.login(email, profileData.password || '');
-            setUserToken(loginResult.token);
+            setUserToken('dummy-token');
+            setCurrentUser(loginResult.user);
             setIsVisitor(false);
           } catch (loginErr) {
             console.log('Auto login after profile completion failed:', loginErr);
@@ -106,8 +110,12 @@ const AppContent = () => {
 
     exitVisitorMode: () => {
       setIsVisitor(false);
-    }
-  }), []);
+    },
+
+    isVisitor,
+    user: currentUser,
+    setUser: setCurrentUser
+  }), [currentUser, isVisitor]);
 
   useEffect(() => {
     const bootstrapAsync = async () => {
@@ -120,6 +128,12 @@ const AppContent = () => {
         if (isAuthenticated) {
           const token = await AsyncStorage.getItem('user_token');
           setUserToken(token);
+          
+          // Load user data from storage
+          const storedUser = await authService.getCurrentUser();
+          if (storedUser) {
+            setCurrentUser(storedUser);
+          }
         }
       } catch (e) {
         console.log('Authentication check error:', e);

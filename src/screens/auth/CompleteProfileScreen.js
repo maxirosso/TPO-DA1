@@ -31,6 +31,10 @@ const CompleteProfileScreen = ({ navigation, route }) => {
   
   const handleCompleteProfile = async () => {
     // Validate inputs
+    if (!email || typeof email !== 'string' || !email.includes('@')) {
+      Alert.alert('Error', 'No se encontró el correo electrónico para completar el perfil. Por favor, regístrate nuevamente.');
+      return;
+    }
     if (!name) {
       Alert.alert('Campos incompletos', 'Por favor, ingresa tu nombre completo.');
       return;

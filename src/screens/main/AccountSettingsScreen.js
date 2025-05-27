@@ -5,9 +5,10 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  TextInput,
   Alert,
   StatusBar,
+  TextInput,
+  Modal,
   Switch,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -18,163 +19,385 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import Button from '../../components/common/Button';
 import Colors from '../../themes/colors';
 import Metrics from '../../themes/metrics';
+import dataService from '../../services/dataService';
 
-const AccountSettingsScreen = ({ route, navigation }) => {
-  const { user, onUserUpdate } = route.params;
-  const [editedUser, setEditedUser] = useState({ ...user });
+const AccountSettingsScreen = ({ navigation, route }) => {
+  const { user: initialUser, onUserUpdate } = route.params || {};
+  
+  const [user, setUser] = useState(initialUser || {});
   const [loading, setLoading] = useState(false);
-  const [passwordData, setPasswordData] = useState({
-    currentPassword: '',
-    newPassword: '',
-    confirmPassword: '',
+  const [editModalVisible, setEditModalVisible] = useState(false);
+  const [upgradeModalVisible, setUpgradeModalVisible] = useState(false);
+  const [editedUser, setEditedUser] = useState({ ...user });
+  const [studentData, setStudentData] = useState({
+    medioPago: '',
+    dniFrente: '',
+    dniFondo: '',
+    tramite: '',
   });
 
-  const accountTypes = [
-    { id: 'visitor', name: 'Visitante', description: 'Acceso básico a recetas' },
-    { id: 'user', name: 'Usuario', description: 'Crear y guardar recetas' },
-    { id: 'student', name: 'Estudiante', description: 'Acceso completo a cursos' },
-  ];
+  // Load complete user data including student information if applicable
+  useEffect(() => {
+    loadCompleteUserData();
+  }, []);
 
-  const handleSaveChanges = async () => {
-    if (!editedUser.name.trim()) {
+  const loadCompleteUserData = async () => {
+    try {
+      setLoading(true);
+      
+      // Get current user data from AsyncStorage
+      const userData = await AsyncStorage.getItem('user_data');
+      if (userData) {
+        const parsedUser = JSON.parse(userData);
+        setUser(parsedUser);
+        setEditedUser(parsedUser);
+        
+        // If user is a student, try to load additional student data
+        if (parsedUser.tipo === 'alumno' && parsedUser.idUsuario) {
+          try {
+            const alumnoData = await dataService.getAlumnoById(parsedUser.idUsuario);
+            if (alumnoData) {
+              setUser(prev => ({ ...prev, studentInfo: alumnoData }));
+              setEditedUser(prev => ({ ...prev, studentInfo: alumnoData }));
+            }
+          } catch (error) {
+            console.log('Error loading student data:', error);
+          }
+        }
+      }
+    } catch (error) {
+      console.log('Error loading user data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSaveProfile = async () => {
+    if (!editedUser.nombre?.trim()) {
       Alert.alert('Error', 'El nombre es obligatorio');
       return;
     }
 
-    if (!editedUser.email.trim() || !editedUser.email.includes('@')) {
+    if (!editedUser.mail?.trim() || !editedUser.mail.includes('@')) {
       Alert.alert('Error', 'Ingresa un email válido');
       return;
     }
 
     setLoading(true);
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // Update user profile via backend if available
+      if (dataService.useBackend) {
+        await dataService.updateUserProfile(editedUser);
+      }
       
-      await onUserUpdate(editedUser);
-      Alert.alert('Éxito', 'Información de cuenta actualizada correctamente');
-      navigation.goBack();
+      // Update local storage
+      await AsyncStorage.setItem('user_data', JSON.stringify(editedUser));
+      setUser(editedUser);
+      setEditModalVisible(false);
+      
+      if (onUserUpdate) {
+        onUserUpdate(editedUser);
+      }
+      
+      Alert.alert('Éxito', 'Perfil actualizado correctamente');
     } catch (error) {
-      Alert.alert('Error', 'No se pudo actualizar la información');
+      console.log('Error updating profile:', error);
+      Alert.alert('Error', 'No se pudo actualizar el perfil');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleChangePassword = async () => {
-    if (!passwordData.currentPassword || !passwordData.newPassword || !passwordData.confirmPassword) {
-      Alert.alert('Error', 'Todos los campos de contraseña son obligatorios');
+  const handleUpgradeToStudent = async () => {
+    // Validate student data
+    if (!studentData.medioPago.trim()) {
+      Alert.alert('Error', 'El medio de pago es obligatorio');
       return;
     }
-
-    if (passwordData.newPassword !== passwordData.confirmPassword) {
-      Alert.alert('Error', 'Las contraseñas nuevas no coinciden');
+    if (!studentData.dniFrente.trim()) {
+      Alert.alert('Error', 'La foto del DNI frente es obligatoria');
       return;
     }
-
-    if (passwordData.newPassword.length < 6) {
-      Alert.alert('Error', 'La nueva contraseña debe tener al menos 6 caracteres');
+    if (!studentData.dniFondo.trim()) {
+      Alert.alert('Error', 'La foto del DNI dorso es obligatoria');
+      return;
+    }
+    if (!studentData.tramite.trim()) {
+      Alert.alert('Error', 'El número de trámite es obligatorio');
       return;
     }
 
     setLoading(true);
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      const studentRequest = {
+        dniFrente: studentData.dniFrente,
+        dniFondo: studentData.dniFondo,
+        tramite: studentData.tramite,
+        // Note: medioPago will be handled separately as per task requirements
+      };
+
+      // Call backend to upgrade user to student
+      await dataService.upgradeToStudent(user.idUsuario, studentRequest);
       
-      Alert.alert('Éxito', 'Contraseña actualizada correctamente');
-      setPasswordData({
-        currentPassword: '',
-        newPassword: '',
-        confirmPassword: '',
-      });
+      // Update local user data
+      const updatedUser = {
+        ...user,
+        tipo: 'alumno',
+        medioPago: studentData.medioPago,
+        studentInfo: {
+          dniFrente: studentData.dniFrente,
+          dniFondo: studentData.dniFondo,
+          tramite: studentData.tramite,
+          cuentaCorriente: 0, // New account starts at 0
+        }
+      };
+      
+      await AsyncStorage.setItem('user_data', JSON.stringify(updatedUser));
+      setUser(updatedUser);
+      setUpgradeModalVisible(false);
+      
+      if (onUserUpdate) {
+        onUserUpdate(updatedUser);
+      }
+      
+      Alert.alert(
+        'Éxito', 
+        'Tu cuenta ha sido actualizada a Alumno. Ahora puedes inscribirte a cursos.',
+        [{ text: 'Entendido', onPress: () => navigation.goBack() }]
+      );
     } catch (error) {
-      Alert.alert('Error', 'No se pudo cambiar la contraseña');
+      console.log('Error upgrading to student:', error);
+      Alert.alert('Error', 'No se pudo actualizar la cuenta a Alumno');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleDeleteAccount = () => {
+  const getUserTypeDisplay = () => {
+    switch (user.tipo) {
+      case 'visitante': return { text: 'Visitante', color: Colors.textMedium, icon: 'eye' };
+      case 'comun': return { text: 'Usuario Regular', color: Colors.primary, icon: 'user' };
+      case 'alumno': return { text: 'Alumno', color: Colors.success, icon: 'book' };
+      case 'empresa': return { text: 'Representante Empresa', color: Colors.warning, icon: 'shield' };
+      default: return { text: 'Usuario', color: Colors.textMedium, icon: 'user' };
+    }
+  };
+
+  const canUpgradeToStudent = () => {
+    return user.tipo === 'comun'; // Only regular users can upgrade to student
+  };
+
+  const handlePasswordRecovery = async () => {
+    if (!user.mail) {
+      Alert.alert('Error', 'No se encontró el email del usuario');
+      return;
+    }
+
     Alert.alert(
-      'Eliminar Cuenta',
-      'Esta acción es irreversible. Se eliminarán todos tus datos, recetas, cursos y configuraciones.\n\n¿Estás seguro que quieres continuar?',
+      'Recuperar Contraseña',
+      '¿Deseas enviar un código de recuperación a tu email?',
       [
         { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Eliminar',
-          style: 'destructive',
-          onPress: () => {
-            Alert.alert(
-              'Confirmación Final',
-              'Escribe "ELIMINAR" para confirmar la eliminación de tu cuenta',
-              [
-                { text: 'Cancelar', style: 'cancel' },
-                {
-                  text: 'Confirmar',
-                  style: 'destructive',
-                  onPress: async () => {
-                    try {
-                      // Simulate account deletion
-                      await new Promise(resolve => setTimeout(resolve, 2000));
-                      Alert.alert('Cuenta Eliminada', 'Tu cuenta ha sido eliminada exitosamente');
-                      // Navigate to login or welcome screen
-                      navigation.reset({
-                        index: 0,
-                        routes: [{ name: 'Welcome' }],
-                      });
-                    } catch (error) {
-                      Alert.alert('Error', 'No se pudo eliminar la cuenta');
-                    }
-                  }
-                }
-              ]
-            );
+        { 
+          text: 'Enviar Código',
+          onPress: async () => {
+            setLoading(true);
+            try {
+              await dataService.resetPassword(user.mail);
+              Alert.alert(
+                'Código Enviado',
+                'Se ha enviado un código de recuperación a tu email. El código tiene una validez de 30 minutos.'
+              );
+            } catch (error) {
+              console.log('Error sending recovery code:', error);
+              Alert.alert('Error', 'No se pudo enviar el código de recuperación');
+            } finally {
+              setLoading(false);
+            }
           }
         }
       ]
     );
   };
 
-  const renderAccountTypeSelector = () => (
-    <View style={styles.section}>
-      <Text style={styles.sectionTitle}>Tipo de Cuenta</Text>
-      <Text style={styles.sectionDescription}>
-        Selecciona el tipo de cuenta que mejor se adapte a tus necesidades
-      </Text>
-      
-      {accountTypes.map((type) => (
-        <TouchableOpacity
-          key={type.id}
-          style={[
-            styles.accountTypeCard,
-            editedUser.accountType === type.id && styles.selectedAccountType
-          ]}
-          onPress={() => setEditedUser({ ...editedUser, accountType: type.id })}
-        >
-          <View style={styles.accountTypeHeader}>
-            <View style={styles.accountTypeInfo}>
-              <Text style={[
-                styles.accountTypeName,
-                editedUser.accountType === type.id && styles.selectedAccountTypeName
-              ]}>
-                {type.name}
-              </Text>
-              <Text style={styles.accountTypeDescription}>{type.description}</Text>
-            </View>
-            <View style={[
-              styles.radioButton,
-              editedUser.accountType === type.id && styles.selectedRadioButton
-            ]}>
-              {editedUser.accountType === type.id && (
-                <View style={styles.radioButtonInner} />
-              )}
-            </View>
+  const renderEditModal = () => (
+    <Modal
+      animationType="slide"
+      transparent={true}
+      visible={editModalVisible}
+      onRequestClose={() => setEditModalVisible(false)}
+    >
+      <View style={styles.modalOverlay}>
+        <View style={styles.modalContent}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Editar Información Personal</Text>
+            <TouchableOpacity onPress={() => setEditModalVisible(false)}>
+              <Icon name="x" size={24} color={Colors.textDark} />
+            </TouchableOpacity>
           </View>
-        </TouchableOpacity>
-      ))}
-    </View>
+
+          <ScrollView style={styles.modalForm}>
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Nombre completo *</Text>
+              <TextInput
+                style={styles.textInput}
+                value={editedUser.nombre || ''}
+                onChangeText={(text) => setEditedUser({ ...editedUser, nombre: text })}
+                placeholder="Ingresa tu nombre completo"
+                placeholderTextColor={Colors.textLight}
+              />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Email *</Text>
+              <TextInput
+                style={styles.textInput}
+                value={editedUser.mail || ''}
+                onChangeText={(text) => setEditedUser({ ...editedUser, mail: text })}
+                placeholder="tu@email.com"
+                placeholderTextColor={Colors.textLight}
+                keyboardType="email-address"
+                autoCapitalize="none"
+              />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Nickname</Text>
+              <TextInput
+                style={styles.textInput}
+                value={editedUser.nickname || ''}
+                onChangeText={(text) => setEditedUser({ ...editedUser, nickname: text })}
+                placeholder="@usuario"
+                placeholderTextColor={Colors.textLight}
+                autoCapitalize="none"
+              />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Dirección</Text>
+              <TextInput
+                style={styles.textInput}
+                value={editedUser.direccion || ''}
+                onChangeText={(text) => setEditedUser({ ...editedUser, direccion: text })}
+                placeholder="Ciudad, País"
+                placeholderTextColor={Colors.textLight}
+              />
+            </View>
+          </ScrollView>
+
+          <View style={styles.modalActions}>
+            <Button
+              title="Cancelar"
+              type="outline"
+              onPress={() => setEditModalVisible(false)}
+              style={styles.modalCancelButton}
+            />
+            <Button
+              title={loading ? "Guardando..." : "Guardar"}
+              onPress={handleSaveProfile}
+              style={styles.modalSaveButton}
+              disabled={loading}
+            />
+          </View>
+        </View>
+      </View>
+    </Modal>
   );
+
+  const renderUpgradeModal = () => (
+    <Modal
+      animationType="slide"
+      transparent={true}
+      visible={upgradeModalVisible}
+      onRequestClose={() => setUpgradeModalVisible(false)}
+    >
+      <View style={styles.modalOverlay}>
+        <View style={styles.modalContent}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Cambiar a Cuenta de Alumno</Text>
+            <TouchableOpacity onPress={() => setUpgradeModalVisible(false)}>
+              <Icon name="x" size={24} color={Colors.textDark} />
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView style={styles.modalForm}>
+            <Text style={styles.upgradeDescription}>
+              Para convertir tu cuenta a Alumno necesitas proporcionar la siguiente información adicional:
+            </Text>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Medio de Pago *</Text>
+              <TextInput
+                style={styles.textInput}
+                value={studentData.medioPago}
+                onChangeText={(text) => setStudentData({ ...studentData, medioPago: text })}
+                placeholder="Tarjeta de crédito, débito, etc."
+                placeholderTextColor={Colors.textLight}
+              />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Foto DNI Frente *</Text>
+              <TextInput
+                style={styles.textInput}
+                value={studentData.dniFrente}
+                onChangeText={(text) => setStudentData({ ...studentData, dniFrente: text })}
+                placeholder="URL o referencia de la foto del DNI frente"
+                placeholderTextColor={Colors.textLight}
+              />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Foto DNI Dorso *</Text>
+              <TextInput
+                style={styles.textInput}
+                value={studentData.dniFondo}
+                onChangeText={(text) => setStudentData({ ...studentData, dniFondo: text })}
+                placeholder="URL o referencia de la foto del DNI dorso"
+                placeholderTextColor={Colors.textLight}
+              />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Número de Trámite *</Text>
+              <TextInput
+                style={styles.textInput}
+                value={studentData.tramite}
+                onChangeText={(text) => setStudentData({ ...studentData, tramite: text })}
+                placeholder="Número de trámite del DNI"
+                placeholderTextColor={Colors.textLight}
+                keyboardType="numeric"
+              />
+            </View>
+
+            <View style={styles.upgradeNote}>
+              <Icon name="info" size={16} color={Colors.primary} />
+              <Text style={styles.upgradeNoteText}>
+                Registrarse como alumno no tiene costo. Solo se facturarán los cursos a los que te inscribas.
+              </Text>
+            </View>
+          </ScrollView>
+
+          <View style={styles.modalActions}>
+            <Button
+              title="Cancelar"
+              type="outline"
+              onPress={() => setUpgradeModalVisible(false)}
+              style={styles.modalCancelButton}
+            />
+            <Button
+              title={loading ? "Procesando..." : "Cambiar a Alumno"}
+              onPress={handleUpgradeToStudent}
+              style={styles.modalSaveButton}
+              disabled={loading}
+            />
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+
+  const userType = getUserTypeDisplay();
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -196,218 +419,126 @@ const AccountSettingsScreen = ({ route, navigation }) => {
       </LinearGradient>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {/* Personal Information */}
+        {/* Account Type Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Información Personal</Text>
-          
-          <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Nombre completo</Text>
-            <TextInput
-              style={styles.textInput}
-              value={editedUser.name}
-              onChangeText={(text) => setEditedUser({ ...editedUser, name: text })}
-              placeholder="Ingresa tu nombre completo"
-              placeholderTextColor={Colors.textLight}
-            />
-          </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Email</Text>
-            <TextInput
-              style={styles.textInput}
-              value={editedUser.email}
-              onChangeText={(text) => setEditedUser({ ...editedUser, email: text })}
-              placeholder="tu@email.com"
-              placeholderTextColor={Colors.textLight}
-              keyboardType="email-address"
-              autoCapitalize="none"
-            />
-          </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Teléfono</Text>
-            <TextInput
-              style={styles.textInput}
-              value={editedUser.phone}
-              onChangeText={(text) => setEditedUser({ ...editedUser, phone: text })}
-              placeholder="+1 (555) 123-4567"
-              placeholderTextColor={Colors.textLight}
-              keyboardType="phone-pad"
-            />
-          </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Ubicación</Text>
-            <TextInput
-              style={styles.textInput}
-              value={editedUser.location}
-              onChangeText={(text) => setEditedUser({ ...editedUser, location: text })}
-              placeholder="Ciudad, País"
-              placeholderTextColor={Colors.textLight}
-            />
-          </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Biografía</Text>
-            <TextInput
-              style={[styles.textInput, styles.textArea]}
-              value={editedUser.bio}
-              onChangeText={(text) => setEditedUser({ ...editedUser, bio: text })}
-              placeholder="Cuéntanos sobre ti..."
-              placeholderTextColor={Colors.textLight}
-              multiline
-              numberOfLines={4}
-              textAlignVertical="top"
-            />
+          <Text style={styles.sectionTitle}>Tipo de Cuenta</Text>
+          <View style={styles.accountTypeCard}>
+            <View style={styles.accountTypeInfo}>
+              <View style={[styles.accountTypeIcon, { backgroundColor: userType.color + '20' }]}>
+                <Icon name={userType.icon} size={20} color={userType.color} />
+              </View>
+              <View style={styles.accountTypeDetails}>
+                <Text style={styles.accountTypeTitle}>{userType.text}</Text>
+                <Text style={styles.accountTypeDescription}>
+                  {user.tipo === 'visitante' && 'Acceso limitado a recetas públicas'}
+                  {user.tipo === 'comun' && 'Puede crear, gestionar recetas y ver contenido'}
+                  {user.tipo === 'alumno' && 'Acceso completo incluyendo cursos'}
+                  {user.tipo === 'empresa' && 'Puede aprobar recetas de usuarios'}
+                </Text>
+              </View>
+            </View>
+            {canUpgradeToStudent() && (
+              <Button
+                title="Cambiar a Alumno"
+                type="outline"
+                onPress={() => setUpgradeModalVisible(true)}
+                style={styles.upgradeButton}
+                iconName="arrow-up"
+              />
+            )}
           </View>
         </View>
 
-        {/* Account Type */}
-        {renderAccountTypeSelector()}
-
-        {/* Privacy Settings */}
+        {/* Personal Information Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Configuración de Privacidad</Text>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Información Personal</Text>
+            <TouchableOpacity onPress={() => setEditModalVisible(true)}>
+              <Icon name="edit-2" size={20} color={Colors.primary} />
+            </TouchableOpacity>
+          </View>
           
-          <View style={styles.settingRow}>
-            <View style={styles.settingInfo}>
-              <Text style={styles.settingTitle}>Perfil Público</Text>
-              <Text style={styles.settingDescription}>
-                Permite que otros usuarios vean tu perfil y recetas
+          <View style={styles.infoCard}>
+            <View style={styles.infoRow}>
+              <Text style={styles.infoLabel}>Nombre:</Text>
+              <Text style={styles.infoValue}>{user.nombre || 'No especificado'}</Text>
+            </View>
+            <View style={styles.infoRow}>
+              <Text style={styles.infoLabel}>Email:</Text>
+              <Text style={styles.infoValue}>{user.mail || 'No especificado'}</Text>
+            </View>
+            <View style={styles.infoRow}>
+              <Text style={styles.infoLabel}>Nickname:</Text>
+              <Text style={styles.infoValue}>@{user.nickname || 'usuario'}</Text>
+            </View>
+            <View style={styles.infoRow}>
+              <Text style={styles.infoLabel}>Dirección:</Text>
+              <Text style={styles.infoValue}>{user.direccion || 'No especificada'}</Text>
+            </View>
+            <View style={styles.infoRow}>
+              <Text style={styles.infoLabel}>Estado:</Text>
+              <Text style={[styles.infoValue, { color: user.habilitado === 'Si' ? Colors.success : Colors.error }]}>
+                {user.habilitado === 'Si' ? 'Activo' : 'Pendiente de verificación'}
               </Text>
             </View>
-            <Switch
-              value={editedUser.preferences?.publicProfile || false}
-              onValueChange={(value) => setEditedUser({
-                ...editedUser,
-                preferences: { ...editedUser.preferences, publicProfile: value }
-              })}
-              trackColor={{ false: Colors.border, true: Colors.primary + '40' }}
-              thumbColor={editedUser.preferences?.publicProfile ? Colors.primary : Colors.textLight}
-            />
-          </View>
-
-          <View style={styles.settingRow}>
-            <View style={styles.settingInfo}>
-              <Text style={styles.settingTitle}>Mostrar Email</Text>
-              <Text style={styles.settingDescription}>
-                Permite que otros usuarios vean tu email en tu perfil
-              </Text>
-            </View>
-            <Switch
-              value={editedUser.preferences?.showEmail || false}
-              onValueChange={(value) => setEditedUser({
-                ...editedUser,
-                preferences: { ...editedUser.preferences, showEmail: value }
-              })}
-              trackColor={{ false: Colors.border, true: Colors.primary + '40' }}
-              thumbColor={editedUser.preferences?.showEmail ? Colors.primary : Colors.textLight}
-            />
-          </View>
-
-          <View style={styles.settingRow}>
-            <View style={styles.settingInfo}>
-              <Text style={styles.settingTitle}>Recibir Mensajes</Text>
-              <Text style={styles.settingDescription}>
-                Permite que otros usuarios te envíen mensajes privados
-              </Text>
-            </View>
-            <Switch
-              value={editedUser.preferences?.allowMessages || true}
-              onValueChange={(value) => setEditedUser({
-                ...editedUser,
-                preferences: { ...editedUser.preferences, allowMessages: value }
-              })}
-              trackColor={{ false: Colors.border, true: Colors.primary + '40' }}
-              thumbColor={editedUser.preferences?.allowMessages ? Colors.primary : Colors.textLight}
-            />
           </View>
         </View>
 
-        {/* Change Password */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Cambiar Contraseña</Text>
-          
-          <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Contraseña actual</Text>
-            <TextInput
-              style={styles.textInput}
-              value={passwordData.currentPassword}
-              onChangeText={(text) => setPasswordData({ ...passwordData, currentPassword: text })}
-              placeholder="Ingresa tu contraseña actual"
-              placeholderTextColor={Colors.textLight}
-              secureTextEntry
-            />
-          </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Nueva contraseña</Text>
-            <TextInput
-              style={styles.textInput}
-              value={passwordData.newPassword}
-              onChangeText={(text) => setPasswordData({ ...passwordData, newPassword: text })}
-              placeholder="Ingresa tu nueva contraseña"
-              placeholderTextColor={Colors.textLight}
-              secureTextEntry
-            />
-          </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Confirmar nueva contraseña</Text>
-            <TextInput
-              style={styles.textInput}
-              value={passwordData.confirmPassword}
-              onChangeText={(text) => setPasswordData({ ...passwordData, confirmPassword: text })}
-              placeholder="Confirma tu nueva contraseña"
-              placeholderTextColor={Colors.textLight}
-              secureTextEntry
-            />
-          </View>
-
-          <Button
-            title="Cambiar Contraseña"
-            onPress={handleChangePassword}
-            style={styles.changePasswordButton}
-            disabled={loading}
-            iconName="lock"
-          />
-        </View>
-
-        {/* Danger Zone */}
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: Colors.error }]}>Zona de Peligro</Text>
-          
-          <View style={styles.dangerCard}>
-            <View style={styles.dangerInfo}>
-              <Text style={styles.dangerTitle}>Eliminar Cuenta</Text>
-              <Text style={styles.dangerDescription}>
-                Esta acción eliminará permanentemente tu cuenta y todos los datos asociados. 
-                No se puede deshacer.
-              </Text>
+        {/* Student Information Section - Only show for students */}
+        {user.tipo === 'alumno' && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Información de Alumno</Text>
+            <View style={styles.infoCard}>
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>Medio de Pago:</Text>
+                <Text style={styles.infoValue}>{user.medioPago || 'No especificado'}</Text>
+              </View>
+              {user.studentInfo && (
+                <>
+                  <View style={styles.infoRow}>
+                    <Text style={styles.infoLabel}>DNI Frente:</Text>
+                    <Text style={styles.infoValue}>{user.studentInfo.dniFront ? 'Registrado' : 'No registrado'}</Text>
+                  </View>
+                  <View style={styles.infoRow}>
+                    <Text style={styles.infoLabel}>DNI Dorso:</Text>
+                    <Text style={styles.infoValue}>{user.studentInfo.dniBack ? 'Registrado' : 'No registrado'}</Text>
+                  </View>
+                  <View style={styles.infoRow}>
+                    <Text style={styles.infoLabel}>Número de Trámite:</Text>
+                    <Text style={styles.infoValue}>{user.studentInfo.tramite || 'No especificado'}</Text>
+                  </View>
+                  <View style={styles.infoRow}>
+                    <Text style={styles.infoLabel}>Cuenta Corriente:</Text>
+                    <Text style={[styles.infoValue, { fontWeight: '600' }]}>
+                      ${user.studentInfo.accountBalance || '0.00'}
+                    </Text>
+                  </View>
+                </>
+              )}
             </View>
+          </View>
+        )}
+
+        {/* Password Recovery Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Recuperación de Contraseña</Text>
+          <View style={styles.infoCard}>
+            <Text style={styles.recoveryInfo}>
+              Si necesitas recuperar tu contraseña, puedes solicitar un código de recuperación. El código será válido por 30 minutos.
+            </Text>
             <Button
-              title="Eliminar Cuenta"
-              onPress={handleDeleteAccount}
-              style={styles.deleteButton}
-              textStyle={styles.deleteButtonText}
-              iconName="trash-2"
+              title="Solicitar Código de Recuperación"
+              type="outline"
+              onPress={handlePasswordRecovery}
+              style={styles.recoveryButton}
+              iconName="key"
             />
           </View>
         </View>
-
-        <View style={styles.bottomPadding} />
       </ScrollView>
 
-      {/* Save Button */}
-      <View style={styles.saveContainer}>
-        <Button
-          title={loading ? "Guardando..." : "Guardar Cambios"}
-          onPress={handleSaveChanges}
-          style={styles.saveButton}
-          disabled={loading}
-          iconName="save"
-        />
-      </View>
+      {renderEditModal()}
+      {renderUpgradeModal()}
     </SafeAreaView>
   );
 };
@@ -419,12 +550,11 @@ const styles = StyleSheet.create({
   },
   headerContainer: {
     paddingHorizontal: Metrics.mediumSpacing,
-    paddingBottom: Metrics.mediumSpacing,
+    paddingVertical: Metrics.mediumSpacing,
   },
   headerContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: Metrics.mediumSpacing,
   },
   backButton: {
     marginRight: Metrics.baseSpacing,
@@ -440,27 +570,144 @@ const styles = StyleSheet.create({
     padding: Metrics.mediumSpacing,
   },
   section: {
+    marginBottom: Metrics.xLargeSpacing,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: Metrics.mediumSpacing,
+  },
+  sectionTitle: {
+    fontSize: Metrics.mediumFontSize,
+    fontWeight: '600',
+    color: Colors.textDark,
+    marginBottom: Metrics.mediumSpacing,
+  },
+  accountTypeCard: {
     backgroundColor: Colors.card,
     borderRadius: Metrics.baseBorderRadius,
     padding: Metrics.mediumSpacing,
-    marginBottom: Metrics.mediumSpacing,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 2,
   },
-  sectionTitle: {
-    fontSize: Metrics.mediumFontSize,
+  accountTypeInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: Metrics.mediumSpacing,
+  },
+  accountTypeIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: Metrics.mediumSpacing,
+  },
+  accountTypeDetails: {
+    flex: 1,
+  },
+  accountTypeTitle: {
+    fontSize: Metrics.baseFontSize,
     fontWeight: '600',
     color: Colors.textDark,
-    marginBottom: Metrics.baseSpacing,
+    marginBottom: 2,
   },
-  sectionDescription: {
+  accountTypeDescription: {
     fontSize: Metrics.smallFontSize,
     color: Colors.textMedium,
-    marginBottom: Metrics.mediumSpacing,
     lineHeight: Metrics.baseLineHeight,
+  },
+  upgradeButton: {
+    marginTop: Metrics.baseSpacing,
+  },
+  infoCard: {
+    backgroundColor: Colors.card,
+    borderRadius: Metrics.baseBorderRadius,
+    padding: Metrics.mediumSpacing,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  infoRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: Metrics.baseSpacing,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+  },
+  infoLabel: {
+    fontSize: Metrics.baseFontSize,
+    color: Colors.textMedium,
+    fontWeight: '500',
+    flex: 1,
+  },
+  infoValue: {
+    fontSize: Metrics.baseFontSize,
+    color: Colors.textDark,
+    flex: 2,
+    textAlign: 'right',
+  },
+  actionsCard: {
+    backgroundColor: Colors.card,
+    borderRadius: Metrics.baseBorderRadius,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  actionItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: Metrics.mediumSpacing,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+  },
+  actionText: {
+    fontSize: Metrics.baseFontSize,
+    color: Colors.textDark,
+    marginLeft: Metrics.mediumSpacing,
+    flex: 1,
+  },
+  dangerAction: {
+    borderBottomWidth: 0,
+  },
+  // Modal styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: Colors.card,
+    borderRadius: Metrics.mediumBorderRadius,
+    padding: Metrics.mediumSpacing,
+    margin: Metrics.mediumSpacing,
+    width: '90%',
+    maxHeight: '80%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: Metrics.mediumSpacing,
+  },
+  modalTitle: {
+    fontSize: Metrics.largeFontSize,
+    fontWeight: '600',
+    color: Colors.textDark,
+  },
+  modalForm: {
+    maxHeight: 400,
   },
   inputGroup: {
     marginBottom: Metrics.mediumSpacing,
@@ -480,126 +727,48 @@ const styles = StyleSheet.create({
     color: Colors.textDark,
     backgroundColor: Colors.background,
   },
-  textArea: {
-    height: 80,
-    textAlignVertical: 'top',
-  },
-  accountTypeCard: {
-    borderWidth: 1,
-    borderColor: Colors.border,
-    borderRadius: Metrics.baseBorderRadius,
-    padding: Metrics.mediumSpacing,
-    marginBottom: Metrics.baseSpacing,
-    backgroundColor: Colors.background,
-  },
-  selectedAccountType: {
-    borderColor: Colors.primary,
-    backgroundColor: Colors.primary + '10',
-  },
-  accountTypeHeader: {
+  modalActions: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    marginTop: Metrics.mediumSpacing,
   },
-  accountTypeInfo: {
+  modalCancelButton: {
     flex: 1,
+    marginRight: Metrics.baseSpacing,
   },
-  accountTypeName: {
-    fontSize: Metrics.baseFontSize,
-    fontWeight: '500',
-    color: Colors.textDark,
-    marginBottom: 4,
-  },
-  selectedAccountTypeName: {
-    color: Colors.primary,
-  },
-  accountTypeDescription: {
-    fontSize: Metrics.smallFontSize,
-    color: Colors.textMedium,
-  },
-  radioButton: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    borderWidth: 2,
-    borderColor: Colors.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  selectedRadioButton: {
-    borderColor: Colors.primary,
-  },
-  radioButtonInner: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: Colors.primary,
-  },
-  settingRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: Metrics.baseSpacing,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-  },
-  settingInfo: {
+  modalSaveButton: {
     flex: 1,
-    marginRight: Metrics.mediumSpacing,
+    marginLeft: Metrics.baseSpacing,
   },
-  settingTitle: {
+  upgradeDescription: {
     fontSize: Metrics.baseFontSize,
-    fontWeight: '500',
-    color: Colors.textDark,
-    marginBottom: 4,
-  },
-  settingDescription: {
-    fontSize: Metrics.smallFontSize,
     color: Colors.textMedium,
-    lineHeight: Metrics.baseLineHeight,
-  },
-  changePasswordButton: {
-    marginTop: Metrics.baseSpacing,
-  },
-  dangerCard: {
-    backgroundColor: Colors.error + '10',
-    borderRadius: Metrics.baseBorderRadius,
-    padding: Metrics.mediumSpacing,
-    borderWidth: 1,
-    borderColor: Colors.error + '30',
-  },
-  dangerInfo: {
+    lineHeight: Metrics.mediumLineHeight,
     marginBottom: Metrics.mediumSpacing,
   },
-  dangerTitle: {
-    fontSize: Metrics.baseFontSize,
-    fontWeight: '600',
-    color: Colors.error,
-    marginBottom: Metrics.baseSpacing,
+  upgradeNote: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: Colors.primary + '10',
+    padding: Metrics.mediumSpacing,
+    borderRadius: Metrics.baseBorderRadius,
+    marginTop: Metrics.mediumSpacing,
   },
-  dangerDescription: {
+  upgradeNoteText: {
     fontSize: Metrics.smallFontSize,
-    color: Colors.textMedium,
+    color: Colors.primary,
+    marginLeft: Metrics.baseSpacing,
+    flex: 1,
     lineHeight: Metrics.baseLineHeight,
   },
-  deleteButton: {
-    backgroundColor: Colors.error,
-    borderWidth: 0,
+  recoveryInfo: {
+    fontSize: Metrics.baseFontSize,
+    color: Colors.textMedium,
+    lineHeight: Metrics.mediumLineHeight,
+    marginBottom: Metrics.mediumSpacing,
   },
-  deleteButtonText: {
-    color: Colors.card,
-  },
-  saveContainer: {
-    padding: Metrics.mediumSpacing,
-    backgroundColor: Colors.card,
-    borderTopWidth: 1,
-    borderTopColor: Colors.border,
-  },
-  saveButton: {
-    width: '100%',
-  },
-  bottomPadding: {
-    height: Metrics.xxLargeSpacing,
+  recoveryButton: {
+    marginTop: Metrics.baseSpacing,
   },
 });
 

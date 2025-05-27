@@ -19,8 +19,9 @@ import Button from '../../components/common/Button';
 import Input from '../../components/common/Input';
 import Colors from '../../themes/colors';
 import Metrics from '../../themes/metrics';
+import apiService from '../../services/api';
 
-const StudentRegistrationScreen = ({ navigation }) => {
+const StudentRegistrationScreen = ({ navigation, route }) => {
   const [cardNumber, setCardNumber] = useState('');
   const [expiry, setExpiry] = useState('');
   const [cvv, setCvv] = useState('');
@@ -29,7 +30,11 @@ const StudentRegistrationScreen = ({ navigation }) => {
   const [dniFront, setDniFront] = useState(null);
   const [dniBack, setDniBack] = useState(null);
   const [currentStep, setCurrentStep] = useState(1);
+  const [tramite, setTramite] = useState('');
   
+  const email = route?.params?.email || '';
+  const [idUsuario, setIdUsuario] = useState('');
+
   const handleSelectImage = (type) => {
     ImagePicker.launchImageLibrary(
       {
@@ -54,7 +59,20 @@ const StudentRegistrationScreen = ({ navigation }) => {
     );
   };
 
-  const handleContinue = () => {
+  const fetchUserId = async (email) => {
+    try {
+      const response = await apiService.get('/getUsuarioByEmail', { mail: email });
+      if (response && response.data && response.data.idUsuario) {
+        setIdUsuario(response.data.idUsuario);
+        return response.data.idUsuario;
+      }
+    } catch (error) {
+      console.error('Error fetching user ID:', error);
+    }
+    return null;
+  };
+
+  const handleContinue = async () => {
     if (currentStep === 1) {
       if (!cardNumber || !expiry || !cvv || !cardName) {
         Alert.alert('Error', 'Por favor, completa todos los campos de la tarjeta.');
@@ -62,17 +80,45 @@ const StudentRegistrationScreen = ({ navigation }) => {
       }
       setCurrentStep(2);
     } else if (currentStep === 2) {
-      if (!dniFront || !dniBack) {
-        Alert.alert('Error', 'Por favor, sube las fotos de tu DNI (frente y reverso).');
+      if (!dniFront || !dniBack || !tramite) {
+        Alert.alert('Error', 'Por favor, sube las fotos de tu DNI (frente y reverso) y completa el campo de trámite.');
         return;
       }
       setIsLoading(true);
-      
-      // Simulate API call for verification
-      setTimeout(() => {
+      try {
+        // For new student registration, do NOT fetch or send idUsuario
+        // Only use idUsuario if upgrading an existing user (not handled here)
+        // Extract file names from URIs if possible
+        const getFileName = (uri) => {
+          if (!uri) return '';
+          const parts = uri.split('/');
+          return parts[parts.length - 1];
+        };
+        const dniFrente = getFileName(dniFront);
+        const dniFondo = getFileName(dniBack);
+        const mail = email;
+        const medioPago = cardNumber || '';
+        const tramiteStr = tramite || '';
+        // Log the data for debugging
+        console.log('Registering student params:', { mail, idUsuario: null, medioPago, dniFrente, dniFondo, tramite: tramiteStr });
+        const response = await apiService.auth.registerStudent(
+          mail,
+          null, // idUsuario is null for new student
+          medioPago,
+          dniFrente,
+          dniFondo,
+          tramiteStr
+        );
         setIsLoading(false);
-        navigation.navigate('Verification', { email: 'estudiante@ejemplo.com' });
-      }, 1500);
+        if (response && response.data) {
+          navigation.navigate('Verification', { email });
+        } else {
+          Alert.alert('Error', 'No se pudo registrar como estudiante.');
+        }
+      } catch (error) {
+        setIsLoading(false);
+        Alert.alert('Error', 'No se pudo registrar como estudiante.');
+      }
     }
   };
   
@@ -214,6 +260,13 @@ const StudentRegistrationScreen = ({ navigation }) => {
                   )}
                 </TouchableOpacity>
               </View>
+              <Input
+                label="Número de Trámite del DNI"
+                value={tramite}
+                onChangeText={setTramite}
+                placeholder="Ej: AB1234"
+                style={{ marginTop: 16 }}
+              />
             </View>
           )}
           

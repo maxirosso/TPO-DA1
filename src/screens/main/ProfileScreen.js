@@ -22,30 +22,29 @@ import Button from '../../components/common/Button';
 import Colors from '../../themes/colors';
 import Metrics from '../../themes/metrics';
 import { AuthContext } from '../../context/AuthContext';
+import dataService from '../../services/dataService';
 
 const ProfileScreen = ({ navigation }) => {
-  const { signOut } = useContext(AuthContext);
+  const { signOut, user: contextUser } = useContext(AuthContext);
 
   // User state management
   const [user, setUser] = useState({
-    name: 'Sarah Johnson',
-    username: '@sarahjcook',
-    email: 'sarah.johnson@email.com',
-    phone: '+1 (555) 123-4567',
+    name: 'Usuario',
+    username: '@usuario',
+    email: '',
+    phone: '',
     avatar: 'https://images.unsplash.com/photo-1580489944761-15a19d654956',
-    bio: 'Entusiasta de la comida y chef casera. Me encanta experimentar con nuevos sabores y compartir mis recetas.',
-    location: 'San Francisco, CA',
-    recipeCount: 42,
-    followers: 1253,
-    following: 384,
-    joinDate: '2023-01-15',
-    accountType: 'student', // visitor, user, student
+    bio: '',
+    location: '',
+    recipeCount: 0,
+    joinDate: '',
+    accountType: 'user', // visitor, user, student
     preferences: {
       notifications: true,
       emailUpdates: true,
       darkMode: false,
       language: 'es',
-    }
+    },
   });
 
   const [editModalVisible, setEditModalVisible] = useState(false);
@@ -54,14 +53,75 @@ const ProfileScreen = ({ navigation }) => {
 
   useEffect(() => {
     loadUserData();
-  }, []);
+  }, [contextUser]);
 
   const loadUserData = async () => {
     try {
-      const userData = await AsyncStorage.getItem('userData');
+      // First try to get user from context (active session)
+      if (contextUser) {
+        // Map backend user types to frontend display  
+        let accountType = 'user';
+        if (contextUser.tipo === 'visitante') accountType = 'visitor';
+        else if (contextUser.tipo === 'alumno') accountType = 'student';
+        else if (contextUser.tipo === 'comun') accountType = 'user';
+        
+        // Load user's recipe count from backend
+        let recipeCount = 0;
+        try {
+          const userRecipes = await dataService.searchRecipesByUser(contextUser.nombre || contextUser.name || '');
+          recipeCount = userRecipes.length;
+        } catch (error) {
+          console.log('Error loading user recipe count:', error);
+        }
+        
+        setUser({
+          ...user,
+          name: contextUser.nombre || contextUser.name || 'Usuario',
+          email: contextUser.mail || contextUser.email || '',
+          username: `@${contextUser.nickname || 'usuario'}`,
+          accountType: accountType,
+          recipeCount: recipeCount,
+          joinDate: contextUser.fechaRegistro || new Date().toISOString(),
+          phone: contextUser.telefono || '',
+          bio: contextUser.bio || '',
+          location: contextUser.direccion || '',
+          ...contextUser
+        });
+        return;
+      }
+
+      // Fallback to AsyncStorage
+      const userData = await AsyncStorage.getItem('user_data');
       if (userData) {
         const parsedUser = JSON.parse(userData);
-        setUser({ ...user, ...parsedUser });
+        // Map backend user types to frontend display
+        let accountType = 'user';
+        if (parsedUser.tipo === 'visitante') accountType = 'visitor';
+        else if (parsedUser.tipo === 'alumno') accountType = 'student';
+        else if (parsedUser.tipo === 'comun') accountType = 'user';
+        
+        // Load user's recipe count from backend
+        let recipeCount = 0;
+        try {
+          const userRecipes = await dataService.searchRecipesByUser(parsedUser.nombre || parsedUser.name || '');
+          recipeCount = userRecipes.length;
+        } catch (error) {
+          console.log('Error loading user recipe count:', error);
+        }
+        
+        setUser({
+          ...user,
+          name: parsedUser.nombre || parsedUser.name || 'Usuario',
+          email: parsedUser.mail || parsedUser.email || '',
+          username: `@${parsedUser.nickname || 'usuario'}`,
+          accountType: accountType,
+          recipeCount: recipeCount,
+          joinDate: parsedUser.fechaRegistro || new Date().toISOString(),
+          phone: parsedUser.telefono || '',
+          bio: parsedUser.bio || '',
+          location: parsedUser.direccion || '',
+          ...parsedUser
+        });
       }
     } catch (error) {
       console.log('Error loading user data:', error);
@@ -70,93 +130,116 @@ const ProfileScreen = ({ navigation }) => {
 
   const saveUserData = async (userData) => {
     try {
-      await AsyncStorage.setItem('userData', JSON.stringify(userData));
-      setUser(userData);
+      await AsyncStorage.setItem('user_data', JSON.stringify(userData));
+      console.log('User data saved successfully');
     } catch (error) {
       console.log('Error saving user data:', error);
-      Alert.alert('Error', 'No se pudo guardar la información del perfil');
     }
   };
 
-  const menuItems = [
-    {
-      id: 'my_recipes',
-      icon: 'book-open',
-      title: 'Mis Recetas',
-      description: 'Ver y gestionar tus recetas creadas',
-      badge: user.recipeCount,
-    },
-    {
-      id: 'my_courses',
-      icon: 'briefcase',
-      title: 'Mis Cursos',
-      description: 'Seguimiento de tu progreso de aprendizaje',
-      badge: null,
-    },
-    {
-      id: 'saved_recipes',
-      icon: 'bookmark',
-      title: 'Recetas Guardadas',
-      description: 'Recetas que has guardado para después',
-      badge: null,
-    },
-    {
-      id: 'saved_scaled_recipes',
-      icon: 'sliders',
-      title: 'Recetas Escaladas',
-      description: 'Recetas con cantidades personalizadas',
-      badge: null,
-    },
-    {
-      id: 'shopping_list',
-      icon: 'shopping-cart',
-      title: 'Lista de Compras',
-      description: 'Tu lista de compras de ingredientes',
-      badge: null,
-    },
-    {
-      id: 'database_tables',
-      icon: 'database',
-      title: 'Base de Datos',
-      description: 'Ver todas las tablas de la base de datos',
-      badge: null,
-    },
-    {
-      id: 'account_settings',
-      icon: 'user',
-      title: 'Configuración de Cuenta',
-      description: 'Gestionar información personal y preferencias',
-      badge: null,
-    },
-    {
-      id: 'app_settings',
-      icon: 'settings',
-      title: 'Configuración de App',
-      description: 'Notificaciones, idioma y preferencias',
-      badge: null,
-    },
-    {
-      id: 'server_config',
-      icon: 'server',
-      title: 'Configuración del Servidor',
-      description: 'Conectar con tu servidor backend',
-      badge: null,
-    },
-    {
-      id: 'help',
-      icon: 'help-circle',
-      title: 'Ayuda y Soporte',
-      description: 'Preguntas frecuentes e información de contacto',
-      badge: null,
-    },
-    {
-      id: 'about',
-      icon: 'info',
-      title: 'Acerca de',
-      description: 'Información de la app y términos de uso',
-      badge: null,
-    },
-  ];
+  const createEmpresaUser = async () => {
+    Alert.alert(
+      'Crear Usuario Empresa',
+      'Esto creará un usuario tipo "empresa" que puede aprobar recetas.',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        { 
+          text: 'Crear', 
+          onPress: async () => {
+            try {
+              const empresaUser = {
+                nombre: 'Admin ChefNet',
+                mail: 'admin@chefnet.com',
+                nickname: 'admin',
+                password: 'admin123'
+              };
+
+              const response = await dataService.createEmpresaUser(empresaUser);
+              Alert.alert('Éxito', 'Usuario empresa creado. Email: admin@chefnet.com, Password: admin123');
+            } catch (error) {
+              console.log('Error creating empresa user:', error);
+              Alert.alert('Error', error.message || 'No se pudo crear el usuario empresa');
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  // Menu items based on task requirements only
+  // Check if current user can approve recipes (empresa type)
+  const canApproveRecipes = () => {
+    return contextUser?.tipo === 'empresa' || user.tipo === 'empresa';
+  };
+
+  const getMenuItems = () => {
+    const baseItems = [
+      {
+        id: 'my_recipes',
+        icon: 'book-open',
+        title: 'Mis Recetas',
+        description: 'Ver y gestionar tus recetas creadas',
+        badge: user.recipeCount,
+        available: user.accountType !== 'visitor'
+      },
+      {
+        id: 'saved_recipes',
+        icon: 'bookmark',
+        title: 'Lista de Recetas',
+        description: 'Recetas que has guardado para intentar',
+        badge: null,
+        available: user.accountType !== 'visitor'
+      },
+      {
+        id: 'saved_scaled_recipes',
+        icon: 'sliders',
+        title: 'Recetas Escaladas',
+        description: 'Recetas con cantidades personalizadas (máximo 10)',
+        badge: null,
+        available: user.accountType !== 'visitor'
+      }
+    ];
+
+    // Add courses only for students
+    if (user.accountType === 'student') {
+      baseItems.push({
+        id: 'my_courses',
+        icon: 'briefcase',
+        title: 'Mis Cursos',
+        description: 'Cursos contratados y seguimiento de progreso',
+        badge: null,
+        available: true
+      });
+    }
+
+    // Add admin panel for empresa users
+    if (canApproveRecipes()) {
+      baseItems.push({
+        id: 'admin_panel',
+        icon: 'shield',
+        title: 'Panel de Administración',
+        description: 'Aprobar recetas pendientes de los usuarios',
+        badge: null,
+        available: true
+      });
+    }
+
+    // Add basic settings for all authenticated users
+    if (user.accountType !== 'visitor') {
+      baseItems.push({
+        id: 'account_settings',
+        icon: 'user',
+        title: 'Configuración de Cuenta',
+        description: 'Gestionar información personal y preferencias',
+        badge: null,
+        available: true
+      });
+    }
+
+    return baseItems.filter(item => item.available);
+  };
+
+  const menuItems = getMenuItems();
 
   const handleMenuItemPress = (id) => {
     switch (id) {
@@ -172,26 +255,11 @@ const ProfileScreen = ({ navigation }) => {
       case 'saved_scaled_recipes':
         navigation.navigate('SavedScaledRecipes');
         break;
-      case 'shopping_list':
-        navigation.navigate('ShoppingList');
-        break;
-      case 'database_tables':
-        navigation.navigate('DatabaseTables');
+      case 'admin_panel':
+        navigation.navigate('AdminPanel');
         break;
       case 'account_settings':
         navigation.navigate('AccountSettings', { user, onUserUpdate: saveUserData });
-        break;
-      case 'app_settings':
-        navigation.navigate('AppSettings', { user, onUserUpdate: saveUserData });
-        break;
-      case 'server_config':
-        navigation.navigate('ServerConfig');
-        break;
-      case 'help':
-        navigation.navigate('HelpSupport');
-        break;
-      case 'about':
-        navigation.navigate('About');
         break;
       default:
         Alert.alert('Próximamente', 'Esta función estará disponible pronto.');
@@ -290,8 +358,8 @@ const ProfileScreen = ({ navigation }) => {
   const getAccountTypeBadge = () => {
     const badges = {
       visitor: { text: 'Visitante', color: Colors.textMedium },
-      user: { text: 'Usuario', color: Colors.primary },
-      student: { text: 'Estudiante', color: Colors.success },
+      user: { text: 'Usuario Regular', color: Colors.primary },
+      student: { text: 'Alumno', color: Colors.success },
     };
     return badges[user.accountType] || badges.user;
   };
@@ -413,12 +481,6 @@ const ProfileScreen = ({ navigation }) => {
         >
           <View style={styles.headerContent}>
             <Text style={styles.headerTitle}>Perfil</Text>
-            <TouchableOpacity 
-              style={styles.settingsButton}
-              onPress={() => handleMenuItemPress('app_settings')}
-            >
-              <Icon name="settings" size={24} color={Colors.textDark} />
-            </TouchableOpacity>
           </View>
         </LinearGradient>
 
@@ -470,20 +532,6 @@ const ProfileScreen = ({ navigation }) => {
               <Text style={styles.statValue}>{user.recipeCount}</Text>
               <Text style={styles.statLabel}>Recetas</Text>
             </TouchableOpacity>
-
-            <View style={styles.statDivider} />
-
-            <TouchableOpacity style={styles.statItem}>
-              <Text style={styles.statValue}>{user.followers.toLocaleString()}</Text>
-              <Text style={styles.statLabel}>Seguidores</Text>
-            </TouchableOpacity>
-
-            <View style={styles.statDivider} />
-
-            <TouchableOpacity style={styles.statItem}>
-              <Text style={styles.statValue}>{user.following}</Text>
-              <Text style={styles.statLabel}>Siguiendo</Text>
-            </TouchableOpacity>
           </View>
 
           <View style={styles.buttonsContainer}>
@@ -506,7 +554,7 @@ const ProfileScreen = ({ navigation }) => {
 
         <View style={styles.menuContainer}>
           <Text style={styles.menuSectionTitle}>Gestión de Contenido</Text>
-          {menuItems.slice(0, 5).map((item) => (
+          {menuItems.filter(item => ['my_recipes', 'saved_recipes', 'saved_scaled_recipes', 'my_courses'].includes(item.id)).map((item) => (
             <TouchableOpacity
               key={item.id}
               style={styles.menuItem}
@@ -520,19 +568,19 @@ const ProfileScreen = ({ navigation }) => {
                 <Text style={styles.menuTitle}>{item.title}</Text>
                 <Text style={styles.menuDescription}>{item.description}</Text>
               </View>
-              <View style={styles.menuRight}>
-                {item.badge && (
-                  <View style={styles.badgeContainer}>
-                    <Text style={styles.badgeText}>{item.badge}</Text>
-                  </View>
-                )}
-                <Icon name="chevron-right" size={20} color={Colors.textMedium} />
-              </View>
+              {item.badge && (
+                <View style={styles.menuBadge}>
+                  <Text style={styles.menuBadgeText}>{item.badge}</Text>
+                </View>
+              )}
+              <Icon name="chevron-right" size={16} color={Colors.textMedium} />
             </TouchableOpacity>
           ))}
+        </View>
 
+        <View style={styles.menuContainer}>
           <Text style={styles.menuSectionTitle}>Configuración</Text>
-          {menuItems.slice(5, 8).map((item) => (
+          {menuItems.filter(item => ['account_settings'].includes(item.id)).map((item) => (
             <TouchableOpacity
               key={item.id}
               style={styles.menuItem}
@@ -546,26 +594,7 @@ const ProfileScreen = ({ navigation }) => {
                 <Text style={styles.menuTitle}>{item.title}</Text>
                 <Text style={styles.menuDescription}>{item.description}</Text>
               </View>
-              <Icon name="chevron-right" size={20} color={Colors.textMedium} />
-            </TouchableOpacity>
-          ))}
-
-          <Text style={styles.menuSectionTitle}>Soporte</Text>
-          {menuItems.slice(8).map((item) => (
-            <TouchableOpacity
-              key={item.id}
-              style={styles.menuItem}
-              onPress={() => handleMenuItemPress(item.id)}
-              activeOpacity={0.7}
-            >
-              <View style={styles.menuIconContainer}>
-                <Icon name={item.icon} size={20} color={Colors.primary} />
-              </View>
-              <View style={styles.menuTextContainer}>
-                <Text style={styles.menuTitle}>{item.title}</Text>
-                <Text style={styles.menuDescription}>{item.description}</Text>
-              </View>
-              <Icon name="chevron-right" size={20} color={Colors.textMedium} />
+              <Icon name="chevron-right" size={16} color={Colors.textMedium} />
             </TouchableOpacity>
           ))}
         </View>
@@ -577,6 +606,16 @@ const ProfileScreen = ({ navigation }) => {
           style={styles.signOutButton}
           iconName="log-out"
         />
+
+        {/* Development helper for creating empresa users */}
+        {user.accountType === 'user' && (
+          <TouchableOpacity
+            style={styles.devHelperButton}
+            onPress={createEmpresaUser}
+          >
+            <Text style={styles.devHelperText}>Crear Usuario Empresa (Dev)</Text>
+          </TouchableOpacity>
+        )}
 
         <View style={styles.versionContainer}>
           <Text style={styles.versionText}>ChefNet v1.2.0</Text>
@@ -607,14 +646,6 @@ const styles = StyleSheet.create({
     fontSize: Metrics.xxLargeFontSize,
     fontWeight: '600',
     color: Colors.textDark,
-  },
-  settingsButton: {
-    width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 20,
-    backgroundColor: Colors.card + '20',
   },
   profileContainer: {
     backgroundColor: Colors.card,
@@ -730,11 +761,6 @@ const styles = StyleSheet.create({
     fontSize: Metrics.smallFontSize,
     color: Colors.textMedium,
   },
-  statDivider: {
-    width: 1,
-    height: '80%',
-    backgroundColor: Colors.border,
-  },
   buttonsContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -795,11 +821,7 @@ const styles = StyleSheet.create({
     color: Colors.textMedium,
     lineHeight: Metrics.baseLineHeight,
   },
-  menuRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  badgeContainer: {
+  menuBadge: {
     backgroundColor: Colors.primary,
     borderRadius: Metrics.roundedFull,
     paddingHorizontal: Metrics.baseSpacing,
@@ -808,7 +830,7 @@ const styles = StyleSheet.create({
     minWidth: 24,
     alignItems: 'center',
   },
-  badgeText: {
+  menuBadgeText: {
     fontSize: Metrics.smallFontSize,
     fontWeight: '600',
     color: Colors.card,
@@ -897,6 +919,19 @@ const styles = StyleSheet.create({
   modalSaveButton: {
     flex: 1,
     marginLeft: Metrics.baseSpacing,
+  },
+  devHelperButton: {
+    marginHorizontal: Metrics.mediumSpacing,
+    marginTop: Metrics.mediumSpacing,
+    padding: Metrics.mediumSpacing,
+    borderWidth: 1,
+    borderColor: Colors.primary,
+    borderRadius: Metrics.baseBorderRadius,
+  },
+  devHelperText: {
+    fontSize: Metrics.baseFontSize,
+    fontWeight: '500',
+    color: Colors.primary,
   },
 });
 

@@ -19,26 +19,85 @@ import Button from '../../components/common/Button';
 import Colors from '../../themes/colors';
 import Metrics from '../../themes/metrics';
 import dataService from '../../services/dataService';
+import api from '../../services/api';
 
 const MyRecipesScreen = ({ navigation }) => {
   const [myRecipes, setMyRecipes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState('Todas');
   const [error, setError] = useState(null);
+  const [currentUser, setCurrentUser] = useState(null);
 
   const categories = ['Todas', 'Desayuno', 'Almuerzo', 'Cena', 'Postres', 'Bebidas', 'Aperitivos'];
 
   useEffect(() => {
     loadMyRecipes();
+    loadCurrentUser();
   }, []);
+
+  const loadCurrentUser = async () => {
+    try {
+      const userData = await AsyncStorage.getItem('user_data');
+      if (userData) {
+        setCurrentUser(JSON.parse(userData));
+      }
+    } catch (error) {
+      console.log('Error loading current user:', error);
+    }
+  };
+
+  // Check if current user can approve recipes (empresa/admin)
+  const canApproveRecipes = () => {
+    if (!currentUser) return false;
+    // Allow admin access for empresa representatives 
+    return currentUser.tipo === 'empresa';
+  };
 
   const loadMyRecipes = async () => {
     setLoading(true);
     setError(null);
     try {
-      const allRecipes = await dataService.getAllRecipes();
-      setMyRecipes(allRecipes);
+      // Get current user data
+      let currentUser = null;
+      const userData = await AsyncStorage.getItem('user_data');
+      if (userData) {
+        currentUser = JSON.parse(userData);
+      }
+
+      if (!currentUser) {
+        setError('Usuario no autenticado');
+        setMyRecipes([]);
+        return;
+      }
+
+      // Use the specific endpoint to get user's own recipes (including pending ones)
+      const userId = currentUser.idUsuario || currentUser.id;
+      let userRecipes = [];
+      
+      try {
+        // Try the dedicated user recipes endpoint first
+        const userRecipesResponse = await dataService.getUserRecipes ? 
+          await dataService.getUserRecipes(userId) : 
+          await api.recipes.getByUser(userId);
+        userRecipes = userRecipesResponse || [];
+      } catch (error) {
+        console.log('Failed to get user recipes by ID, trying by name search:', error);
+        // Fallback to name search
+        userRecipes = await dataService.searchRecipesByUser(currentUser.nombre || currentUser.name || '');
+      }
+      
+      // Map recipes with proper status based on backend authorization
+      const mappedRecipes = userRecipes.map(recipe => ({
+        ...recipe,
+        status: recipe.autorizada === true ? 'published' : 'pending_approval',
+        views: Math.floor(Math.random() * 100), // Mock data since not in backend
+        likes: Math.floor(Math.random() * 50), // Mock data since not in backend
+      }));
+
+      setMyRecipes(mappedRecipes);
+      console.log(`Loaded ${mappedRecipes.length} user recipes, including pending ones`);
     } catch (err) {
+      console.log('Error loading user recipes:', err);
       setError('No se pudieron cargar tus recetas. Intenta nuevamente.');
       setMyRecipes([]);
     } finally {
@@ -87,6 +146,47 @@ const MyRecipesScreen = ({ navigation }) => {
     );
     setMyRecipes(updatedRecipes);
     AsyncStorage.setItem('myRecipes', JSON.stringify(updatedRecipes));
+  };
+
+  const handleApproveRecipe = async (recipeId, approve = true) => {
+    try {
+      await dataService.approveRecipe(recipeId, approve);
+      
+      // Update local state
+      const updatedRecipes = myRecipes.map(recipe =>
+        recipe.id === recipeId ? { 
+          ...recipe, 
+          status: approve ? 'published' : 'rejected',
+          autorizada: approve 
+        } : recipe
+      );
+      setMyRecipes(updatedRecipes);
+      
+      const action = approve ? 'aprobada' : 'rechazada';
+      Alert.alert('Éxito', `Receta ${action} correctamente`);
+    } catch (error) {
+      Alert.alert('Error', 'No se pudo procesar la aprobación de la receta');
+    }
+  };
+
+  const showAdminActions = (recipe) => {
+    Alert.alert(
+      'Acciones de Administrador',
+      `Receta: "${recipe.title}"`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        { 
+          text: 'Aprobar', 
+          onPress: () => handleApproveRecipe(recipe.id, true),
+          style: 'default'
+        },
+        { 
+          text: 'Rechazar', 
+          onPress: () => handleApproveRecipe(recipe.id, false),
+          style: 'destructive'
+        }
+      ]
+    );
   };
 
   const getFilteredRecipes = () => {
@@ -195,6 +295,15 @@ const MyRecipesScreen = ({ navigation }) => {
           >
             <Icon name="trash-2" size={16} color={Colors.error} />
           </TouchableOpacity>
+          {/* Admin approval button - only for authorized users */}
+          {canApproveRecipes() && item.status === 'pending_approval' && (
+            <TouchableOpacity
+              style={[styles.actionButton, styles.adminButton]}
+              onPress={() => showAdminActions(item)}
+            >
+              <Icon name="check-circle" size={16} color={Colors.success} />
+            </TouchableOpacity>
+          )}
         </View>
       </View>
     </View>
@@ -225,6 +334,14 @@ const MyRecipesScreen = ({ navigation }) => {
           >
             <Icon name="plus" size={20} color={Colors.textDark} />
           </TouchableOpacity>
+          {canApproveRecipes() && (
+            <TouchableOpacity 
+              style={styles.adminButton}
+              onPress={() => navigation.navigate('AdminPanel')}
+            >
+              <Icon name="shield" size={20} color={Colors.textDark} />
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* Stats */}
@@ -306,6 +423,14 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   addButton: {
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 20,
+    backgroundColor: Colors.card + '20',
+  },
+  adminButton: {
     width: 40,
     height: 40,
     alignItems: 'center',

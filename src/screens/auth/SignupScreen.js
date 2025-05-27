@@ -89,6 +89,11 @@ const SignupScreen = ({ navigation }) => {
       return;
     }
     
+    if (!username.trim()) {
+      Alert.alert('Nombre de usuario requerido', 'Por favor, ingresa un nombre de usuario válido.');
+      return;
+    }
+    
     if (usernameError) {
       Alert.alert('Nombre de usuario no disponible', 'Por favor, elige otro nombre de usuario o selecciona una de las sugerencias.');
       return;
@@ -125,7 +130,7 @@ const SignupScreen = ({ navigation }) => {
       // Register user and send verification email
       const result = await signUp({
         email,
-        username,
+        username: username.trim(),
         password,
         userType: activeTab === 'regularUser' ? 'regular' : 'student'
       });
@@ -143,7 +148,7 @@ const SignupScreen = ({ navigation }) => {
       console.error('Registration error:', error);
       Alert.alert(
         'Error en el registro',
-        'Ha ocurrido un error al registrar tu cuenta. Por favor, intenta nuevamente.'
+        error.message || 'Ha ocurrido un error al registrar tu cuenta. Por favor, intenta nuevamente.'
       );
     } finally {
       setIsLoading(false);

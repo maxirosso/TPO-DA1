@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useContext } from 'react';
 import {
   View,
   Text,
@@ -18,17 +18,21 @@ import Icon from 'react-native-vector-icons/Feather';
 import Slider from '@react-native-community/slider';
 import { Rating } from 'react-native-ratings';
 import { useSelector, useDispatch } from 'react-redux';
+import { AuthContext } from '../../context/AuthContext';
 
 import Button from '../../components/common/Button';
 import Colors from '../../themes/colors';
 import Metrics from '../../themes/metrics';
 import { toggleFavorite } from '../../store/actions/recipeActions';
 import { selectIsFavorite } from '../../store/selectors/recipeSelectors';
+import { api } from '../../services/api';
+import { mapBackendRecipe } from '../../services/dataService';
 
 const { width } = Dimensions.get('window');
 
 const RecipeDetailScreen = ({ navigation, route }) => {
   const dispatch = useDispatch();
+  const { isVisitor } = useContext(AuthContext);
   const [activeTab, setActiveTab] = useState('ingredients');
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [reviewText, setReviewText] = useState('');
@@ -138,26 +142,83 @@ const RecipeDetailScreen = ({ navigation, route }) => {
     setIsModalVisible(true);
   };
 
-  const submitReview = () => {
-    // Aquí iría la lógica para enviar la reseña al backend
-    Alert.alert("Reseña enviada", "Tu reseña ha sido enviada y será revisada por nuestro equipo.");
-    setIsModalVisible(false);
-    setReviewText('');
-    setReviewRating(5);
+  const submitReview = async () => {
+    if (isVisitor) {
+      Alert.alert('Funcionalidad Limitada', 'Debes registrarte para valorar recetas.');
+      return;
+    }
+    
+    if (!reviewText.trim()) {
+      Alert.alert('Error', 'Por favor escribe un comentario.');
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      await api.ratings.add(recipe.id || recipe.idReceta, {
+        calificacion: reviewRating,
+        comentarios: reviewText
+      });
+      
+      Alert.alert("Reseña enviada", "Tu reseña ha sido enviada y será revisada por nuestro equipo.");
+      setIsModalVisible(false);
+      setReviewText('');
+      setReviewRating(5);
+    } catch (error) {
+      console.error('Error submitting review:', error);
+      Alert.alert('Error', 'No se pudo enviar la reseña. Intenta nuevamente.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const addToShoppingList = () => {
-    // Aquí iría la lógica para agregar a la lista de compras
-    Alert.alert("Lista de compras", "Los ingredientes han sido agregados a tu lista de compras.");
+  const addToShoppingList = async () => {
+    if (isVisitor) {
+      Alert.alert('Funcionalidad Limitada', 'Debes registrarte para usar la lista de recetas.');
+      return;
+    }
+    
+    try {
+      await api.recipeList.addById(recipe.id || recipe.idReceta);
+      Alert.alert("Lista de compras", "Los ingredientes han sido agregados a tu lista de compras.");
+    } catch (error) {
+      console.error('Error adding to shopping list:', error);
+      Alert.alert('Error', 'No se pudo agregar a la lista. Intenta nuevamente.');
+    }
   };
 
   const openScaleModal = () => {
     setScaleModalVisible(true);
   };
 
-  const applyScaling = () => {
-    // Aquí iría la lógica para aplicar el escaldo
-    setScaleModalVisible(false);
+  const applyScaling = async () => {
+    if (isVisitor) {
+      Alert.alert('Funcionalidad Limitada', 'Debes registrarte para usar la función de escalar recetas.');
+      return;
+    }
+    
+    try {
+      let tipo;
+      if (scaleFactor === 0.5) tipo = 'mitad';
+      else if (scaleFactor === 2) tipo = 'doble';
+      else tipo = 'porciones';
+      
+      const porciones = tipo === 'porciones' ? Math.round(recipe.servings * scaleFactor) : null;
+      
+      const response = await api.recipes.scale(
+        recipe.id || recipe.idReceta, 
+        tipo, 
+        porciones
+      );
+      
+      const scaledRecipe = mapBackendRecipe(response.data);
+      setRecipe(scaledRecipe);
+      setScaleModalVisible(false);
+      setScaleFactor(1);
+    } catch (error) {
+      console.error('Error scaling recipe:', error);
+      Alert.alert('Error', 'No se pudo escalar la receta. Intenta nuevamente.');
+    }
   };
 
   const toggleScaleMethod = () => {
@@ -170,12 +231,26 @@ const RecipeDetailScreen = ({ navigation, route }) => {
     setSelectedIngredient({...ingredient, index});
   };
 
-  const scaleRecipeByIngredient = () => {
+  const scaleRecipeByIngredient = async () => {
     if (!selectedIngredient || !customAmount) return;
     
-    // Lógica para escalar por ingrediente
-    Alert.alert("Receta escalada", `La receta ha sido ajustada para usar ${customAmount} de ${selectedIngredient.name}.`);
-    setScaleModalVisible(false);
+    try {
+      const response = await api.recipes.scaleByIngredient(
+        recipe.id || recipe.idReceta, 
+        selectedIngredient.name, 
+        parseFloat(customAmount)
+      );
+      
+      const scaledRecipe = mapBackendRecipe(response.data);
+      setRecipe(scaledRecipe);
+      setScaleModalVisible(false);
+      setScaleByIngredient(false);
+      setSelectedIngredient(null);
+      setCustomAmount('');
+    } catch (error) {
+      console.error('Error scaling recipe by ingredient:', error);
+      Alert.alert('Error', 'No se pudo escalar la receta por ingrediente. Intenta nuevamente.');
+    }
   };
 
   // Función auxiliar mejorada para escalar cantidades por persona

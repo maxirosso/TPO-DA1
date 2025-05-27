@@ -2,24 +2,57 @@ import { api } from './api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Normaliza los campos de receta del backend al formato del frontend
-function mapBackendRecipe(receta) {
+export function mapBackendRecipe(receta) {
   return {
     id: receta.idReceta,
+    idReceta: receta.idReceta,
     title: receta.nombreReceta,
+    nombreReceta: receta.nombreReceta,
     description: receta.descripcionReceta,
-    imageUrl: receta.fotoPrincipal,
+    descripcionReceta: receta.descripcionReceta,
+    imageUrl: receta.fotoPrincipal || 'https://via.placeholder.com/300x200?text=Recipe',
+    fotoPrincipal: receta.fotoPrincipal,
     servings: receta.porciones,
+    porciones: receta.porciones,
     people: receta.cantidadPersonas,
+    cantidadPersonas: receta.cantidadPersonas,
     date: receta.fecha,
-    ingredients: receta.ingredientes || [],
-    instructions: receta.instrucciones || [],
+    fecha: receta.fecha,
+    time: 30, // Default cooking time
+    ingredients: Array.isArray(receta.ingredientes) ? receta.ingredientes.map(ing => ({
+      name: ing.nombre || ing.name,
+      amount: ing.cantidad || ing.amount || '1',
+      unit: ing.unidadMedida || ing.unit || 'unidad'
+    })) : [],
+    ingredientes: receta.ingredientes || [],
+    instructions: Array.isArray(receta.instrucciones) ? receta.instrucciones : 
+                  typeof receta.instrucciones === 'string' ? 
+                  receta.instrucciones.split('\n').map((step, index) => ({
+                    step: index + 1,
+                    text: step.trim()
+                  })) : [],
+    instrucciones: receta.instrucciones || [],
+    pasos: receta.pasos || [],
     user: receta.usuario ? {
       id: receta.usuario.idUsuario,
+      idUsuario: receta.usuario.idUsuario,
       name: receta.usuario.nombre,
+      nombre: receta.usuario.nombre,
       email: receta.usuario.mail,
-      type: receta.usuario.tipo
+      mail: receta.usuario.mail,
+      nickname: receta.usuario.nickname,
+      type: receta.usuario.tipo,
+      tipo: receta.usuario.tipo
     } : null,
-    // Agrega aquí más campos si tu frontend los necesita
+    usuario: receta.usuario,
+    author: receta.usuario ? receta.usuario.nombre : 'Desconocido',
+    category: receta.tipoReceta ? receta.tipoReceta.descripcion : 
+              receta.tipo ? receta.tipo.descripcion : 'Sin categoría',
+    tipoReceta: receta.tipoReceta || receta.tipo,
+    tags: receta.tipoReceta ? [receta.tipoReceta.descripcion] : [],
+    rating: 0, // Default rating
+    reviews: [],
+    autorizada: receta.autorizada
   };
 }
 
@@ -221,9 +254,32 @@ class DataService {
 
   async searchRecipesByName(nombrePlato, orden = 'alfabetico') {
     try {
-      const result = await api.recipes.getByName(nombrePlato, orden);
-      return result.data.map(mapBackendRecipe) || [];
+      // Map frontend orden to backend format
+      let backendOrden;
+      if (orden === 'newest') {
+        backendOrden = 'nueva';
+      } else if (orden === 'user') {
+        backendOrden = 'usuario';
+      } else {
+        backendOrden = 'alfabetico';
+      }
+      console.log(`Searching recipes by name "${nombrePlato}" with order "${backendOrden}"`);
+      const result = await api.recipes.getByName(nombrePlato, backendOrden);
+      
+      if (result && result.data) {
+        const mappedRecipes = result.data.map(mapBackendRecipe) || [];
+        console.log(`Found ${mappedRecipes.length} recipes with name containing "${nombrePlato}" in order:`, 
+          mappedRecipes.map(r => r.title));
+        return mappedRecipes;
+      }
+      
+      console.log(`No recipes found with name containing "${nombrePlato}"`);
+      return [];
     } catch (error) {
+      if (error.response && error.response.status === 404) {
+        console.log(`No recipes found with name containing "${nombrePlato}"`);
+        return [];
+      }
       console.log('Error al buscar recetas por nombre:', error.message);
       return [];
     }
@@ -231,7 +287,16 @@ class DataService {
 
   async searchRecipesByIngredient(ingrediente, orden = 'alfabetico') {
     try {
-      const result = await api.recipes.getByIngredient(ingrediente, orden);
+      // Map frontend orden to backend format
+      let backendOrden;
+      if (orden === 'newest') {
+        backendOrden = 'nueva';
+      } else if (orden === 'user') {
+        backendOrden = 'usuario';
+      } else {
+        backendOrden = 'alfabetico';
+      }
+      const result = await api.recipes.getByIngredient(ingrediente, backendOrden);
       return result.data.map(mapBackendRecipe) || [];
     } catch (error) {
       console.log('Error al buscar recetas por ingrediente:', error.message);
@@ -241,11 +306,59 @@ class DataService {
 
   async searchRecipesWithoutIngredient(ingrediente, orden = 'alfabetico') {
     try {
-      const result = await api.recipes.getWithoutIngredient(ingrediente, orden);
+      // Map frontend orden to backend format
+      let backendOrden;
+      if (orden === 'newest') {
+        backendOrden = 'nueva';
+      } else if (orden === 'user') {
+        backendOrden = 'usuario';
+      } else {
+        backendOrden = 'alfabetico';
+      }
+      const result = await api.recipes.getWithoutIngredient(ingrediente, backendOrden);
       return result.data.map(mapBackendRecipe) || [];
     } catch (error) {
       console.log('Error al buscar recetas sin ingrediente:', error.message);
       return [];
+    }
+  }
+
+  async searchRecipesByUser(usuario, orden = 'alfabetico') {
+    try {
+      // Map frontend orden to backend format  
+      let backendOrden;
+      if (orden === 'newest') {
+        backendOrden = 'nueva';
+      } else if (orden === 'user') {
+        backendOrden = 'usuario';
+      } else {
+        backendOrden = 'alfabetico';
+      }
+      console.log(`Searching recipes by user "${usuario}" with order "${backendOrden}"`);
+      const result = await api.recipes.getByUserProfile(usuario, backendOrden);
+      const mappedRecipes = result.data.map(mapBackendRecipe) || [];
+      console.log(`Found ${mappedRecipes.length} recipes by user "${usuario}"`);
+      return mappedRecipes;
+    } catch (error) {
+      console.log('Error al buscar recetas por usuario:', error.message);
+      // Fallback to local search
+      const allRecipes = await this.getAllRecipes();
+      return allRecipes.filter(recipe =>
+        recipe.author && recipe.author.toLowerCase().includes(usuario.toLowerCase())
+      );
+    }
+  }
+
+  async getUserRecipes(idUsuario) {
+    try {
+      console.log(`Getting all recipes for user ID: ${idUsuario}`);
+      const result = await api.recipes.getByUser(idUsuario);
+      const mappedRecipes = result.data.map(mapBackendRecipe) || [];
+      console.log(`Found ${mappedRecipes.length} recipes for user ${idUsuario} (including pending)`);
+      return mappedRecipes;
+    } catch (error) {
+      console.log('Error al obtener recetas del usuario:', error.message);
+      throw error;
     }
   }
 
@@ -451,12 +564,12 @@ class DataService {
     }
   }
 
-  async getUserById(id) {
+  async getUserByEmail(email) {
     try {
-      const result = await api.users.getProfile(id);
+      const result = await api.users.getByEmail(email);
       return result.data ? mapBackendUser(result.data) : null;
     } catch (error) {
-      console.log('Error al obtener usuario por ID:', error.message);
+      console.log('Error al obtener usuario por email:', error.message);
       return null;
     }
   }
@@ -579,6 +692,76 @@ class DataService {
     } catch (error) {
       console.error('Error fetching sugerencias de recetas:', error);
       return [];
+    }
+  }
+
+  async approveRecipe(idReceta, approve = true) {
+    try {
+      const result = await api.recipes.approve(idReceta, approve);
+      return result.data;
+    } catch (error) {
+      console.log('Error approving recipe:', error.message);
+      throw error;
+    }
+  }
+
+  async createEmpresaUser(userData) {
+    try {
+      const result = await api.auth.createEmpresaUser(userData);
+      return result.data;
+    } catch (error) {
+      console.log('Error creating empresa user:', error.message);
+      throw error;
+    }
+  }
+
+  async updateUserProfile(userData) {
+    try {
+      const result = await api.users.updateProfile(userData);
+      return result.data;
+    } catch (error) {
+      console.log('Error updating user profile:', error.message);
+      throw error;
+    }
+  }
+
+  async upgradeToStudent(idUsuario, studentData) {
+    try {
+      const result = await api.auth.upgradeToStudent(idUsuario, studentData);
+      return result.data;
+    } catch (error) {
+      console.log('Error upgrading to student:', error.message);
+      throw error;
+    }
+  }
+
+  async registerVisitor(email, idUsuario) {
+    try {
+      const result = await api.auth.registerVisitor(email, idUsuario);
+      return result.data;
+    } catch (error) {
+      console.log('Error registering visitor:', error.message);
+      throw error;
+    }
+  }
+
+  async registerStudent(email, idUsuario, medioPago, dniFrente, dniFondo, tramite) {
+    try {
+      const result = await api.auth.registerStudent(email, idUsuario, medioPago, dniFrente, dniFondo, tramite);
+      return result.data;
+    } catch (error) {
+      console.log('Error registering student:', error.message);
+      throw error;
+    }
+  }
+
+  async resetPassword(email) {
+    try {
+      const result = await api.auth.resetPassword(email);
+      return result.data;
+    } catch (error) {
+      console.log('Error resetting password:', error.message);
+      throw error;
     }
   }
 }
