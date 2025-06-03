@@ -698,21 +698,59 @@ class DataService {
   }
 
   async approveRecipe(idReceta, approve = true) {
+    if (!this.useBackend) {
+      throw new Error('Function requires backend connection');
+    }
+    
     try {
-      const result = await api.recipes.approve(idReceta, approve);
-      return result.data;
+      console.log('DataService.approveRecipe called with:', { idReceta, approve });
+      const response = await api.recipes.approve(idReceta, approve);
+      console.log('DataService.approveRecipe response:', response);
+      return response;
     } catch (error) {
-      console.log('Error approving recipe:', error.message);
+      console.error('Error approving recipe:', error);
+      throw error;
+    }
+  }
+
+  async getPendingRecipes() {
+    if (!this.useBackend) {
+      throw new Error('Function requires backend connection');
+    }
+    
+    try {
+      const response = await api.recipes.getPendingRecipes();
+      return response.data.map(mapBackendRecipe) || [];
+    } catch (error) {
+      console.error('Error getting pending recipes:', error);
       throw error;
     }
   }
 
   async createEmpresaUser(userData) {
+    if (!this.useBackend) {
+      throw new Error('Function requires backend connection');
+    }
+    
     try {
-      const result = await api.auth.createEmpresaUser(userData);
-      return result.data;
+      const response = await api.auth.createEmpresaUser(userData);
+      return response.data;
     } catch (error) {
-      console.log('Error creating empresa user:', error.message);
+      console.error('Error creating empresa user:', error);
+      throw error;
+    }
+  }
+
+  async createAdminUser(userData) {
+    if (!this.useBackend) {
+      throw new Error('Function requires backend connection');
+    }
+    
+    try {
+      const response = await api.auth.createAdminUser(userData);
+      return response.data;
+    } catch (error) {
+      console.error('Error creating admin user:', error);
       throw error;
     }
   }

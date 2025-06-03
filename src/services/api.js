@@ -200,10 +200,33 @@ class ApiService {
   }
 
   // PUT request
-  async put(endpoint, data = {}) {
-    return this.request(endpoint, {
+  async put(endpoint, data = {}, options = {}) {
+    const queryString = options.params ? new URLSearchParams(options.params).toString() : '';
+    const url = queryString ? `${endpoint}?${queryString}` : endpoint;
+    
+    return this.request(url, {
       method: 'PUT',
       body: data,
+    });
+  }
+
+  // PUT request with form data (for Spring Boot @RequestParam)
+  async putForm(endpoint, data = {}) {
+    const formData = new URLSearchParams();
+    Object.keys(data).forEach(key => {
+      // Handle null and undefined values
+      const value = data[key];
+      if (value !== null && value !== undefined) {
+        formData.append(key, value.toString());
+      }
+    });
+
+    return this.request(endpoint, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: formData.toString(),
     });
   }
 
@@ -246,6 +269,14 @@ class ApiService {
     console.log('Scale endpoint:', endpoint);
     return this.get(endpoint, { tipo, porciones });
   }
+
+  // Approve method
+  async approve(idReceta, aprobar = true) {
+    console.log('API approve called with:', { idReceta, aprobar });
+    const params = { aprobar: aprobar.toString() };
+    console.log('API approve params:', params);
+    return this.put(`/aprobarReceta/${idReceta}`, {}, { params });
+  }
 }
 
 // Create singleton instance
@@ -266,6 +297,7 @@ export const api = {
     resetPassword: (mail) => apiService.postForm('/recuperarContrasena', { mail }),
     upgradeToStudent: (idUsuario, studentData) => apiService.put(`/cambiarAAlumno/${idUsuario}`, studentData),
     createEmpresaUser: (userData) => apiService.post('/crearUsuarioEmpresa', userData),
+    createAdminUser: (userData) => apiService.post('/crearUsuarioAdmin', userData),
   },
 
   // Recipe endpoints (matching Spring Boot controller)
@@ -281,6 +313,7 @@ export const api = {
     getByUserProfile: (usuario, orden = 'alfabetico') => apiService.get('/getUsuarioReceta', { usuario, orden }),
     search: (nombre) => apiService.get('/buscarRecetas', { nombre }),
     create: (recipeData) => apiService.post('/CargarNuevasRecetas', recipeData),
+    createAlternative: (recipeData) => apiService.post('/publicarRecetas', recipeData), // Alternative endpoint
     createWithFiles: (receta, files) => apiService.uploadFile('/cargarReceta', files[0], receta),
     publish: (recipeData) => apiService.post('/publicarRecetas', recipeData),
     update: (idReceta, recipeData) => apiService.put(`/recetas/${idReceta}`, recipeData),
@@ -288,7 +321,10 @@ export const api = {
     scaleByIngredient: (idReceta, nombreIngrediente, nuevaCantidad) => 
       apiService.postForm(`/ajustarPorIngrediente/${idReceta}`, { nombreIngrediente, nuevaCantidad }),
     getSuggestions: (idTipo) => apiService.get('/sugerenciasRecetas', { idTipo }),
-    approve: (idReceta, aprobar = true) => apiService.put('/aprobarReceta/' + idReceta, null, { aprobar }),
+    approve: (idReceta, aprobar = true) => apiService.approve(idReceta, aprobar),
+    approveRecipe: (idReceta, aprobar = true) => apiService.putForm(`/aprobarRecipe/${idReceta}`, { aprobar }),
+    getPendingRecipes: () => apiService.get('/getRecetasPendientes'),
+    getTypes: () => apiService.get('/getTiposReceta'),
   },
 
   // Course endpoints (matching Spring Boot controller)

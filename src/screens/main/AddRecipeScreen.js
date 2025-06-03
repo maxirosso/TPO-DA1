@@ -65,6 +65,8 @@ const AddRecipeScreen = ({ navigation, route }) => {
   const [instructions, setInstructions] = useState(['']);
   const [selectedCategories, setSelectedCategories] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [recipeTypes, setRecipeTypes] = useState([]);
+  const [selectedRecipeType, setSelectedRecipeType] = useState(null);
 
   // Load recipe data if editing
   useEffect(() => {
@@ -72,6 +74,32 @@ const AddRecipeScreen = ({ navigation, route }) => {
       loadExistingRecipe(editingRecipe);
     }
   }, [isEditing, editingRecipe]);
+
+  // Load recipe types from backend
+  useEffect(() => {
+    loadRecipeTypes();
+  }, []);
+
+  const loadRecipeTypes = async () => {
+    try {
+      const { api } = await import('../../services/api');
+      const response = await api.recipes.getTypes();
+      const types = response.data || response;
+      console.log('Loaded recipe types:', types);
+      setRecipeTypes(types);
+      
+      // Set default type if none selected
+      if (types.length > 0 && !selectedRecipeType) {
+        setSelectedRecipeType(types[0]);
+      }
+    } catch (error) {
+      console.error('Error loading recipe types:', error);
+      // Fallback to a default type
+      const defaultTypes = [{ idTipo: 1, descripcion: 'Postres' }];
+      setRecipeTypes(defaultTypes);
+      setSelectedRecipeType(defaultTypes[0]);
+    }
+  };
 
   const difficultyOptions = ['Fácil', 'Medio', 'Difícil'];
   const categoryOptions = [
@@ -181,6 +209,25 @@ const AddRecipeScreen = ({ navigation, route }) => {
       } else if (typeof recipe.instrucciones === 'string') {
         setInstructions(recipe.instrucciones.split('\n').filter(step => step.trim()));
       }
+    }
+    
+    // Handle recipe type - prefer actual type object over categories
+    if (recipe.tipo || recipe.tipoReceta) {
+      const recipeTypeFromData = recipe.tipo || recipe.tipoReceta;
+      console.log('Recipe type from data:', recipeTypeFromData);
+      
+      // Set the selected recipe type based on the data
+      setTimeout(() => {
+        if (recipeTypes.length > 0) {
+          const matchingType = recipeTypes.find(type => 
+            type.idTipo === recipeTypeFromData.idTipo ||
+            type.descripcion === recipeTypeFromData.descripcion
+          );
+          if (matchingType) {
+            setSelectedRecipeType(matchingType);
+          }
+        }
+      }, 100); // Small delay to ensure recipeTypes are loaded
     }
     
     setSelectedCategories(recipe.tags || recipe.categories || []);
@@ -361,32 +408,76 @@ const AddRecipeScreen = ({ navigation, route }) => {
 
   const uploadRecipe = async (recipeData) => {
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Get current user data
+      const currentUser = user || await getCurrentUser();
       
-      // Save to local recipes with pending approval status
-      const myRecipes = await AsyncStorage.getItem('myRecipes');
-      const recipes = myRecipes ? JSON.parse(myRecipes) : [];
-      
-      const newRecipe = {
-        ...recipeData,
-        id: Date.now().toString(),
-        status: 'pending_approval', // pending_approval, approved, rejected
-        createdAt: new Date().toISOString(),
-        views: 0,
-        likes: 0,
+      if (!currentUser || !currentUser.idUsuario) {
+        Alert.alert('Error', 'No se pudo identificar al usuario. Inicia sesión nuevamente.');
+        return;
+      }
+
+      // Map frontend recipe data to backend format
+      const backendRecipeData = {
+        nombreReceta: recipeData.title.trim(),
+        descripcionReceta: recipeData.description.trim(),
+        fotoPrincipal: recipeData.imageUrl,
+        porciones: parseInt(recipeData.servings) || 1,
+        cantidadPersonas: parseInt(recipeData.servings) || 1,
+        instrucciones: recipeData.instructions.map(inst => inst.text).join('\n'),
+        fecha: new Date().toISOString().split('T')[0], // Current date in YYYY-MM-DD format
+        autorizada: false, // Always false for new recipes requiring approval
+        usuario: {
+          idUsuario: currentUser.idUsuario
+        },
+        idTipo: selectedRecipeType || { idTipo: 1 }, // Use selected recipe type or default
+        // Ingredientes will be handled separately on the backend
+        // We send basic ingredient data but the backend will create proper Ingredientes entities
+        ingredientes: recipeData.ingredients.map((ing, index) => ({
+          nombre: ing.name,
+          cantidad: parseFloat(ing.amount) || 1,
+          unidadMedida: ing.unit || 'unidad'
+        }))
       };
+
+      console.log('Sending recipe data to backend:', backendRecipeData);
+
+      let response;
       
-      recipes.push(newRecipe);
-      await AsyncStorage.setItem('myRecipes', JSON.stringify(recipes));
-      
-      Alert.alert(
-        'Receta Enviada',
-        'Tu receta ha sido enviada y está pendiente de aprobación. Una vez aprobada por nuestro equipo, será visible para otros usuarios.',
-        [{ text: 'OK', onPress: () => navigation.goBack() }]
-      );
+      try {
+        // Try primary endpoint first
+        response = await api.recipes.create(backendRecipeData);
+      } catch (primaryError) {
+        console.log('Primary endpoint failed, trying alternative:', primaryError.message);
+        // Try alternative endpoint if primary fails
+        response = await api.recipes.createAlternative(backendRecipeData);
+      }
+
+      if (response.success || response.data) {
+        Alert.alert(
+          'Receta Enviada',
+          'Tu receta ha sido enviada y está pendiente de aprobación. Una vez aprobada por nuestro equipo, será visible para otros usuarios.',
+          [{ text: 'OK', onPress: () => navigation.goBack() }]
+        );
+      } else {
+        throw new Error(response.message || 'Error al enviar la receta');
+      }
+
     } catch (error) {
-      Alert.alert('Error', 'No se pudo subir la receta. Se guardará localmente.');
+      console.error('Error uploading recipe:', error);
+      let errorMessage = 'No se pudo subir la receta.';
+      
+      // Provide more specific error messages
+      if (error.message.includes('400')) {
+        errorMessage = 'Datos de receta inválidos. Verifica que todos los campos estén completos.';
+      } else if (error.message.includes('401')) {
+        errorMessage = 'No tienes autorización para crear recetas. Inicia sesión nuevamente.';
+      } else if (error.message.includes('500')) {
+        errorMessage = 'Error del servidor. Inténtalo nuevamente más tarde.';
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      Alert.alert('Error', `${errorMessage} Se guardará localmente.`);
       await saveRecipeLocally(recipeData);
     }
   };

@@ -23,8 +23,7 @@ import AboutScreen from '../screens/main/AboutScreen';
 import ShoppingListScreen from '../screens/main/ShoppingListScreen';
 import DatabaseTablesScreen from '../screens/main/DatabaseTablesScreen';
 import AdminPanelScreen from '../screens/main/AdminPanelScreen';
-
-// Recipe Screens
+import RecipeApprovalScreen from '../screens/main/RecipeApprovalScreen';
 import RecipeDetailScreen from '../screens/recipe/RecipeDetailScreen';
 import RecipeSearchScreen from '../screens/recipe/RecipeSearchScreen';
 import SavedScaledRecipesScreen from '../screens/recipe/SavedScaledRecipesScreen';
@@ -33,142 +32,242 @@ import SavedScaledRecipesScreen from '../screens/recipe/SavedScaledRecipesScreen
 import Colors from '../themes/colors';
 
 const Tab = createBottomTabNavigator();
-const HomeStack = createStackNavigator();
-const CourseStack = createStackNavigator();
-const SavedStack = createStackNavigator();
-const ProfileStack = createStackNavigator();
+const Stack = createStackNavigator();
 
-const HomeStackScreen = () => (
-  <HomeStack.Navigator
+// Admin Stack Navigator
+const AdminStackScreen = () => (
+  <Stack.Navigator
     screenOptions={{
       headerShown: false,
     }}>
-    <HomeStack.Screen name="Home" component={HomeScreen} />
-    <HomeStack.Screen name="RecipeDetail" component={RecipeDetailScreen} />
-    <HomeStack.Screen name="RecipeSearch" component={RecipeSearchScreen} />
-  </HomeStack.Navigator>
+    <Stack.Screen name="RecipeApproval" component={RecipeApprovalScreen} />
+    <Stack.Screen name="RecipeDetail" component={RecipeDetailScreen} />
+    <Stack.Screen name="AdminPanel" component={AdminPanelScreen} />
+  </Stack.Navigator>
+);
+
+// Regular User Stack Navigator
+const HomeStackScreen = () => (
+  <Stack.Navigator
+    screenOptions={{
+      headerShown: false,
+    }}>
+    <Stack.Screen name="Home" component={HomeScreen} />
+    <Stack.Screen name="RecipeDetail" component={RecipeDetailScreen} />
+    <Stack.Screen name="RecipeSearch" component={RecipeSearchScreen} />
+  </Stack.Navigator>
 );
 
 const CourseStackScreen = () => (
-  <CourseStack.Navigator
+  <Stack.Navigator
     screenOptions={{
       headerShown: false,
     }}>
-    <CourseStack.Screen name="Courses" component={CourseScreen} />
-    <CourseStack.Screen name="CourseDetail" component={CourseDetailScreen} />
-    <CourseStack.Screen name="CourseEnrollment" component={CourseEnrollmentScreen} />
-    <CourseStack.Screen name="MyCourses" component={MyCoursesScreen} />
-    <CourseStack.Screen name="QRScannerScreen" component={QRScannerScreen} />
-  </CourseStack.Navigator>
+    <Stack.Screen name="Courses" component={CourseScreen} />
+    <Stack.Screen name="CourseDetail" component={CourseDetailScreen} />
+    <Stack.Screen name="CourseEnrollment" component={CourseEnrollmentScreen} />
+    <Stack.Screen name="MyCourses" component={MyCoursesScreen} />
+    <Stack.Screen name="QRScannerScreen" component={QRScannerScreen} />
+  </Stack.Navigator>
 );
 
 const SavedStackScreen = () => (
-  <SavedStack.Navigator
+  <Stack.Navigator
     screenOptions={{
       headerShown: false,
     }}>
-    <SavedStack.Screen name="Saved" component={SavedScreen} />
-    <SavedStack.Screen name="RecipeDetail" component={RecipeDetailScreen} />
-    <SavedStack.Screen name="SavedScaledRecipes" component={SavedScaledRecipesScreen} />
-  </SavedStack.Navigator>
+    <Stack.Screen name="Saved" component={SavedScreen} />
+    <Stack.Screen name="RecipeDetail" component={RecipeDetailScreen} />
+    <Stack.Screen name="SavedScaledRecipes" component={SavedScaledRecipesScreen} />
+  </Stack.Navigator>
 );
 
 const ProfileStackScreen = () => (
-  <ProfileStack.Navigator
+  <Stack.Navigator
     screenOptions={{
       headerShown: false,
     }}>
-    <ProfileStack.Screen name="ProfileHome" component={ProfileScreen} />
-    <ProfileStack.Screen name="MyRecipes" component={MyRecipesScreen} />
-    <ProfileStack.Screen name="MyCourses" component={MyCoursesScreen} />
-    <ProfileStack.Screen name="SavedScaledRecipes" component={SavedScaledRecipesScreen} />
-    <ProfileStack.Screen name="ShoppingList" component={ShoppingListScreen} />
-    <ProfileStack.Screen name="AccountSettings" component={AccountSettingsScreen} />
-    <ProfileStack.Screen name="AppSettings" component={AppSettingsScreen} />
-    <ProfileStack.Screen name="HelpSupport" component={HelpSupportScreen} />
-    <ProfileStack.Screen name="About" component={AboutScreen} />
-    <ProfileStack.Screen name="ServerConfig" component={ServerConfigScreen} />
-    <ProfileStack.Screen name="RecipeDetail" component={RecipeDetailScreen} />
-    <ProfileStack.Screen name="DatabaseTables" component={DatabaseTablesScreen} />
-    <ProfileStack.Screen name="AdminPanel" component={AdminPanelScreen} />
-  </ProfileStack.Navigator>
+    <Stack.Screen name="ProfileHome" component={ProfileScreen} />
+    <Stack.Screen name="MyRecipes" component={MyRecipesScreen} />
+    <Stack.Screen name="MyCourses" component={MyCoursesScreen} />
+    <Stack.Screen name="SavedScaledRecipes" component={SavedScaledRecipesScreen} />
+    <Stack.Screen name="ShoppingList" component={ShoppingListScreen} />
+    <Stack.Screen name="AccountSettings" component={AccountSettingsScreen} />
+    <Stack.Screen name="AppSettings" component={AppSettingsScreen} />
+    <Stack.Screen name="HelpSupport" component={HelpSupportScreen} />
+    <Stack.Screen name="About" component={AboutScreen} />
+    <Stack.Screen name="ServerConfig" component={ServerConfigScreen} />
+    <Stack.Screen name="RecipeDetail" component={RecipeDetailScreen} />
+    <Stack.Screen name="DatabaseTables" component={DatabaseTablesScreen} />
+  </Stack.Navigator>
+);
+
+// Admin Navigation
+const AdminNavigator = () => (
+  <Tab.Navigator
+    screenOptions={{
+      tabBarActiveTintColor: Colors.primary,
+      tabBarInactiveTintColor: Colors.textDark,
+      tabBarStyle: {
+        paddingBottom: 5,
+        paddingTop: 5,
+        height: 60,
+        borderTopWidth: 1,
+        borderTopColor: Colors.border,
+      },
+      headerShown: false,
+    }}>
+    <Tab.Screen
+      name="PendingRecipes"
+      component={AdminStackScreen}
+      options={{
+        tabBarLabel: 'Pendientes',
+        tabBarIcon: ({ color, size }) => (
+          <Icon name="clock" color={color} size={size} />
+        ),
+      }}
+    />
+    <Tab.Screen
+      name="AllRecipes"
+      component={HomeStackScreen}
+      options={{
+        tabBarLabel: 'Recetas',
+        tabBarIcon: ({ color, size }) => (
+          <Icon name="book-open" color={color} size={size} />
+        ),
+      }}
+    />
+    <Tab.Screen
+      name="AdminProfile"
+      component={ProfileStackScreen}
+      options={{
+        tabBarLabel: 'Perfil',
+        tabBarIcon: ({ color, size }) => (
+          <Icon name="user" color={color} size={size} />
+        ),
+      }}
+    />
+  </Tab.Navigator>
+);
+
+// Regular User Navigation
+const UserNavigator = () => (
+  <Tab.Navigator
+    screenOptions={{
+      tabBarActiveTintColor: Colors.primary,
+      tabBarInactiveTintColor: Colors.textDark,
+      tabBarStyle: {
+        paddingBottom: 5,
+        paddingTop: 5,
+        height: 60,
+        borderTopWidth: 1,
+        borderTopColor: Colors.border,
+      },
+      headerShown: false,
+    }}>
+    <Tab.Screen
+      name="HomeTab"
+      component={HomeStackScreen}
+      options={{
+        tabBarLabel: 'Home',
+        tabBarIcon: ({ color, size }) => (
+          <Icon name="home" color={color} size={size} />
+        ),
+      }}
+    />
+    <Tab.Screen
+      name="CoursesTab"
+      component={CourseStackScreen}
+      options={{
+        tabBarLabel: 'Courses',
+        tabBarIcon: ({ color, size }) => (
+          <Icon name="book" color={color} size={size} />
+        ),
+      }}
+    />
+    <Tab.Screen
+      name="AddTab"
+      component={AddRecipeScreen}
+      options={{
+        tabBarLabel: 'Add',
+        tabBarIcon: ({ color, size }) => (
+          <Icon name="plus-circle" color={color} size={size} />
+        ),
+      }}
+    />
+    <Tab.Screen
+      name="SavedTab"
+      component={SavedStackScreen}
+      options={{
+        tabBarLabel: 'Saved',
+        tabBarIcon: ({ color, size }) => (
+          <Icon name="bookmark" color={color} size={size} />
+        ),
+      }}
+    />
+    <Tab.Screen
+      name="ProfileTab"
+      component={ProfileStackScreen}
+      options={{
+        tabBarLabel: 'Profile',
+        tabBarIcon: ({ color, size }) => (
+          <Icon name="user" color={color} size={size} />
+        ),
+      }}
+    />
+  </Tab.Navigator>
 );
 
 const AppNavigator = () => {
-  const { isVisitor } = useContext(AuthContext);
+  const { isVisitor, user, isAdmin } = useContext(AuthContext);
 
-  return (
-    <Tab.Navigator
-      screenOptions={{
-        tabBarActiveTintColor: Colors.primary,
-        tabBarInactiveTintColor: Colors.textDark,
-        tabBarStyle: {
-          paddingBottom: 5,
-          paddingTop: 5,
-          height: 60,
-          borderTopWidth: 1,
-          borderTopColor: Colors.border,
-        },
-        headerShown: false,
-      }}>
-      <Tab.Screen
-        name="HomeTab"
-        component={HomeStackScreen}
-        options={{
-          tabBarLabel: 'Home',
-          tabBarIcon: ({ color, size }) => (
-            <Icon name="home" color={color} size={size} />
-          ),
-        }}
-      />
-      <Tab.Screen
-        name="CoursesTab"
-        component={CourseStackScreen}
-        options={{
-          tabBarLabel: 'Courses',
-          tabBarIcon: ({ color, size }) => (
-            <Icon name="book" color={color} size={size} />
-          ),
-        }}
-      />
-      {/* Hide Add Recipe tab for visitors */}
-      {!isVisitor && (
+  // Si es visitante, mostrar navegación de visitante
+  if (isVisitor) {
+    return (
+      <Tab.Navigator
+        screenOptions={{
+          tabBarActiveTintColor: Colors.primary,
+          tabBarInactiveTintColor: Colors.textDark,
+          tabBarStyle: {
+            paddingBottom: 5,
+            paddingTop: 5,
+            height: 60,
+            borderTopWidth: 1,
+            borderTopColor: Colors.border,
+          },
+          headerShown: false,
+        }}>
         <Tab.Screen
-          name="AddTab"
-          component={AddRecipeScreen}
+          name="HomeTab"
+          component={HomeStackScreen}
           options={{
-            tabBarLabel: 'Add',
+            tabBarLabel: 'Home',
             tabBarIcon: ({ color, size }) => (
-              <Icon name="plus-circle" color={color} size={size} />
+              <Icon name="home" color={color} size={size} />
             ),
           }}
         />
-      )}
-      {/* Hide Saved tab for visitors since they can't save recipes */}
-      {!isVisitor && (
         <Tab.Screen
-          name="SavedTab"
-          component={SavedStackScreen}
+          name="ProfileTab"
+          component={ProfileStackScreen}
           options={{
-            tabBarLabel: 'Saved',
+            tabBarLabel: 'Register',
             tabBarIcon: ({ color, size }) => (
-              <Icon name="bookmark" color={color} size={size} />
+              <Icon name="user-plus" color={color} size={size} />
             ),
           }}
         />
-      )}
-      <Tab.Screen
-        name="ProfileTab"
-        component={ProfileStackScreen}
-        options={{
-          tabBarLabel: isVisitor ? 'Register' : 'Profile',
-          tabBarIcon: ({ color, size }) => (
-            <Icon name={isVisitor ? "user-plus" : "user"} color={color} size={size} />
-          ),
-        }}
-      />
-    </Tab.Navigator>
-  );
+      </Tab.Navigator>
+    );
+  }
+
+  // Si es admin, mostrar navegación de admin
+  if (user && (user.rol === 'admin' || user.tipo === 'empresa')) {
+    return <AdminNavigator />;
+  }
+
+  // Si es usuario regular, mostrar navegación normal
+  return <UserNavigator />;
 };
 
 export default AppNavigator;

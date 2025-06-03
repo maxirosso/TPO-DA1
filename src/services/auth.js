@@ -97,6 +97,7 @@ export const authService = {
             mail: user.mail || user.email,
             nickname: user.nickname || user.username,
             tipo: user.tipo || 'comun', // comun, visitante, alumno
+            rol: user.rol, // Add rol field from backend
             ...user
           };
           await AsyncStorage.setItem(USER_STORAGE_KEY, JSON.stringify(mappedUser));

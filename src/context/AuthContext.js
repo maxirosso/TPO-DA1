@@ -19,6 +19,10 @@ export const AuthProvider = ({ children }) => {
     setIsVisitor(false);
   };
 
+  const isAdmin = () => {
+    return user && (user.rol === 'admin' || user.tipo === 'empresa');
+  };
+
   return (
     <AuthContext.Provider value={{ 
       isVisitor, 
@@ -26,7 +30,8 @@ export const AuthProvider = ({ children }) => {
       enterVisitorMode, 
       exitVisitorMode, 
       signOut,
-      setUser 
+      setUser,
+      isAdmin
     }}>
       {children}
     </AuthContext.Provider>

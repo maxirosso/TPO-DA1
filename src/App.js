@@ -21,9 +21,13 @@ import { authService } from './services/auth';
 // Actions
 import { loadFavorites } from './store/actions/recipeActions';
 
+// Components
+import SplashScreen from './components/common/SplashScreen';
+
 const AppContent = () => {
   const dispatch = useDispatch();
   const [isLoading, setIsLoading] = useState(true);
+  const [showSplash, setShowSplash] = useState(true);
   const [userToken, setUserToken] = useState(null);
   const [isVisitor, setIsVisitor] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
@@ -119,7 +123,6 @@ const AppContent = () => {
 
   useEffect(() => {
     const bootstrapAsync = async () => {
-      setIsLoading(true);
       try {
         // Load favorites from storage
         dispatch(loadFavorites());
@@ -142,8 +145,20 @@ const AppContent = () => {
       }
     };
 
+    // Show splash screen for 3 seconds
+    const splashTimer = setTimeout(() => {
+      setShowSplash(false);
+    }, 3000);
+
     bootstrapAsync();
+
+    return () => clearTimeout(splashTimer);
   }, [dispatch]);
+
+  // Show splash screen
+  if (showSplash) {
+    return <SplashScreen />;
+  }
 
   // Simple loading screen
   if (isLoading) {
