@@ -16,6 +16,8 @@ const RecipeCard = ({
   title,
   imageUrl,
   time,
+  category,
+  rating,
   tags = [],
   ingredients = [],
   onPress,
@@ -49,9 +51,34 @@ const RecipeCard = ({
         id: id, // Asegurarse de pasar el ID correctamente
         title,
         imageUrl,
-        time
+        time,
+        category,
+        rating
       });
     }
+  };
+
+  // Función para renderizar las estrellas de rating
+  const renderStars = (rating) => {
+    if (!rating || rating === 0) return null;
+    
+    const stars = [];
+    const fullStars = Math.floor(rating);
+    const hasHalfStar = rating % 1 !== 0;
+    
+    for (let i = 0; i < fullStars; i++) {
+      stars.push(
+        <Icon key={i} name="star" size={12} color={Colors.warning} style={styles.starIcon} />
+      );
+    }
+    
+    if (hasHalfStar) {
+      stars.push(
+        <Icon key="half" name="star" size={12} color={Colors.textLight} style={styles.starIcon} />
+      );
+    }
+    
+    return stars;
   };
 
   if (type === 'grid') {
@@ -70,15 +97,27 @@ const RecipeCard = ({
           <Text style={styles.title} numberOfLines={1}>
             {title}
           </Text>
+          
+          {/* Mostrar categoría si está disponible */}
+          {category && (
+            <Text style={styles.categoryText} numberOfLines={1}>
+              {category}
+            </Text>
+          )}
+          
           <View style={styles.metaContainer}>
-          <View style={styles.timeContainer}>
-            <Icon name="clock" size={14} color={Colors.textDark} />
+            <View style={styles.timeContainer}>
+              <Icon name="clock" size={14} color={Colors.textDark} />
               <Text style={styles.metaText}>{time} min</Text>
             </View>
-            {ingredientsCount > 0 && (
-              <View style={styles.ingredientsContainer}>
-                <Icon name="list" size={14} color={Colors.textDark} />
-                <Text style={styles.metaText}>{ingredientsCount} ing.</Text>
+            
+            {/* Mostrar rating si está disponible */}
+            {rating && rating > 0 && (
+              <View style={styles.ratingContainer}>
+                <View style={styles.starsContainer}>
+                  {renderStars(rating)}
+                </View>
+                <Text style={styles.ratingText}>{rating}</Text>
               </View>
             )}
           </View>
@@ -102,18 +141,31 @@ const RecipeCard = ({
         <Text style={styles.title} numberOfLines={2}>
           {title}
         </Text>
+        
+        {/* Mostrar categoría si está disponible */}
+        {category && (
+          <Text style={styles.categoryText} numberOfLines={1}>
+            {category}
+          </Text>
+        )}
+        
         <View style={styles.metaContainer}>
-        <View style={styles.timeContainer}>
-          <Icon name="clock" size={14} color={Colors.textDark} />
+          <View style={styles.timeContainer}>
+            <Icon name="clock" size={14} color={Colors.textDark} />
             <Text style={styles.metaText}>{time} min</Text>
           </View>
-          {ingredientsCount > 0 && (
-            <View style={styles.ingredientsContainer}>
-              <Icon name="list" size={14} color={Colors.textDark} />
-              <Text style={styles.metaText}>{ingredientsCount} ing.</Text>
+          
+          {/* Mostrar rating si está disponible */}
+          {rating && rating > 0 && (
+            <View style={styles.ratingContainer}>
+              <View style={styles.starsContainer}>
+                {renderStars(rating)}
+              </View>
+              <Text style={styles.ratingText}>{rating}</Text>
             </View>
           )}
         </View>
+        
         {tags.length > 0 && (
           <View style={styles.tagsContainer}>
             {tags.map((tag, index) => (
@@ -178,6 +230,12 @@ const styles = StyleSheet.create({
     color: Colors.textDark,
     marginBottom: Metrics.smallSpacing,
   },
+  categoryText: {
+    fontSize: Metrics.smallFontSize,
+    color: Colors.primary,
+    fontWeight: '500',
+    marginBottom: Metrics.smallSpacing,
+  },
   metaContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -188,9 +246,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginRight: Metrics.baseSpacing,
   },
-  ingredientsContainer: {
+  ratingContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+  },
+  starsContainer: {
+    flexDirection: 'row',
+    marginRight: 4,
+  },
+  starIcon: {
+    marginRight: 1,
+  },
+  ratingText: {
+    fontSize: Metrics.smallFontSize,
+    color: Colors.textDark,
+    fontWeight: '500',
   },
   metaText: {
     fontSize: Metrics.smallFontSize,

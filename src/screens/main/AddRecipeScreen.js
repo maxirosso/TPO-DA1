@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useContext, useEffect } from 'react';
 import {
   View,
   Text,
@@ -22,8 +22,37 @@ import Button from '../../components/common/Button';
 import Input from '../../components/common/Input';
 import Colors from '../../themes/colors';
 import Metrics from '../../themes/metrics';
+import { AuthContext } from '../../context/AuthContext';
+import { api } from '../../services/api';
 
-const AddRecipeScreen = ({ navigation }) => {
+const AddRecipeScreen = ({ navigation, route }) => {
+  const { isVisitor, user } = useContext(AuthContext);
+  
+  // Get editing parameters from navigation
+  const editingRecipe = route?.params?.editingRecipe;
+  const isEditing = route?.params?.isEditing || false;
+  
+  // Redirect visitors to registration
+  useEffect(() => {
+    if (isVisitor) {
+      Alert.alert(
+        'Acceso Restringido',
+        'Debes registrarte para crear recetas.',
+        [
+          {
+            text: 'Ir a Registro',
+            onPress: () => navigation.navigate('ProfileTab')
+          }
+        ]
+      );
+    }
+  }, [isVisitor, navigation]);
+
+  // If visitor, don't render the screen content
+  if (isVisitor) {
+    return null;
+  }
+
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [prepTime, setPrepTime] = useState('');
@@ -36,6 +65,13 @@ const AddRecipeScreen = ({ navigation }) => {
   const [instructions, setInstructions] = useState(['']);
   const [selectedCategories, setSelectedCategories] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
+
+  // Load recipe data if editing
+  useEffect(() => {
+    if (isEditing && editingRecipe) {
+      loadExistingRecipe(editingRecipe);
+    }
+  }, [isEditing, editingRecipe]);
 
   const difficultyOptions = ['Fácil', 'Medio', 'Difícil'];
   const categoryOptions = [
@@ -117,6 +153,140 @@ const AddRecipeScreen = ({ navigation }) => {
     } else {
       setSelectedCategories([...selectedCategories, category]);
     }
+  };
+
+  const loadExistingRecipe = (recipe) => {
+    setTitle(recipe.title || recipe.nombreReceta || '');
+    setDescription(recipe.description || recipe.descripcionReceta || '');
+    setPrepTime(recipe.prepTime?.toString() || '');
+    setCookTime(recipe.cookTime?.toString() || '');
+    setServings(recipe.servings?.toString() || recipe.porciones?.toString() || '');
+    setCalories(recipe.calories?.toString() || '');
+    setDifficulty(recipe.difficulty || 'Medio');
+    setRecipeImage(recipe.imageUrl || recipe.fotoPrincipal);
+    
+    // Handle ingredients
+    if (recipe.ingredients && Array.isArray(recipe.ingredients)) {
+      setIngredients(recipe.ingredients.map(ing => ing.name || ing.toString()));
+    } else if (recipe.ingredientes && Array.isArray(recipe.ingredientes)) {
+      setIngredients(recipe.ingredientes.map(ing => ing.nombre || ing.toString()));
+    }
+    
+    // Handle instructions
+    if (recipe.instructions && Array.isArray(recipe.instructions)) {
+      setInstructions(recipe.instructions.map(inst => inst.text || inst.toString()));
+    } else if (recipe.instrucciones) {
+      if (Array.isArray(recipe.instrucciones)) {
+        setInstructions(recipe.instrucciones.map(inst => inst.toString()));
+      } else if (typeof recipe.instrucciones === 'string') {
+        setInstructions(recipe.instrucciones.split('\n').filter(step => step.trim()));
+      }
+    }
+    
+    setSelectedCategories(recipe.tags || recipe.categories || []);
+  };
+
+  const updateRecipe = async (recipeData) => {
+    try {
+      // Get current user data
+      const currentUser = user || await getCurrentUser();
+      
+      if (!currentUser || !currentUser.idUsuario) {
+        Alert.alert('Error', 'No se pudo identificar al usuario. Inicia sesión nuevamente.');
+        return;
+      }
+
+      // Validate recipe ID
+      const recipeId = editingRecipe.id || editingRecipe.idReceta;
+      if (!recipeId) {
+        Alert.alert('Error', 'ID de receta no válido');
+        return;
+      }
+
+      const updateData = {
+        nombreReceta: recipeData.title,
+        descripcionReceta: recipeData.description,
+        fotoPrincipal: recipeData.imageUrl,
+        porciones: parseInt(recipeData.servings) || 1,
+        cantidadPersonas: parseInt(recipeData.servings) || 1,
+        instrucciones: recipeData.instructions.map(inst => inst.text).join('\n'),
+        usuario: {
+          idUsuario: currentUser.idUsuario
+        },
+        idTipo: {
+          idTipo: getCategoryId(recipeData.category)
+        }
+      };
+
+      console.log('Updating recipe with data:', updateData);
+      console.log('Recipe ID:', recipeId);
+      console.log('Current user ID:', currentUser.idUsuario);
+
+      const response = await api.recipes.update(recipeId, updateData);
+      
+      // Handle both text and object responses
+      const message = typeof response.data === 'string' ? response.data : 'Receta actualizada exitosamente';
+      
+      Alert.alert(
+        'Receta Actualizada',
+        message,
+        [{ text: 'OK', onPress: () => navigation.goBack() }]
+      );
+    } catch (error) {
+      console.error('Error updating recipe:', error);
+      // Show more specific error message
+      let errorMessage = 'No se pudo actualizar la receta';
+      if (error.message.includes('403') || error.message.includes('Forbidden')) {
+        errorMessage = 'No tienes permisos para editar esta receta';
+      } else if (error.message.includes('404') || error.message.includes('not found')) {
+        errorMessage = 'Receta no encontrada';
+      } else if (error.message.includes('400') || error.message.includes('Bad Request')) {
+        errorMessage = 'Datos incorrectos. Verifica la información e intenta nuevamente';
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      Alert.alert('Error', errorMessage);
+    }
+  };
+
+  const getCurrentUser = async () => {
+    try {
+      // Try different possible storage keys
+      let userData = await AsyncStorage.getItem('user_data');
+      if (!userData) {
+        userData = await AsyncStorage.getItem('user');
+      }
+      if (!userData) {
+        userData = await AsyncStorage.getItem('currentUser');
+      }
+      
+      const parsedUser = userData ? JSON.parse(userData) : null;
+      console.log('Current user from storage:', parsedUser);
+      return parsedUser;
+    } catch (error) {
+      console.error('Error getting user data:', error);
+      return null;
+    }
+  };
+
+  const getCategoryId = (categoryName) => {
+    // Map category names to IDs (you'll need to adjust these based on your backend)
+    const categoryMap = {
+      'Desayuno': 1,
+      'Almuerzo': 2,
+      'Cena': 3,
+      'Postre': 4,
+      'Aperitivo': 5,
+      'Sopa': 6,
+      'Ensalada': 7,
+      'Vegetariano': 8,
+      'Vegano': 9,
+      'Sin Gluten': 10,
+      'Keto': 11,
+      'Paleo': 12,
+    };
+    return categoryMap[categoryName] || 1;
   };
 
   const checkNetworkCost = async () => {
@@ -245,46 +415,6 @@ const AddRecipeScreen = ({ navigation }) => {
 
     setIsLoading(true);
 
-    // Check for existing recipe with same name
-    try {
-      const myRecipes = await AsyncStorage.getItem('myRecipes');
-      const recipes = myRecipes ? JSON.parse(myRecipes) : [];
-      const existingRecipe = recipes.find(recipe => 
-        recipe.title.toLowerCase() === title.toLowerCase()
-      );
-
-      if (existingRecipe) {
-        Alert.alert(
-          'Receta Existente',
-          `Ya tienes una receta llamada "${title}". ¿Qué deseas hacer?`,
-          [
-            { text: 'Cancelar', style: 'cancel', onPress: () => setIsLoading(false) },
-            { 
-              text: 'Reemplazar', 
-              style: 'destructive',
-              onPress: () => proceedWithSave(true, existingRecipe.id)
-            },
-            { 
-              text: 'Editar Existente', 
-              onPress: () => {
-                setIsLoading(false);
-                // Load existing recipe data for editing
-                loadExistingRecipe(existingRecipe);
-              }
-            }
-          ]
-        );
-        return;
-      }
-
-      await proceedWithSave(false);
-    } catch (error) {
-      console.log('Error checking existing recipes:', error);
-      await proceedWithSave(false);
-    }
-  };
-
-  const proceedWithSave = async (isReplacement = false, replaceId = null) => {
     const recipeData = {
       title: title.trim(),
       description: description.trim(),
@@ -305,42 +435,36 @@ const AddRecipeScreen = ({ navigation }) => {
       })),
       tags: selectedCategories,
       category: selectedCategories[0] || 'Otros',
-      isReplacement,
-      replaceId,
     };
 
-    const networkStatus = await checkNetworkCost();
+    try {
+      if (isEditing && editingRecipe) {
+        // Update existing recipe
+        await updateRecipe(recipeData);
+      } else {
+        // Create new recipe (existing logic)
+        const networkStatus = await checkNetworkCost();
 
-    switch (networkStatus) {
-      case 'offline':
-        await saveRecipeLocally(recipeData);
-        break;
-      case 'wait':
-        await saveRecipeLocally(recipeData);
-        break;
-      case 'free':
-      case 'paid':
-        await uploadRecipe(recipeData);
-        break;
-      default:
-        await uploadRecipe(recipeData);
+        switch (networkStatus) {
+          case 'offline':
+            await saveRecipeLocally(recipeData);
+            break;
+          case 'wait':
+            await saveRecipeLocally(recipeData);
+            break;
+          case 'free':
+          case 'paid':
+            await uploadRecipe(recipeData);
+            break;
+          default:
+            await uploadRecipe(recipeData);
+        }
+      }
+    } catch (error) {
+      Alert.alert('Error', 'No se pudo guardar la receta. Intenta nuevamente.');
+    } finally {
+      setIsLoading(false);
     }
-
-    setIsLoading(false);
-  };
-
-  const loadExistingRecipe = (recipe) => {
-    setTitle(recipe.title);
-    setDescription(recipe.description);
-    setPrepTime(recipe.prepTime?.toString() || '');
-    setCookTime(recipe.cookTime?.toString() || '');
-    setServings(recipe.servings?.toString() || '');
-    setCalories(recipe.calories?.toString() || '');
-    setDifficulty(recipe.difficulty || 'Medio');
-    setRecipeImage(recipe.imageUrl);
-    setIngredients(recipe.ingredients?.map(ing => ing.name) || ['']);
-    setInstructions(recipe.instructions?.map(inst => inst.text) || ['']);
-    setSelectedCategories(recipe.tags || []);
   };
 
   return (
@@ -361,7 +485,9 @@ const AddRecipeScreen = ({ navigation }) => {
             >
               <Icon name="chevron-left" size={24} color={Colors.textDark} />
             </TouchableOpacity>
-            <Text style={styles.headerTitle}>Crear Receta</Text>
+            <Text style={styles.headerTitle}>
+              {isEditing ? 'Editar Receta' : 'Crear Receta'}
+            </Text>
             <TouchableOpacity
               style={styles.saveButton}
               onPress={handleSaveRecipe}
@@ -577,7 +703,7 @@ const AddRecipeScreen = ({ navigation }) => {
             ))}
 
             <Button
-              title={isLoading ? "Guardando..." : "Guardar Receta"}
+              title={isLoading ? "Guardando..." : (isEditing ? "Actualizar Receta" : "Guardar Receta")}
               onPress={handleSaveRecipe}
               style={styles.saveRecipeButton}
               disabled={isLoading}

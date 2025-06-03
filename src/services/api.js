@@ -106,12 +106,45 @@ class ApiService {
 
       // Handle HTTP errors
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || `HTTP ${response.status}: ${response.statusText}`);
+        let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+        try {
+          const errorData = await response.text();
+          // Try to parse as JSON first, fallback to text
+          try {
+            const jsonError = JSON.parse(errorData);
+            errorMessage = jsonError.message || jsonError.error || errorData;
+          } catch (parseError) {
+            errorMessage = errorData || errorMessage;
+          }
+        } catch (textError) {
+          // Use default error message if we can't read response
+        }
+        throw new Error(errorMessage);
       }
 
-      // Parse JSON response
-      const data = await response.json();
+      // Parse response based on content type
+      const contentType = response.headers.get('content-type');
+      let data;
+      
+      try {
+        if (contentType && contentType.includes('application/json')) {
+          data = await response.json();
+        } else {
+          // Handle text responses (like success messages)
+          const textData = await response.text();
+          // Try to parse as JSON if possible, otherwise keep as text
+          try {
+            data = JSON.parse(textData);
+          } catch (jsonError) {
+            data = textData;
+          }
+        }
+      } catch (parseError) {
+        console.warn('Error parsing response:', parseError);
+        // Fallback to empty response
+        data = '';
+      }
+      
       return { success: true, data };
 
     } catch (error) {
@@ -150,7 +183,11 @@ class ApiService {
   async postForm(endpoint, data = {}) {
     const formData = new URLSearchParams();
     Object.keys(data).forEach(key => {
-      formData.append(key, data[key]);
+      // Handle null and undefined values
+      const value = data[key];
+      if (value !== null && value !== undefined) {
+        formData.append(key, value.toString());
+      }
     });
 
     return this.request(endpoint, {
@@ -201,6 +238,14 @@ class ApiService {
       body: formData,
     });
   }
+
+  // Scale function
+  async scale(idReceta, tipo, porciones) {
+    console.log('API scale called with:', { idReceta, tipo, porciones });
+    const endpoint = `/ajustarPorciones/${idReceta}`;
+    console.log('Scale endpoint:', endpoint);
+    return this.get(endpoint, { tipo, porciones });
+  }
 }
 
 // Create singleton instance
@@ -238,7 +283,8 @@ export const api = {
     create: (recipeData) => apiService.post('/CargarNuevasRecetas', recipeData),
     createWithFiles: (receta, files) => apiService.uploadFile('/cargarReceta', files[0], receta),
     publish: (recipeData) => apiService.post('/publicarRecetas', recipeData),
-    scale: (idReceta, tipo, porciones) => apiService.get(`/ajustarPorciones/${idReceta}`, { tipo, porciones }),
+    update: (idReceta, recipeData) => apiService.put(`/recetas/${idReceta}`, recipeData),
+    scale: (idReceta, tipo, porciones) => apiService.scale(idReceta, tipo, porciones),
     scaleByIngredient: (idReceta, nombreIngrediente, nuevaCantidad) => 
       apiService.postForm(`/ajustarPorIngrediente/${idReceta}`, { nombreIngrediente, nuevaCantidad }),
     getSuggestions: (idTipo) => apiService.get('/sugerenciasRecetas', { idTipo }),
@@ -287,7 +333,26 @@ export const api = {
   // Reviews endpoints (matching Spring Boot controller)
   reviews: {
     getByRecipe: (idReceta) => apiService.get(`/getValoracionReceta/${idReceta}`),
-    create: (idReceta, reviewData) => apiService.post(`/valorarReceta/${idReceta}`, reviewData),
+    create: (idReceta, reviewData, idUsuario) => {
+      const endpoint = `/valorarReceta/${idReceta}`;
+      
+      console.log('Reviews API call:', {
+        endpoint,
+        idUsuario,
+        reviewData
+      });
+      
+      if (idUsuario) {
+        // Si tenemos ID de usuario, agregarlo como parámetro de consulta
+        return apiService.request(`${endpoint}?idUsuario=${idUsuario}`, {
+          method: 'POST',
+          body: reviewData
+        });
+      } else {
+        // Sin ID de usuario, envío normal
+        return apiService.post(endpoint, reviewData);
+      }
+    },
     authorize: (idCalificacion) => apiService.put(`/autorizarComentario/${idCalificacion}`),
   },
 

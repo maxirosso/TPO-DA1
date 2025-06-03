@@ -21,7 +21,7 @@ import { AuthContext } from '../../context/AuthContext';
 
 const CourseDetailScreen = ({ route, navigation }) => {
   const { course, enrollment, isEnrolled = false } = route.params;
-  const { user } = useContext(AuthContext);
+  const { user, isVisitor } = useContext(AuthContext);
   
   const [activeTab, setActiveTab] = useState('overview');
 
@@ -90,6 +90,23 @@ const CourseDetailScreen = ({ route, navigation }) => {
     });
   };
 
+  const handleRestrictedAction = (actionName) => {
+    Alert.alert(
+      'Funcionalidad Limitada',
+      `Para ${actionName}, necesitas crear una cuenta. Los visitantes solo pueden ver información básica de los cursos.`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        { 
+          text: 'Crear Cuenta', 
+          onPress: () => {
+            // Navigate to registration
+            navigation.navigate('ProfileTab');
+          }
+        }
+      ]
+    );
+  };
+
   const renderTabButton = (tabId, title, icon) => (
     <TouchableOpacity
       style={[styles.tabButton, activeTab === tabId && styles.activeTabButton]}
@@ -107,6 +124,63 @@ const CourseDetailScreen = ({ route, navigation }) => {
         {title}
       </Text>
     </TouchableOpacity>
+  );
+
+  const renderVisitorOverviewTab = () => (
+    <View style={styles.tabContent}>
+      <View style={styles.visitorNotice}>
+        <Icon name="info" size={20} color={Colors.warning} />
+        <Text style={styles.visitorNoticeText}>
+          Modo visitante: Solo puedes ver información básica. Regístrate para acceder al contenido completo.
+        </Text>
+      </View>
+
+      {/* Basic Course Description */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Descripción del Curso</Text>
+        <Text style={styles.sectionText}>
+          {course.description || course.fullDescription?.substring(0, 200) + '...'}
+        </Text>
+        <TouchableOpacity 
+          style={styles.readMoreButton}
+          onPress={() => handleRestrictedAction('ver la descripción completa')}
+        >
+          <Text style={styles.readMoreText}>Leer más</Text>
+          <Icon name="lock" size={16} color={Colors.primary} />
+        </TouchableOpacity>
+      </View>
+
+      {/* Basic Course Details */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Información Básica</Text>
+        <View style={styles.basicDetailsGrid}>
+          <View style={styles.basicDetailItem}>
+            <Icon name="clock" size={16} color={Colors.primary} />
+            <Text style={styles.basicDetailLabel}>Duración</Text>
+            <Text style={styles.basicDetailValue}>{course.duration}</Text>
+          </View>
+          <View style={styles.basicDetailItem}>
+            <Icon name="dollar-sign" size={16} color={Colors.primary} />
+            <Text style={styles.basicDetailLabel}>Precio</Text>
+            <Text style={styles.basicDetailValue}>{formatPrice(course.price)}</Text>
+          </View>
+        </View>
+      </View>
+
+      {/* Registration Call to Action */}
+      <View style={styles.registrationCTA}>
+        <Text style={styles.ctaTitle}>¿Te interesa este curso?</Text>
+        <Text style={styles.ctaDescription}>
+          Regístrate para acceder a información detallada, inscribirte y más.
+        </Text>
+        <Button
+          title="Crear Cuenta"
+          onPress={() => navigation.navigate('ProfileTab')}
+          style={styles.ctaButton}
+          fullWidth
+        />
+      </View>
+    </View>
   );
 
   const renderOverviewTab = () => (
@@ -478,10 +552,10 @@ const CourseDetailScreen = ({ route, navigation }) => {
 
       {/* Tab Content */}
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {activeTab === 'overview' && renderOverviewTab()}
-        {activeTab === 'requirements' && renderRequirementsTab()}
-        {activeTab === 'location' && renderLocationTab()}
-        {activeTab === 'enrollment' && renderEnrollmentTab()}
+        {activeTab === 'overview' && (isVisitor ? renderVisitorOverviewTab() : renderOverviewTab())}
+        {activeTab === 'requirements' && (isVisitor ? renderVisitorOverviewTab() : renderRequirementsTab())}
+        {activeTab === 'location' && (isVisitor ? renderVisitorOverviewTab() : renderLocationTab())}
+        {activeTab === 'enrollment' && (isVisitor ? renderVisitorOverviewTab() : renderEnrollmentTab())}
         
         <View style={styles.bottomPadding} />
       </ScrollView>
@@ -999,6 +1073,72 @@ const styles = StyleSheet.create({
   },
   bottomPadding: {
     height: Metrics.xxLargeSpacing,
+  },
+  visitorNotice: {
+    backgroundColor: Colors.card,
+    borderRadius: Metrics.baseBorderRadius,
+    padding: Metrics.mediumSpacing,
+    marginBottom: Metrics.largeSpacing,
+  },
+  visitorNoticeText: {
+    fontSize: Metrics.baseFontSize,
+    color: Colors.textDark,
+    marginBottom: Metrics.baseSpacing,
+  },
+  readMoreButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: Metrics.baseSpacing,
+  },
+  readMoreText: {
+    fontSize: Metrics.baseFontSize,
+    color: Colors.primary,
+    marginLeft: Metrics.baseSpacing,
+  },
+  basicDetailsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  basicDetailItem: {
+    width: '48%',
+    backgroundColor: Colors.card,
+    borderRadius: Metrics.baseBorderRadius,
+    padding: Metrics.mediumSpacing,
+    marginBottom: Metrics.baseSpacing,
+    alignItems: 'center',
+  },
+  basicDetailLabel: {
+    fontSize: Metrics.smallFontSize,
+    color: Colors.textMedium,
+    marginTop: Metrics.smallSpacing,
+    marginBottom: 4,
+  },
+  basicDetailValue: {
+    fontSize: Metrics.baseFontSize,
+    fontWeight: '500',
+    color: Colors.textDark,
+    textAlign: 'center',
+  },
+  registrationCTA: {
+    backgroundColor: Colors.card,
+    borderRadius: Metrics.baseBorderRadius,
+    padding: Metrics.mediumSpacing,
+    marginTop: Metrics.largeSpacing,
+  },
+  ctaTitle: {
+    fontSize: Metrics.mediumFontSize,
+    fontWeight: '600',
+    color: Colors.textDark,
+    marginBottom: Metrics.baseSpacing,
+  },
+  ctaDescription: {
+    fontSize: Metrics.baseFontSize,
+    color: Colors.textMedium,
+    marginBottom: Metrics.baseSpacing,
+  },
+  ctaButton: {
+    minWidth: '100%',
   },
 });
 

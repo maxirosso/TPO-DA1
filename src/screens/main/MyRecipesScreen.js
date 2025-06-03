@@ -115,7 +115,13 @@ const MyRecipesScreen = ({ navigation }) => {
       `¿Qué quieres hacer con "${recipe.title}"?`,
       [
         { text: 'Cancelar', style: 'cancel' },
-        { text: 'Editar', onPress: () => navigation.navigate('AddTab') },
+        { 
+          text: 'Editar', 
+          onPress: () => navigation.navigate('AddTab', { 
+            editingRecipe: recipe,
+            isEditing: true 
+          })
+        },
         { text: 'Ver Detalles', onPress: () => handleRecipePress(recipe) },
       ]
     );

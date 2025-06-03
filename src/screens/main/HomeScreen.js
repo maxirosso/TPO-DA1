@@ -335,7 +335,7 @@ const HomeScreen = ({ navigation }) => {
     <SafeAreaView style={styles.container} edges={['top']}>
       <StatusBar backgroundColor={Colors.gradientStart} barStyle="dark-content" />
       
-      {renderConnectionStatus()}
+      {/* {renderConnectionStatus()} */}
 
       <LinearGradient
         colors={[Colors.gradientStart, Colors.gradientEnd]}

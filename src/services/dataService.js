@@ -50,8 +50,10 @@ export function mapBackendRecipe(receta) {
               receta.tipo ? receta.tipo.descripcion : 'Sin categoría',
     tipoReceta: receta.tipoReceta || receta.tipo,
     tags: receta.tipoReceta ? [receta.tipoReceta.descripcion] : [],
-    rating: 0, // Default rating
-    reviews: [],
+    rating: receta.calificacionPromedio || 0, // Mapear calificacionPromedio del backend
+    calificacionPromedio: receta.calificacionPromedio || 0,
+    reviews: receta.totalCalificaciones || 0,
+    totalCalificaciones: receta.totalCalificaciones || 0,
     autorizada: receta.autorizada
   };
 }

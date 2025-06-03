@@ -99,8 +99,16 @@ const StudentRegistrationScreen = ({ navigation, route }) => {
         const mail = email;
         const medioPago = cardNumber || '';
         const tramiteStr = tramite || '';
+        
         // Log the data for debugging
         console.log('Registering student params:', { mail, idUsuario: null, medioPago, dniFrente, dniFondo, tramite: tramiteStr });
+        
+        if (!mail) {
+          Alert.alert('Error', 'Email es requerido para el registro.');
+          setIsLoading(false);
+          return;
+        }
+        
         const response = await apiService.auth.registerStudent(
           mail,
           null, // idUsuario is null for new student
@@ -109,15 +117,23 @@ const StudentRegistrationScreen = ({ navigation, route }) => {
           dniFondo,
           tramiteStr
         );
+        
         setIsLoading(false);
-        if (response && response.data) {
-          navigation.navigate('Verification', { email });
+        
+        if (response && response.success) {
+          Alert.alert(
+            'Registro exitoso',
+            'Tu registro como estudiante fue procesado exitosamente. Revisa tu correo para completar la verificación.',
+            [{ text: 'OK', onPress: () => navigation.navigate('Verification', { email }) }]
+          );
         } else {
-          Alert.alert('Error', 'No se pudo registrar como estudiante.');
+          Alert.alert('Error', response?.data || 'No se pudo registrar como estudiante.');
         }
       } catch (error) {
         setIsLoading(false);
-        Alert.alert('Error', 'No se pudo registrar como estudiante.');
+        console.error('Student registration error:', error);
+        const errorMessage = error.message || 'No se pudo registrar como estudiante.';
+        Alert.alert('Error', errorMessage);
       }
     }
   };

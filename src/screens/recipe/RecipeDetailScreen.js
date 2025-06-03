@@ -32,7 +32,7 @@ const { width } = Dimensions.get('window');
 
 const RecipeDetailScreen = ({ navigation, route }) => {
   const dispatch = useDispatch();
-  const { isVisitor } = useContext(AuthContext);
+  const { isVisitor, user } = useContext(AuthContext);
   const [activeTab, setActiveTab] = useState('ingredients');
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [reviewText, setReviewText] = useState('');
@@ -43,10 +43,10 @@ const RecipeDetailScreen = ({ navigation, route }) => {
   const [selectedIngredient, setSelectedIngredient] = useState(null);
   const [customAmount, setCustomAmount] = useState('');
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [userRating, setUserRating] = useState(0);
   const [comment, setComment] = useState('');
   const [comments, setComments] = useState([]);
+  const [error, setError] = useState('');
+  const [userRating, setUserRating] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   // Obtener el ID o datos iniciales de la receta de los parámetros de navegación
@@ -114,8 +114,21 @@ const RecipeDetailScreen = ({ navigation, route }) => {
         // Actualizar el estado con los datos completos
         setRecipe(prevRecipe => ({
           ...prevRecipe,
-          ...fullRecipe
+          ...fullRecipe,
+          // Asegurar valores numéricos válidos
+          prepTime: safeNumber(fullRecipe.prepTime, 10),
+          cookTime: safeNumber(fullRecipe.cookTime, 15),
+          servings: safeNumber(fullRecipe.servings || fullRecipe.porciones, 2),
+          calories: safeNumber(fullRecipe.calories, 300),
+          protein: safeNumber(fullRecipe.protein, 10),
+          carbs: safeNumber(fullRecipe.carbs, 30),
+          fat: safeNumber(fullRecipe.fat, 15),
+          rating: safeNumber(fullRecipe.rating, 4.5),
+          reviews: safeNumber(fullRecipe.reviews, 0)
         }));
+
+        // Cargar reseñas y comentarios después de cargar la receta
+        await loadRecipeReviews();
       } catch (error) {
         console.error('Error al cargar los detalles de la receta:', error);
         setError(`No se pudo cargar la receta. ${error.message || 'Error desconocido'}`);
@@ -127,7 +140,19 @@ const RecipeDetailScreen = ({ navigation, route }) => {
     loadRecipeDetails();
   }, [recipeFromParams.id]);
   
+  // Cargar valoración del usuario cuando cambie la información del usuario o la receta
+  useEffect(() => {
+    if (!isVisitor && user && user.idUsuario && recipe.id) {
+      loadRecipeReviews();
+    }
+  }, [user?.idUsuario, recipe.id]);
+  
   const handleFavoriteToggle = async () => {
+    if (isVisitor) {
+      Alert.alert('Funcionalidad Limitada', 'Debes registrarte para guardar recetas como favoritas.');
+      return;
+    }
+    
     try {
       setIsSubmitting(true);
       await dispatch(toggleFavorite(recipe.id));
@@ -148,6 +173,11 @@ const RecipeDetailScreen = ({ navigation, route }) => {
       return;
     }
     
+    if (!user || !user.idUsuario) {
+      Alert.alert('Error', 'No se pudo identificar el usuario. Inicia sesión nuevamente.');
+      return;
+    }
+    
     if (!reviewText.trim()) {
       Alert.alert('Error', 'Por favor escribe un comentario.');
       return;
@@ -155,18 +185,47 @@ const RecipeDetailScreen = ({ navigation, route }) => {
 
     try {
       setIsSubmitting(true);
-      await api.ratings.add(recipe.id || recipe.idReceta, {
-        calificacion: reviewRating,
-        comentarios: reviewText
-      });
       
-      Alert.alert("Reseña enviada", "Tu reseña ha sido enviada y será revisada por nuestro equipo.");
+      // Crear objeto de calificación con información del usuario
+      const calificacionData = {
+        calificacion: reviewRating,
+        comentarios: reviewText.trim(),
+        idusuario: {
+          idUsuario: user.idUsuario,
+          nombre: user.nombre,
+          mail: user.mail
+        }
+      };
+      
+      console.log('Sending review data:', calificacionData);
+      
+      // Enviar reseña completa (rating + comentario) al backend
+      await api.reviews.create(recipe.id || recipe.idReceta, calificacionData, user.idUsuario);
+      
+      Alert.alert(
+        "Reseña enviada", 
+        "Tu reseña ha sido enviada y será revisada por nuestro equipo antes de publicarse."
+      );
+      
       setIsModalVisible(false);
       setReviewText('');
       setReviewRating(5);
+      setUserRating(reviewRating); // Actualizar rating del usuario
+      
+      // Recargar reseñas para mostrar cambios
+      await loadRecipeReviews();
+      
     } catch (error) {
       console.error('Error submitting review:', error);
-      Alert.alert('Error', 'No se pudo enviar la reseña. Intenta nuevamente.');
+      let errorMessage = 'No se pudo enviar la reseña. Intenta nuevamente.';
+      
+      if (error.message && error.message.includes('unauthorized')) {
+        errorMessage = 'Debes iniciar sesión para valorar recetas.';
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      Alert.alert('Error', errorMessage);
     } finally {
       setIsSubmitting(false);
     }
@@ -188,6 +247,10 @@ const RecipeDetailScreen = ({ navigation, route }) => {
   };
 
   const openScaleModal = () => {
+    if (isVisitor) {
+      Alert.alert('Funcionalidad Limitada', 'Debes registrarte para usar la función de escalar recetas.');
+      return;
+    }
     setScaleModalVisible(true);
   };
 
@@ -198,23 +261,23 @@ const RecipeDetailScreen = ({ navigation, route }) => {
     }
     
     try {
-      let tipo;
-      if (scaleFactor === 0.5) tipo = 'mitad';
-      else if (scaleFactor === 2) tipo = 'doble';
-      else tipo = 'porciones';
+      console.log('Applying local scaling with factor:', scaleFactor);
       
-      const porciones = tipo === 'porciones' ? Math.round(recipe.servings * scaleFactor) : null;
+      // Escalado local sin llamar al backend
+      setRecipe(prevRecipe => {
+        const scaledRecipe = { ...prevRecipe };
+        
+        // Escalar porciones
+        scaledRecipe.servings = Math.round((prevRecipe.servings || 2) * scaleFactor);
+        
+        // Los demás valores nutricionales se mantienen por porción, 
+        // por lo que no necesitan escalarse individualmente
+        
+        return scaledRecipe;
+      });
       
-      const response = await api.recipes.scale(
-        recipe.id || recipe.idReceta, 
-        tipo, 
-        porciones
-      );
-      
-      const scaledRecipe = mapBackendRecipe(response.data);
-      setRecipe(scaledRecipe);
       setScaleModalVisible(false);
-      setScaleFactor(1);
+      Alert.alert('Éxito', `Receta escalada para ${Math.round((recipe.servings || 2) * scaleFactor)} porciones`);
     } catch (error) {
       console.error('Error scaling recipe:', error);
       Alert.alert('Error', 'No se pudo escalar la receta. Intenta nuevamente.');
@@ -235,22 +298,147 @@ const RecipeDetailScreen = ({ navigation, route }) => {
     if (!selectedIngredient || !customAmount) return;
     
     try {
-      const response = await api.recipes.scaleByIngredient(
-        recipe.id || recipe.idReceta, 
-        selectedIngredient.name, 
-        parseFloat(customAmount)
-      );
+      console.log('Scaling by ingredient locally');
       
-      const scaledRecipe = mapBackendRecipe(response.data);
-      setRecipe(scaledRecipe);
+      // Encontrar el factor de escalado basado en el ingrediente seleccionado
+      const originalAmount = parseFloat(selectedIngredient.amount) || 1;
+      const newAmount = parseFloat(customAmount);
+      const localScaleFactor = newAmount / originalAmount;
+      
+      console.log('Local scale factor:', localScaleFactor);
+      
+      // Aplicar escalado local
+      setRecipe(prevRecipe => {
+        const scaledRecipe = { ...prevRecipe };
+        
+        // Escalar porciones
+        scaledRecipe.servings = Math.round((prevRecipe.servings || 2) * localScaleFactor);
+        
+        // Escalar ingredientes
+        if (scaledRecipe.ingredients) {
+          scaledRecipe.ingredients = scaledRecipe.ingredients.map(ingredient => ({
+            ...ingredient,
+            amount: ingredient.amount ? scaleAmount(ingredient.amount, localScaleFactor) : ingredient.amount
+          }));
+        }
+        
+        return scaledRecipe;
+      });
+      
       setScaleModalVisible(false);
       setScaleByIngredient(false);
       setSelectedIngredient(null);
       setCustomAmount('');
+      
+      Alert.alert('Éxito', `Receta escalada basada en ${selectedIngredient.name}`);
     } catch (error) {
       console.error('Error scaling recipe by ingredient:', error);
       Alert.alert('Error', 'No se pudo escalar la receta por ingrediente. Intenta nuevamente.');
     }
+  };
+
+  const resetScaling = () => {
+    setScaleFactor(1);
+    Alert.alert('Éxito', 'Escalado restablecido a la receta original');
+  };
+
+  // Función para cargar reseñas y comentarios de la receta
+  const loadRecipeReviews = async () => {
+    try {
+      const recipeId = recipe.id || recipe.idReceta;
+      if (!recipeId) return;
+
+      const response = await api.reviews.getByRecipe(recipeId);
+      
+      if (response.success && response.data) {
+        const reviews = Array.isArray(response.data) ? response.data : [];
+        console.log('All reviews loaded:', reviews.length);
+        
+        // Buscar la valoración del usuario actual
+        if (!isVisitor && user && user.idUsuario) {
+          console.log('Looking for rating for user ID:', user.idUsuario);
+          const userReview = reviews.find(review => 
+            review.idusuario && review.idusuario.idUsuario === user.idUsuario
+          );
+          
+          if (userReview) {
+            console.log('Found user rating:', userReview.calificacion, 'Review:', userReview);
+            setUserRating(userReview.calificacion);
+            setReviewRating(userReview.calificacion); // También para el modal
+          } else {
+            console.log('No rating found for current user. Reviews:', reviews.map(r => ({
+              userId: r.idusuario?.idUsuario,
+              rating: r.calificacion
+            })));
+            setUserRating(0);
+            setReviewRating(5); // Valor por defecto para el modal
+          }
+        } else {
+          console.log('User not available for rating lookup:', { isVisitor, user: user?.idUsuario });
+        }
+        
+        // Calcular rating promedio usando TODAS las valoraciones
+        if (reviews.length > 0) {
+          const totalRating = reviews.reduce((sum, review) => sum + (review.calificacion || 0), 0);
+          const averageRating = totalRating / reviews.length;
+          
+          // Para los comentarios públicos, solo mostrar los autorizados
+          // Pero usar todas las valoraciones para el promedio
+          const authorizedComments = reviews.filter(review => 
+            review.autorizado === true && 
+            review.comentarios && 
+            review.comentarios.trim() !== ''
+          );
+          
+          // Actualizar el estado de la receta con las reseñas
+          setRecipe(prevRecipe => ({
+            ...prevRecipe,
+            rating: Math.round(averageRating * 10) / 10, // Redondear a 1 decimal
+            reviews: reviews.length,
+            comments: authorizedComments.map(review => ({
+              id: review.idCalificacion,
+              text: review.comentarios,
+              user: review.idusuario?.nombre || 'Usuario',
+              avatar: review.idusuario?.avatar || 'https://randomuser.me/api/portraits/men/41.jpg',
+              rating: review.calificacion,
+              date: review.fecha || new Date().toLocaleDateString(),
+              status: 'approved'
+            }))
+          }));
+        }
+      }
+    } catch (error) {
+      console.error('Error loading reviews:', error);
+    }
+  };
+
+  // Funciones auxiliares para cálculos seguros
+  const safeNumber = (value, defaultValue = 0) => {
+    const num = Number(value);
+    return isNaN(num) ? defaultValue : num;
+  };
+
+  const getTotalTime = () => {
+    const prep = safeNumber(recipe.prepTime, 10);
+    const cook = safeNumber(recipe.cookTime, 15);
+    return Math.round((prep + cook) * scaleFactor);
+  };
+
+  const getServings = () => {
+    const servings = safeNumber(recipe.servings, 2);
+    return Math.round(servings * scaleFactor);
+  };
+
+  const getCaloriesPerServing = () => {
+    const calories = safeNumber(recipe.calories, 300);
+    const servings = safeNumber(recipe.servings, 2);
+    return Math.round(calories / servings);
+  };
+
+  const getNutrientPerServing = (nutrient, defaultValue = 10) => {
+    const value = safeNumber(recipe[nutrient], defaultValue);
+    const servings = safeNumber(recipe.servings, 2);
+    return Math.round(value / servings);
   };
 
   // Función auxiliar mejorada para escalar cantidades por persona
@@ -347,42 +535,108 @@ const RecipeDetailScreen = ({ navigation, route }) => {
   );
   
   const handleRating = async (rating) => {
+    if (isVisitor) {
+      Alert.alert('Funcionalidad Limitada', 'Debes registrarte para valorar recetas.');
+      return;
+    }
+    
+    if (!user || !user.idUsuario) {
+      Alert.alert('Error', 'No se pudo identificar el usuario. Inicia sesión nuevamente.');
+      return;
+    }
+    
     try {
       setUserRating(rating);
-      // Here you would typically send the rating to your backend
-      // await api.post(`/recipes/${recipe.id}/ratings`, { rating });
+      
+      // Crear objeto de calificación con información del usuario
+      const calificacionData = {
+        calificacion: rating,
+        comentarios: '',
+        idusuario: {
+          idUsuario: user.idUsuario,
+          nombre: user.nombre,
+          mail: user.mail
+        }
+      };
+      
+      console.log('Sending rating data:', calificacionData);
+      
+      // Enviar la valoración al backend con el ID del usuario como parámetro
+      const response = await api.reviews.create(recipe.id || recipe.idReceta, calificacionData, user.idUsuario);
+      
+      Alert.alert('Éxito', 'Tu valoración ha sido registrada.');
+      
+      // Recargar las valoraciones para actualizar el promedio
+      await loadRecipeReviews();
+      
     } catch (error) {
       console.error('Rating error:', error);
-      Alert.alert(
-        'Error',
-        'No se pudo enviar la valoración. Por favor, intenta nuevamente.'
-      );
+      let errorMessage = 'No se pudo enviar la valoración. Por favor, intenta nuevamente.';
+      
+      if (error.message && error.message.includes('unauthorized')) {
+        errorMessage = 'Debes iniciar sesión para valorar recetas.';
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      Alert.alert('Error', errorMessage);
     }
   };
   
   const handleAddComment = async () => {
-    if (!comment.trim()) return;
+    if (isVisitor) {
+      Alert.alert('Funcionalidad Limitada', 'Debes registrarte para comentar recetas.');
+      return;
+    }
+    
+    if (!user || !user.idUsuario) {
+      Alert.alert('Error', 'No se pudo identificar el usuario. Inicia sesión nuevamente.');
+      return;
+    }
+    
+    if (!comment.trim()) {
+      Alert.alert('Error', 'Por favor escribe un comentario.');
+      return;
+    }
     
     setIsSubmitting(true);
     try {
-      const newComment = {
-        id: Date.now(),
-        text: comment,
-        user: 'Current User', // Replace with actual user
-        status: 'pending',
-        date: new Date().toISOString(),
+      // Crear objeto de calificación con información del usuario
+      const calificacionData = {
+        calificacion: userRating || 5,
+        comentarios: comment.trim(),
+        idusuario: {
+          idUsuario: user.idUsuario,
+          nombre: user.nombre,
+          mail: user.mail
+        }
       };
       
-      setComments(prevComments => [...prevComments, newComment]);
+      console.log('Sending comment data:', calificacionData);
+      
+      // Enviar comentario al backend
+      const response = await api.reviews.create(recipe.id || recipe.idReceta, calificacionData, user.idUsuario);
+      
       setComment('');
-      // Here you would typically send the comment to your backend
-      // await api.post(`/recipes/${recipe.id}/comments`, { text: comment });
+      Alert.alert(
+        'Comentario Enviado', 
+        'Tu comentario ha sido enviado y será revisado por nuestro equipo antes de publicarse.'
+      );
+      
+      // Recargar reseñas para mostrar cambios (si están aprobados automáticamente)
+      await loadRecipeReviews();
+      
     } catch (error) {
       console.error('Comment error:', error);
-      Alert.alert(
-        'Error',
-        'No se pudo enviar el comentario. Por favor, intenta nuevamente.'
-      );
+      let errorMessage = 'No se pudo enviar el comentario. Por favor, intenta nuevamente.';
+      
+      if (error.message && error.message.includes('unauthorized')) {
+        errorMessage = 'Debes iniciar sesión para comentar recetas.';
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      Alert.alert('Error', errorMessage);
     } finally {
       setIsSubmitting(false);
     }
@@ -484,7 +738,7 @@ const RecipeDetailScreen = ({ navigation, route }) => {
             <View style={styles.statItem}>
               <Icon name="clock" size={20} color={Colors.primary} />
                   <Text style={styles.statValue}>
-                    {Math.round((recipe.prepTime + recipe.cookTime) * scaleFactor)} min
+                    {getTotalTime()} min
                   </Text>
               <Text style={styles.statLabel}>Tiempo Total</Text>
             </View>
@@ -494,7 +748,7 @@ const RecipeDetailScreen = ({ navigation, route }) => {
             <View style={styles.statItem}>
               <Icon name="users" size={20} color={Colors.primary} />
                   <Text style={styles.statValue}>
-                    {Math.round(recipe.servings * scaleFactor)}
+                    {getServings()}
                   </Text>
               <Text style={styles.statLabel}>Porciones</Text>
             </View>
@@ -504,7 +758,7 @@ const RecipeDetailScreen = ({ navigation, route }) => {
             <View style={styles.statItem}>
               <Icon name="activity" size={20} color={Colors.primary} />
                   <Text style={styles.statValue}>
-                    {Math.round(recipe.calories * scaleFactor / recipe.servings)}
+                    {getCaloriesPerServing()}
                   </Text>
                   <Text style={styles.statLabel}>Calorías/porción</Text>
             </View>
@@ -513,21 +767,21 @@ const RecipeDetailScreen = ({ navigation, route }) => {
           <View style={styles.nutritionContainer}>
             <View style={styles.nutritionItem}>
                   <Text style={styles.nutritionValue}>
-                    {Math.round(recipe.protein * scaleFactor / recipe.servings)}g
+                    {getNutrientPerServing('protein')}g
                   </Text>
               <Text style={styles.nutritionLabel}>Proteína</Text>
             </View>
             
             <View style={styles.nutritionItem}>
                   <Text style={styles.nutritionValue}>
-                    {Math.round(recipe.carbs * scaleFactor / recipe.servings)}g
+                    {getNutrientPerServing('carbs')}g
                   </Text>
               <Text style={styles.nutritionLabel}>Carbohidratos</Text>
             </View>
             
             <View style={styles.nutritionItem}>
                   <Text style={styles.nutritionValue}>
-                    {Math.round(recipe.fat * scaleFactor / recipe.servings)}g
+                    {getNutrientPerServing('fat')}g
                   </Text>
               <Text style={styles.nutritionLabel}>Grasa</Text>
             </View>
@@ -538,6 +792,13 @@ const RecipeDetailScreen = ({ navigation, route }) => {
               <Icon name="refresh-cw" size={20} color={Colors.primary} />
               <Text style={styles.actionButtonText}>Escalar</Text>
             </TouchableOpacity>
+            
+            {scaleFactor !== 1 && (
+              <TouchableOpacity style={styles.actionButton} onPress={resetScaling}>
+                <Icon name="rotate-ccw" size={20} color={Colors.secondary} />
+                <Text style={[styles.actionButtonText, { color: Colors.secondary }]}>Reset</Text>
+              </TouchableOpacity>
+            )}
             
             <TouchableOpacity style={styles.actionButton} onPress={addToShoppingList}>
               <Icon name="shopping-cart" size={20} color={Colors.primary} />
@@ -612,7 +873,7 @@ const RecipeDetailScreen = ({ navigation, route }) => {
             <View style={styles.ingredientsContainer}>
               <View style={styles.servingInfo}>
                 <Text style={styles.servingText}>
-                  Para <Text style={styles.servingCount}>{Math.round(recipe.servings * scaleFactor)}</Text> {Math.round(recipe.servings * scaleFactor) === 1 ? 'persona' : 'personas'}
+                  Para <Text style={styles.servingCount}>{getServings()}</Text> {getServings() === 1 ? 'persona' : 'personas'}
                 </Text>
                 {!scaleByIngredient && (
                   <TouchableOpacity onPress={openScaleModal}>
@@ -648,97 +909,73 @@ const RecipeDetailScreen = ({ navigation, route }) => {
                 <Text style={styles.addReviewText}>Añadir reseña</Text>
               </TouchableOpacity>
               
-                  {recipe.comments && recipe.comments.length > 0 ? (
-                    recipe.comments.map((comment, index) => (
-                <View key={index} style={styles.reviewItem}>
-                  <View style={styles.reviewHeader}>
-                    <View style={styles.reviewUser}>
-                      <Image source={{uri: comment.avatar}} style={styles.reviewAvatar} />
-                      <View>
-                        <Text style={styles.reviewUserName}>{comment.user}</Text>
-                        <Text style={styles.reviewDate}>{comment.date}</Text>
-                      </View>
-                    </View>
-                    <View style={styles.reviewRating}>
-                      {[1, 2, 3, 4, 5].map(i => (
-                        <Icon 
-                          key={i}
-                          name="star" 
-                          size={14} 
-                          color={i <= comment.rating ? Colors.warning : Colors.textLight} 
-                        />
-                      ))}
-                    </View>
+              <View style={styles.ratingSummary}>
+                <View style={styles.ratingDisplay}>
+                  <Text style={styles.averageRating}>{recipe.rating}</Text>
+                  <View style={styles.starsDisplay}>
+                    {[1, 2, 3, 4, 5].map(i => (
+                      <Icon 
+                        key={i}
+                        name="star" 
+                        size={16} 
+                        color={i <= Math.round(recipe.rating) ? Colors.warning : Colors.textLight} 
+                      />
+                    ))}
                   </View>
-                  <Text style={styles.reviewText}>{comment.text}</Text>
+                  <Text style={styles.reviewCount}>({recipe.reviews} reseñas)</Text>
                 </View>
-                    ))
-                  ) : (
-                    <Text style={styles.emptyMessage}>No hay reseñas disponibles para esta receta. ¡Sé el primero en comentar!</Text>
-                  )}
+              </View>
+              
+              {recipe.comments && recipe.comments.length > 0 ? (
+                recipe.comments
+                  .filter(comment => comment.status === 'approved') // Solo comentarios aprobados
+                  .map((comment, index) => (
+                    <View key={comment.id || index} style={styles.reviewItem}>
+                      <View style={styles.reviewHeader}>
+                        <View style={styles.reviewUser}>
+                          <Image source={{uri: comment.avatar}} style={styles.reviewAvatar} />
+                          <View>
+                            <Text style={styles.reviewUserName}>{comment.user}</Text>
+                            <Text style={styles.reviewDate}>{comment.date}</Text>
+                          </View>
+                        </View>
+                        <View style={styles.reviewRating}>
+                          {[1, 2, 3, 4, 5].map(i => (
+                            <Icon 
+                              key={i}
+                              name="star" 
+                              size={14} 
+                              color={i <= comment.rating ? Colors.warning : Colors.textLight} 
+                            />
+                          ))}
+                        </View>
+                      </View>
+                      <Text style={styles.reviewText}>{comment.text}</Text>
+                    </View>
+                  ))
+              ) : (
+                <Text style={styles.emptyMessage}>
+                  No hay reseñas disponibles para esta receta. ¡Sé el primero en comentar!
+                </Text>
+              )}
             </View>
           )}
           
           <View style={styles.ratingSection}>
             <Text style={styles.sectionTitle}>Valorar Receta</Text>
             <Rating
+              key={`rating-${userRating}`}
               showRating
               onFinishRating={handleRating}
               style={styles.rating}
               startingValue={userRating}
-              readonly={isSubmitting}
+              readonly={isSubmitting || isVisitor}
             />
-          </View>
-          
-          <View style={styles.commentsSection}>
-            <Text style={styles.sectionTitle}>Comentarios</Text>
-            <View style={styles.commentInput}>
-              <TextInput
-                style={styles.commentTextInput}
-                placeholder="Escribe tu comentario..."
-                value={comment}
-                onChangeText={setComment}
-                multiline
-                editable={!isSubmitting}
-              />
-              <TouchableOpacity
-                style={[
-                  styles.commentButton,
-                  isSubmitting && styles.commentButtonDisabled
-                ]}
-                onPress={handleAddComment}
-                disabled={isSubmitting}
-              >
-                {isSubmitting ? (
-                  <ActivityIndicator size="small" color={Colors.card} />
-                ) : (
-                  <Text style={styles.commentButtonText}>Enviar</Text>
-                )}
-              </TouchableOpacity>
-            </View>
-            
-            <FlatList
-              data={comments}
-              renderItem={({ item }) => (
-                <View style={styles.commentItem}>
-                  <Text style={styles.commentUser}>{item.user}</Text>
-                  <Text style={styles.commentText}>{item.text}</Text>
-                  <Text style={styles.commentDate}>
-                    {new Date(item.date).toLocaleDateString()}
-                  </Text>
-                  {item.status === 'pending' && (
-                    <Text style={styles.commentStatus}>Pendiente de aprobación</Text>
-                  )}
-                </View>
-              )}
-              keyExtractor={item => item.id.toString()}
-              ListEmptyComponent={
-                <Text style={styles.emptyCommentsText}>
-                  No hay comentarios aún. ¡Sé el primero en comentar!
-                </Text>
-              }
-              scrollEnabled={false}
-            />
+            {isVisitor && (
+              <Text style={styles.visitorMessage}>
+                Regístrate para valorar esta receta
+              </Text>
+            )}
           </View>
         </View>
       </ScrollView>
@@ -852,7 +1089,7 @@ const RecipeDetailScreen = ({ navigation, route }) => {
             {!scaleByIngredient ? (
               <View style={styles.scaleByPortionContainer}>
                 <Text style={styles.scaleLabel}>
-                  Ajustar porciones: <Text style={styles.scaleValue}>{Math.round(recipe.servings * scaleFactor)}</Text>
+                  Ajustar porciones: <Text style={styles.scaleValue}>{getServings()}</Text>
                 </Text>
                 <Slider
                   style={styles.slider}
@@ -1474,64 +1711,35 @@ const styles = StyleSheet.create({
   rating: {
     paddingVertical: Metrics.smallSpacing,
   },
-  commentsSection: {
+  ratingSummary: {
     padding: Metrics.mediumSpacing,
-    backgroundColor: Colors.card,
+    backgroundColor: Colors.background,
     borderRadius: Metrics.mediumBorderRadius,
-  },
-  commentInput: {
-    flexDirection: 'row',
     marginBottom: Metrics.mediumSpacing,
   },
-  commentTextInput: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    borderRadius: Metrics.mediumBorderRadius,
-    padding: Metrics.smallSpacing,
-    marginRight: Metrics.smallSpacing,
-    minHeight: 40,
+  ratingDisplay: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
-  commentButton: {
-    backgroundColor: Colors.primary,
-    padding: Metrics.smallSpacing,
-    borderRadius: Metrics.mediumBorderRadius,
-    justifyContent: 'center',
-    minWidth: 80,
+  averageRating: {
+    fontSize: Metrics.xLargeFontSize,
+    fontWeight: '700',
+    color: Colors.textDark,
+    marginRight: Metrics.baseSpacing,
   },
-  commentButtonDisabled: {
-    opacity: 0.7,
+  starsDisplay: {
+    flexDirection: 'row',
+    marginRight: Metrics.baseSpacing,
   },
-  commentButtonText: {
-    color: Colors.card,
-    fontWeight: '500',
+  reviewCount: {
+    fontSize: Metrics.baseFontSize,
+    color: Colors.textMedium,
+  },
+  visitorMessage: {
+    fontSize: Metrics.baseFontSize,
+    color: Colors.textMedium,
     textAlign: 'center',
-  },
-  commentItem: {
-    padding: Metrics.smallSpacing,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-  },
-  commentUser: {
-    fontWeight: '500',
-    marginBottom: Metrics.smallSpacing,
-  },
-  commentText: {
-    marginBottom: Metrics.smallSpacing,
-  },
-  commentDate: {
-    fontSize: Metrics.smallFontSize,
-    color: Colors.textLight,
-  },
-  commentStatus: {
-    fontSize: Metrics.smallFontSize,
-    color: Colors.warning,
-    marginTop: Metrics.smallSpacing,
-  },
-  emptyCommentsText: {
-    textAlign: 'center',
-    color: Colors.textLight,
-    padding: Metrics.mediumSpacing,
+    marginTop: Metrics.mediumSpacing,
   },
 });
 

@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useContext } from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
 import Icon from 'react-native-vector-icons/Feather';
+import { AuthContext } from '../context/AuthContext';
 
 // Main Screens
 import HomeScreen from '../screens/main/HomeScreen';
@@ -94,6 +95,8 @@ const ProfileStackScreen = () => (
 );
 
 const AppNavigator = () => {
+  const { isVisitor } = useContext(AuthContext);
+
   return (
     <Tab.Navigator
       screenOptions={{
@@ -128,33 +131,39 @@ const AppNavigator = () => {
           ),
         }}
       />
-      <Tab.Screen
-        name="AddTab"
-        component={AddRecipeScreen}
-        options={{
-          tabBarLabel: 'Add',
-          tabBarIcon: ({ color, size }) => (
-            <Icon name="plus-circle" color={color} size={size} />
-          ),
-        }}
-      />
-      <Tab.Screen
-        name="SavedTab"
-        component={SavedStackScreen}
-        options={{
-          tabBarLabel: 'Saved',
-          tabBarIcon: ({ color, size }) => (
-            <Icon name="bookmark" color={color} size={size} />
-          ),
-        }}
-      />
+      {/* Hide Add Recipe tab for visitors */}
+      {!isVisitor && (
+        <Tab.Screen
+          name="AddTab"
+          component={AddRecipeScreen}
+          options={{
+            tabBarLabel: 'Add',
+            tabBarIcon: ({ color, size }) => (
+              <Icon name="plus-circle" color={color} size={size} />
+            ),
+          }}
+        />
+      )}
+      {/* Hide Saved tab for visitors since they can't save recipes */}
+      {!isVisitor && (
+        <Tab.Screen
+          name="SavedTab"
+          component={SavedStackScreen}
+          options={{
+            tabBarLabel: 'Saved',
+            tabBarIcon: ({ color, size }) => (
+              <Icon name="bookmark" color={color} size={size} />
+            ),
+          }}
+        />
+      )}
       <Tab.Screen
         name="ProfileTab"
         component={ProfileStackScreen}
         options={{
-          tabBarLabel: 'Profile',
+          tabBarLabel: isVisitor ? 'Register' : 'Profile',
           tabBarIcon: ({ color, size }) => (
-            <Icon name="user" color={color} size={size} />
+            <Icon name={isVisitor ? "user-plus" : "user"} color={color} size={size} />
           ),
         }}
       />

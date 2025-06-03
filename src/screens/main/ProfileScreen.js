@@ -25,7 +25,7 @@ import { AuthContext } from '../../context/AuthContext';
 import dataService from '../../services/dataService';
 
 const ProfileScreen = ({ navigation }) => {
-  const { signOut, user: contextUser } = useContext(AuthContext);
+  const { signOut, user: contextUser, isVisitor, exitVisitorMode } = useContext(AuthContext);
 
   // User state management
   const [user, setUser] = useState({
@@ -469,6 +469,98 @@ const ProfileScreen = ({ navigation }) => {
       </View>
     </Modal>
   );
+
+  // Render visitor registration screen
+  const renderVisitorScreen = () => (
+    <SafeAreaView style={styles.container} edges={['top']}>
+      <StatusBar backgroundColor={Colors.card} barStyle="light-content" />
+      <LinearGradient
+        colors={[Colors.primary, Colors.primaryDark]}
+        style={styles.visitorHeader}
+      >
+        <View style={styles.visitorHeaderContent}>
+          <Icon name="user-plus" size={60} color={Colors.card} />
+          <Text style={styles.visitorTitle}>¡Únete a ChefNet!</Text>
+          <Text style={styles.visitorSubtitle}>
+            Desbloquea todas las funcionalidades creando tu cuenta
+          </Text>
+        </View>
+      </LinearGradient>
+
+      <ScrollView style={styles.visitorContent}>
+        <View style={styles.benefitsSection}>
+          <Text style={styles.benefitsTitle}>Con una cuenta podrás:</Text>
+          
+          <View style={styles.benefitItem}>
+            <Icon name="plus-circle" size={24} color={Colors.primary} />
+            <View style={styles.benefitText}>
+              <Text style={styles.benefitTitle}>Crear y cargar recetas</Text>
+              <Text style={styles.benefitDescription}>Comparte tus recetas favoritas con la comunidad</Text>
+            </View>
+          </View>
+
+          <View style={styles.benefitItem}>
+            <Icon name="sliders" size={24} color={Colors.primary} />
+            <View style={styles.benefitText}>
+              <Text style={styles.benefitTitle}>Escalar recetas</Text>
+              <Text style={styles.benefitDescription}>Ajusta porciones e ingredientes a tu medida</Text>
+            </View>
+          </View>
+
+          <View style={styles.benefitItem}>
+            <Icon name="bookmark" size={24} color={Colors.primary} />
+            <View style={styles.benefitText}>
+              <Text style={styles.benefitTitle}>Guardar recetas</Text>
+              <Text style={styles.benefitDescription}>Crea tu lista personal de recetas para probar</Text>
+            </View>
+          </View>
+
+          <View style={styles.benefitItem}>
+            <Icon name="star" size={24} color={Colors.primary} />
+            <View style={styles.benefitText}>
+              <Text style={styles.benefitTitle}>Valorar y comentar</Text>
+              <Text style={styles.benefitDescription}>Comparte tu experiencia con otras recetas</Text>
+            </View>
+          </View>
+
+          <View style={styles.benefitItem}>
+            <Icon name="book" size={24} color={Colors.primary} />
+            <View style={styles.benefitText}>
+              <Text style={styles.benefitTitle}>Acceso completo a cursos</Text>
+              <Text style={styles.benefitDescription}>Inscríbete y accede al contenido detallado</Text>
+            </View>
+          </View>
+        </View>
+
+        <View style={styles.visitorActions}>
+          <Button
+            title="Crear Cuenta"
+            onPress={() => {
+              exitVisitorMode();
+              // This will navigate back to auth screens
+            }}
+            style={styles.registerButton}
+            fullWidth
+          />
+          
+          <TouchableOpacity
+            style={styles.loginButton}
+            onPress={() => {
+              exitVisitorMode();
+              // This will navigate back to auth screens
+            }}
+          >
+            <Text style={styles.loginButtonText}>Ya tengo cuenta - Iniciar Sesión</Text>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
+    </SafeAreaView>
+  );
+
+  // If user is a visitor, show the registration screen
+  if (isVisitor) {
+    return renderVisitorScreen();
+  }
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -929,6 +1021,72 @@ const styles = StyleSheet.create({
     borderRadius: Metrics.baseBorderRadius,
   },
   devHelperText: {
+    fontSize: Metrics.baseFontSize,
+    fontWeight: '500',
+    color: Colors.primary,
+  },
+  visitorHeader: {
+    padding: Metrics.mediumSpacing,
+  },
+  visitorHeaderContent: {
+    alignItems: 'center',
+  },
+  visitorTitle: {
+    fontSize: Metrics.xxLargeFontSize,
+    fontWeight: '600',
+    color: Colors.card,
+    marginTop: Metrics.mediumSpacing,
+    marginBottom: Metrics.baseSpacing,
+  },
+  visitorSubtitle: {
+    fontSize: Metrics.baseFontSize,
+    color: Colors.card,
+    textAlign: 'center',
+  },
+  visitorContent: {
+    padding: Metrics.mediumSpacing,
+  },
+  benefitsSection: {
+    marginBottom: Metrics.mediumSpacing,
+  },
+  benefitsTitle: {
+    fontSize: Metrics.mediumFontSize,
+    fontWeight: '600',
+    color: Colors.textDark,
+    marginBottom: Metrics.baseSpacing,
+  },
+  benefitItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: Metrics.baseSpacing,
+  },
+  benefitText: {
+    flex: 1,
+    marginLeft: Metrics.mediumSpacing,
+  },
+  benefitTitle: {
+    fontSize: Metrics.baseFontSize,
+    fontWeight: '500',
+    color: Colors.textDark,
+    marginBottom: 2,
+  },
+  benefitDescription: {
+    fontSize: Metrics.smallFontSize,
+    color: Colors.textMedium,
+  },
+  visitorActions: {
+    marginTop: Metrics.mediumSpacing,
+  },
+  registerButton: {
+    marginBottom: Metrics.baseSpacing,
+  },
+  loginButton: {
+    padding: Metrics.mediumSpacing,
+    borderWidth: 1,
+    borderColor: Colors.primary,
+    borderRadius: Metrics.baseBorderRadius,
+  },
+  loginButtonText: {
     fontSize: Metrics.baseFontSize,
     fontWeight: '500',
     color: Colors.primary,

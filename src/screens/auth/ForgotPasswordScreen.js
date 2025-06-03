@@ -35,23 +35,40 @@ const ForgotPasswordScreen = ({ navigation }) => {
     setIsLoading(true);
 
     try {
-      // First check if we have this user in local storage
-      const pendingUsersStr = await AsyncStorage.getItem('pending_users');
-      const pendingUsers = pendingUsersStr ? JSON.parse(pendingUsersStr) : {};
-      
-      // Try with backend first
+      // Try with backend first - fix the API call to properly send email parameter
       try {
-        const response = await axios.post(`${apiConfig.API_BASE_URL}/auth/forgot-password`, { email });
+        const formData = new URLSearchParams();
+        formData.append('mail', email);
         
-        Alert.alert(
-          'Restablecimiento enviado',
-          'Si el correo está registrado, recibirás instrucciones para restablecer tu contraseña.',
-          [{ text: 'OK', onPress: () => navigation.navigate('Login') }]
-        );
+        const response = await fetch(`${apiConfig.API_BASE_URL}/recuperarClave`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: formData.toString(),
+        });
+        
+        if (response.ok) {
+          Alert.alert(
+            'Restablecimiento enviado',
+            'Si el correo está registrado, recibirás instrucciones para restablecer tu contraseña.',
+            [{ text: 'OK', onPress: () => navigation.navigate('Login') }]
+          );
+        } else {
+          // Handle server error but still show success message for security
+          Alert.alert(
+            'Restablecimiento enviado',
+            'Si el correo está registrado, recibirás instrucciones para restablecer tu contraseña.',
+            [{ text: 'OK', onPress: () => navigation.navigate('Login') }]
+          );
+        }
       } catch (error) {
         console.error('Error with backend forgot password:', error);
         
         // Fallback for local users
+        const pendingUsersStr = await AsyncStorage.getItem('pending_users');
+        const pendingUsers = pendingUsersStr ? JSON.parse(pendingUsersStr) : {};
+        
         if (pendingUsers[email]) {
           // For development, we'll just pretend we sent an email
           Alert.alert(
@@ -60,7 +77,7 @@ const ForgotPasswordScreen = ({ navigation }) => {
             [{ text: 'OK', onPress: () => navigation.navigate('Login') }]
           );
         } else {
-          // User not found in local storage either
+          // User not found in local storage either - still show success for security
           Alert.alert(
             'Correo enviado',
             'Si el correo está registrado, recibirás instrucciones para restablecer tu contraseña.',
