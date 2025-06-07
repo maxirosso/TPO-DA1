@@ -27,6 +27,7 @@ import RecipeApprovalScreen from '../screens/main/RecipeApprovalScreen';
 import RecipeDetailScreen from '../screens/recipe/RecipeDetailScreen';
 import RecipeSearchScreen from '../screens/recipe/RecipeSearchScreen';
 import SavedScaledRecipesScreen from '../screens/recipe/SavedScaledRecipesScreen';
+import PendingRecipesScreen from '../screens/main/PendingRecipesScreen';
 
 // Theme
 import Colors from '../themes/colors';
@@ -91,6 +92,7 @@ const ProfileStackScreen = () => (
     <Stack.Screen name="MyRecipes" component={MyRecipesScreen} />
     <Stack.Screen name="MyCourses" component={MyCoursesScreen} />
     <Stack.Screen name="SavedScaledRecipes" component={SavedScaledRecipesScreen} />
+    <Stack.Screen name="PendingRecipes" component={PendingRecipesScreen} />
     <Stack.Screen name="ShoppingList" component={ShoppingListScreen} />
     <Stack.Screen name="AccountSettings" component={AccountSettingsScreen} />
     <Stack.Screen name="AppSettings" component={AppSettingsScreen} />

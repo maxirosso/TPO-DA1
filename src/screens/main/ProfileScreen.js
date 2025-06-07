@@ -185,8 +185,16 @@ const ProfileScreen = ({ navigation }) => {
       {
         id: 'saved_recipes',
         icon: 'bookmark',
-        title: 'Lista de Recetas',
-        description: 'Recetas que has guardado para intentar',
+        title: 'Recetas Guardadas',
+        description: 'Recetas favoritas y guardadas',
+        badge: null,
+        available: user.accountType !== 'visitor'
+      },
+      {
+        id: 'pending_recipes',
+        icon: 'clock',
+        title: 'Lista de Pendientes',
+        description: 'Recetas que planeas intentar hacer',
         badge: null,
         available: user.accountType !== 'visitor'
       },
@@ -248,6 +256,9 @@ const ProfileScreen = ({ navigation }) => {
         break;
       case 'saved_recipes':
         navigation.navigate('SavedTab');
+        break;
+      case 'pending_recipes':
+        navigation.navigate('PendingRecipes');
         break;
       case 'my_courses':
         navigation.navigate('MyCourses');
@@ -646,7 +657,7 @@ const ProfileScreen = ({ navigation }) => {
 
         <View style={styles.menuContainer}>
           <Text style={styles.menuSectionTitle}>Gestión de Contenido</Text>
-          {menuItems.filter(item => ['my_recipes', 'saved_recipes', 'saved_scaled_recipes', 'my_courses'].includes(item.id)).map((item) => (
+          {menuItems.filter(item => ['my_recipes', 'saved_recipes', 'pending_recipes', 'saved_scaled_recipes', 'my_courses'].includes(item.id)).map((item) => (
             <TouchableOpacity
               key={item.id}
               style={styles.menuItem}

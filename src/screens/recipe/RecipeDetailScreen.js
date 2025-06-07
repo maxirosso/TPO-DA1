@@ -26,7 +26,7 @@ import Metrics from '../../themes/metrics';
 import { toggleFavorite } from '../../store/actions/recipeActions';
 import { selectIsFavorite } from '../../store/selectors/recipeSelectors';
 import { api } from '../../services/api';
-import { mapBackendRecipe } from '../../services/dataService';
+import dataService, { mapBackendRecipe } from '../../services/dataService';
 
 const { width } = Dimensions.get('window');
 
@@ -48,6 +48,7 @@ const RecipeDetailScreen = ({ navigation, route }) => {
   const [error, setError] = useState('');
   const [userRating, setUserRating] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [addingToPendingList, setAddingToPendingList] = useState(false);
   
   // Obtener el ID o datos iniciales de la receta de los parámetros de navegación
   const recipeFromParams = route.params?.recipe || {};
@@ -233,16 +234,48 @@ const RecipeDetailScreen = ({ navigation, route }) => {
 
   const addToShoppingList = async () => {
     if (isVisitor) {
-      Alert.alert('Funcionalidad Limitada', 'Debes registrarte para usar la lista de recetas.');
+      Alert.alert('Funcionalidad Limitada', 'Debes registrarte para usar la lista de compras.');
       return;
     }
     
     try {
-      await api.recipeList.addById(recipe.id || recipe.idReceta);
+      // Here you would implement shopping list functionality
       Alert.alert("Lista de compras", "Los ingredientes han sido agregados a tu lista de compras.");
     } catch (error) {
       console.error('Error adding to shopping list:', error);
       Alert.alert('Error', 'No se pudo agregar a la lista. Intenta nuevamente.');
+    }
+  };
+
+  const addToPendingList = async () => {
+    if (isVisitor) {
+      Alert.alert('Funcionalidad Limitada', 'Debes registrarte para usar la lista de recetas pendientes.');
+      return;
+    }
+    
+    // Prevenir múltiples clics
+    if (addingToPendingList) {
+      return;
+    }
+    
+    try {
+      setAddingToPendingList(true);
+      console.log('🔄 Frontend: Adding recipe to pending list:', recipe.id || recipe.idReceta);
+      
+      const result = await dataService.addRecipeToPendingList(recipe.id || recipe.idReceta);
+      
+      console.log('🔍 Frontend: Result from dataService:', result);
+      
+      if (result.success) {
+        Alert.alert('Éxito', result.message);
+      } else {
+        Alert.alert('Error', result.message);
+      }
+    } catch (error) {
+      console.error('❌ Frontend: Error adding to pending list:', error);
+      Alert.alert('Error', 'No se pudo agregar a la lista de pendientes. Intenta nuevamente.');
+    } finally {
+      setAddingToPendingList(false);
     }
   };
 
@@ -803,6 +836,21 @@ const RecipeDetailScreen = ({ navigation, route }) => {
             <TouchableOpacity style={styles.actionButton} onPress={addToShoppingList}>
               <Icon name="shopping-cart" size={20} color={Colors.primary} />
               <Text style={styles.actionButtonText}>Compras</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={[styles.actionButton, addingToPendingList && styles.disabledButton]} 
+              onPress={addToPendingList}
+              disabled={addingToPendingList}
+            >
+              <Icon 
+                name={addingToPendingList ? "loader" : "clock"} 
+                size={20} 
+                color={addingToPendingList ? Colors.textLight : Colors.primary} 
+              />
+              <Text style={[styles.actionButtonText, addingToPendingList && styles.disabledText]}>
+                {addingToPendingList ? 'Agregando...' : 'A Intentar'}
+              </Text>
             </TouchableOpacity>
             
             <TouchableOpacity 
@@ -1740,6 +1788,12 @@ const styles = StyleSheet.create({
     color: Colors.textMedium,
     textAlign: 'center',
     marginTop: Metrics.mediumSpacing,
+  },
+  disabledButton: {
+    opacity: 0.6,
+  },
+  disabledText: {
+    color: Colors.textLight,
   },
 });
 

@@ -396,8 +396,32 @@ export const api = {
   recipeList: {
     add: (idUsuario, receta) => apiService.post(`/lista/${idUsuario}`, receta),
     addById: (idReceta) => apiService.post(`/agregarReceta/${idReceta}`),
+    addByIdWithUser: (idReceta, idUsuario) => {
+      const endpoint = idUsuario ? 
+        `/agregarReceta/${idReceta}?idUsuario=${idUsuario}` : 
+        `/agregarReceta/${idReceta}`;
+      return apiService.post(endpoint);
+    },
     remove: (idReceta) => apiService.delete(`/eliminarReceta/${idReceta}`),
+    removeWithUser: (idReceta, idUsuario) => {
+      const endpoint = idUsuario ? 
+        `/eliminarReceta/${idReceta}?idUsuario=${idUsuario}` : 
+        `/eliminarReceta/${idReceta}`;
+      return apiService.delete(endpoint);
+    },
     get: () => apiService.get('/getMiListaRecetas'),
+    getWithUser: (idUsuario) => {
+      const endpoint = idUsuario ? 
+        `/getMiListaRecetas?idUsuario=${idUsuario}` : 
+        `/getMiListaRecetas`;
+      return apiService.get(endpoint);
+    },
+    markAsCompleted: (idReceta, completada, idUsuario) => {
+      const endpoint = idUsuario ? 
+        `/marcarRecetaCompletada/${idReceta}?completada=${completada}&idUsuario=${idUsuario}` : 
+        `/marcarRecetaCompletada/${idReceta}?completada=${completada}`;
+      return apiService.put(endpoint);
+    },
   },
 
   // Utility endpoints

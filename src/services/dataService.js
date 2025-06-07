@@ -54,7 +54,14 @@ export function mapBackendRecipe(receta) {
     calificacionPromedio: receta.calificacionPromedio || 0,
     reviews: receta.totalCalificaciones || 0,
     totalCalificaciones: receta.totalCalificaciones || 0,
-    autorizada: receta.autorizada
+    autorizada: receta.autorizada,
+    // Recipe list completion status fields
+    completed: receta.completada || false,
+    completada: receta.completada || false,
+    completedDate: receta.fechaCompletada,
+    fechaCompletada: receta.fechaCompletada,
+    addedDate: receta.fechaAgregada,
+    fechaAgregada: receta.fechaAgregada
   };
 }
 
@@ -802,6 +809,688 @@ class DataService {
     } catch (error) {
       console.log('Error resetting password:', error.message);
       throw error;
+    }
+  }
+
+  // ===== RECIPE LIST METHODS (Lista de recetas a intentar) =====
+  
+  // Add recipe to pending list
+  async addRecipeToPendingList(idReceta) {
+    try {
+      console.log('🔄 Adding recipe to pending list:', idReceta);
+      
+      // Step 1: Check if recipe already exists in current list
+      const existingList = await this.getPendingRecipesList();
+      const alreadyExists = existingList.some(r => {
+        const existingId = String(r.id || r.idReceta);
+        const targetId = String(idReceta);
+        return existingId === targetId;
+      });
+      
+      if (alreadyExists) {
+        console.log('🚫 Recipe already in pending list');
+        return { success: false, message: 'La receta ya está en tu lista de pendientes' };
+      }
+      
+      // Step 2: Check if recipe was permanently removed before and clean up if needed
+      const permanentlyRemoved = await this.getPermanentlyRemovedList();
+      if (permanentlyRemoved.includes(String(idReceta))) {
+        console.log('🚫 Recipe was permanently removed, removing from blacklist and adding back');
+        // Remove from permanently removed list to allow re-adding
+        const updatedRemoved = permanentlyRemoved.filter(id => id !== String(idReceta));
+        await AsyncStorage.setItem('permanently_removed_recipes', JSON.stringify(updatedRemoved));
+      }
+      
+      // Step 3: Get recipe details first
+      const recipe = await this.getRecipeById(idReceta);
+      if (!recipe) {
+        return { success: false, message: 'No se pudo encontrar la receta' };
+      }
+      
+      // Step 4: Get current user for backend request
+      let currentUser = null;
+      try {
+        const userData = await AsyncStorage.getItem('user_data');
+        if (userData) {
+          currentUser = JSON.parse(userData);
+        }
+      } catch (error) {
+        console.log('🚫 Error getting current user:', error.message);
+      }
+
+      // Step 5: Try backend first with user ID
+      let backendSuccess = false;
+      try {
+        console.log('🔄 Adding recipe to backend with user ID:', currentUser?.idUsuario || 'none');
+        
+        // Use the existing API method but with user ID parameter
+        const result = await api.recipeList.addByIdWithUser(idReceta, currentUser?.idUsuario);
+        
+        console.log('🔍 Backend response for add:', result);
+        console.log('🔍 Backend response type:', typeof result);
+        console.log('🔍 Backend response keys:', result ? Object.keys(result) : 'null');
+        
+        // Check if backend operation was successful
+        // Backend might return different response formats
+        const isBackendSuccess = result && (
+          result.success === true ||  // Explicit success
+          result.success !== false || // Not explicitly failed
+          (typeof result === 'object' && !result.error) || // Object without error
+          (typeof result === 'string' && result.includes('agregad')) // Success message
+        );
+        
+        if (isBackendSuccess) {
+          console.log('✅ Recipe added to pending list via backend');
+          backendSuccess = true;
+          
+          // If backend succeeds, DON'T add to localStorage to avoid duplicates
+          // The next getPendingRecipesList() call will fetch it from backend
+          return { 
+            success: true, 
+            message: 'Receta agregada a tu lista de pendientes' 
+          };
+        } else {
+          console.log('🚫 Backend response not recognized as success:', result);
+        }
+      } catch (backendError) {
+        console.log('🚫 Backend failed for add:', backendError.message);
+        console.log('🚫 Backend error details:', backendError);
+      }
+      
+      // Step 6: ONLY add to localStorage if backend failed (fallback)
+      console.log('💾 Backend failed, falling back to localStorage');
+      const recipeToAdd = { 
+        ...recipe, 
+        id: recipe.id || recipe.idReceta, 
+        idReceta: recipe.idReceta || recipe.id,
+        addedDate: new Date().toISOString(), 
+        completed: false 
+      };
+      
+      const updatedList = [...existingList, recipeToAdd];
+      await AsyncStorage.setItem('pending_recipes_list', JSON.stringify(updatedList));
+      console.log('✅ Recipe added to local pending list (fallback)');
+      
+      return { 
+        success: true, 
+        message: 'Receta agregada a tu lista de pendientes (sincronizada)' 
+      };
+      
+    } catch (error) {
+      console.error('❌ Error adding recipe to pending list:', error);
+      return { success: false, message: 'Error al agregar receta a la lista de pendientes' };
+    }
+  }
+
+  // Remove recipe from pending list PERMANENTLY (both backend and localStorage)
+  async removeRecipeFromPendingList(idReceta) {
+    try {
+      console.log('🔄 PERMANENTLY removing recipe from pending list:', idReceta);
+      
+      let backendSuccess = false;
+      
+      // Step 1: Get current user for backend request
+      let currentUser = null;
+      try {
+        const userData = await AsyncStorage.getItem('user_data');
+        if (userData) {
+          currentUser = JSON.parse(userData);
+        }
+      } catch (error) {
+        console.log('🚫 Error getting current user:', error.message);
+      }
+
+      // Step 2: Remove from backend database
+      try {
+        console.log('🔄 Removing recipe from backend with user ID:', currentUser?.idUsuario || 'none');
+        
+        const result = await api.recipeList.removeWithUser(idReceta, currentUser?.idUsuario);
+        
+        console.log('🔍 Backend response for remove:', result);
+        console.log('🔍 Backend response type:', typeof result);
+        console.log('🔍 Backend response keys:', result ? Object.keys(result) : 'null');
+        
+        // Check if backend operation was successful
+        const isBackendSuccess = result && (
+          result.success === true ||  // Explicit success
+          result.success !== false || // Not explicitly failed
+          (typeof result === 'object' && !result.error) || // Object without error
+          (typeof result === 'string' && result.includes('eliminad')) // Success message
+        );
+        
+        if (isBackendSuccess) {
+          console.log('✅ Recipe permanently removed from backend database');
+          backendSuccess = true;
+        } else {
+          console.log('🚫 Backend response not recognized as success:', result);
+        }
+      } catch (backendError) {
+        console.log('🚫 Backend failed for remove:', backendError.message);
+        console.log('🚫 Backend error details:', backendError);
+      }
+      
+      // Step 3: FORCE complete removal from localStorage
+      await this.forceRemoveFromLocalStorage(idReceta);
+      
+      // Step 4: Add to permanently removed list to prevent re-adding
+      await this.addToPermanentlyRemovedList(idReceta);
+      
+      // Step 5: Clear any cached data to force fresh reload
+      await AsyncStorage.removeItem('cache_pending_recipes');
+      
+      // Step 6: Force refresh from backend on next getPendingRecipesList call
+      console.log('🔄 Clearing localStorage to force backend refresh on next load');
+      
+      console.log('🧹 Complete cleanup finished for recipe:', idReceta);
+      
+      return { 
+        success: true, 
+        message: backendSuccess ? 
+          'Receta eliminada permanentemente de tu lista' : 
+          'Receta eliminada de tu lista de pendientes' 
+      };
+    } catch (error) {
+      console.error('❌ Error removing recipe from pending list:', error);
+      return { success: false, message: 'Error al eliminar receta de la lista de pendientes' };
+    }
+  }
+
+  // Helper method to remove from localStorage
+  async removeFromLocalStorage(idReceta) {
+    try {
+      const existingList = await this.getPendingRecipesList();
+      console.log('🔍 Trying to remove recipe with ID:', idReceta, 'from list of', existingList.length, 'recipes');
+      
+      // Filter using both id and idReceta fields for compatibility
+      const initialLength = existingList.length;
+      const updatedList = existingList.filter(recipe => 
+        recipe.id !== idReceta && 
+        recipe.idReceta !== idReceta &&
+        String(recipe.id) !== String(idReceta) &&
+        String(recipe.idReceta) !== String(idReceta)
+      );
+      
+      if (updatedList.length < initialLength) {
+        await AsyncStorage.setItem('pending_recipes_list', JSON.stringify(updatedList));
+        console.log('✅ Recipe removed from local storage');
+        return true;
+      } else {
+        console.log('❌ Recipe not found in local storage');
+        return false;
+      }
+    } catch (error) {
+      console.error('❌ Error removing from localStorage:', error);
+      return false;
+    }
+  }
+
+  // Cleanup method that completely removes a recipe from localStorage (including completion states)
+  async cleanupLocalStorage(idReceta) {
+    try {
+      console.log('🧹 Cleaning up localStorage for recipe:', idReceta);
+      
+      // Get current localStorage data directly (not merged with backend)
+      const stored = await AsyncStorage.getItem('pending_recipes_list');
+      let localRecipes = stored ? JSON.parse(stored) : [];
+      
+      // Filter out the recipe completely
+      const cleanedList = localRecipes.filter(recipe => {
+        const recipeId = recipe.id || recipe.idReceta;
+        const targetId = idReceta;
+        return String(recipeId) !== String(targetId);
+      });
+      
+      // Save the cleaned list
+      await AsyncStorage.setItem('pending_recipes_list', JSON.stringify(cleanedList));
+      console.log(`✅ Recipe ${idReceta} completely removed from localStorage. Remaining: ${cleanedList.length}`);
+      
+      return true;
+    } catch (error) {
+      console.error('❌ Error cleaning up localStorage:', error);
+      return false;
+    }
+  }
+
+  // FORCE remove from localStorage - more aggressive cleanup
+  async forceRemoveFromLocalStorage(idReceta) {
+    try {
+      console.log('💀 FORCE removing recipe from localStorage:', idReceta);
+      
+      // Get current localStorage data
+      const stored = await AsyncStorage.getItem('pending_recipes_list');
+      let localRecipes = stored ? JSON.parse(stored) : [];
+      
+      console.log('📋 Before removal - recipes in localStorage:', localRecipes.map(r => ({
+        id: r.id,
+        idReceta: r.idReceta, 
+        name: r.title || r.nombreReceta,
+        completed: r.completed
+      })));
+      
+      // More aggressive filtering - check all possible ID combinations
+      const cleanedList = localRecipes.filter(recipe => {
+        const recipeIdStr = String(recipe.id || '');
+        const recipeIdRecetaStr = String(recipe.idReceta || '');
+        const targetIdStr = String(idReceta);
+        
+        const shouldKeep = recipeIdStr !== targetIdStr && recipeIdRecetaStr !== targetIdStr;
+        
+        if (!shouldKeep) {
+          console.log(`🗑️ Removing recipe: ${recipe.title || recipe.nombreReceta} (ID: ${recipe.id || recipe.idReceta})`);
+        }
+        
+        return shouldKeep;
+      });
+      
+      // Save the cleaned list
+      await AsyncStorage.setItem('pending_recipes_list', JSON.stringify(cleanedList));
+      
+      console.log('📋 After removal - recipes remaining:', cleanedList.map(r => ({
+        id: r.id,
+        idReceta: r.idReceta, 
+        name: r.title || r.nombreReceta,
+        completed: r.completed
+      })));
+      
+      console.log(`💀 FORCE removal complete. Removed: ${localRecipes.length - cleanedList.length}, Remaining: ${cleanedList.length}`);
+      
+      return true;
+    } catch (error) {
+      console.error('❌ Error in force removal:', error);
+      return false;
+    }
+  }
+
+  // Get pending recipes list (combines backend data with localStorage completion states)
+  async getPendingRecipesList() {
+    try {
+      console.log('🔄 Getting pending recipes list...');
+      
+      let backendRecipes = [];
+      let backendAvailable = false;
+      
+      // Get permanently removed recipes list
+      const permanentlyRemoved = await this.getPermanentlyRemovedList();
+      
+      // Get current user for backend request
+      let currentUser = null;
+      try {
+        const userData = await AsyncStorage.getItem('user_data');
+        if (userData) {
+          currentUser = JSON.parse(userData);
+        }
+      } catch (error) {
+        console.log('🚫 Error getting current user:', error.message);
+      }
+
+      // Try to get recipes from backend first
+      try {
+        console.log('🔄 Getting recipes from backend with user ID:', currentUser?.idUsuario || 'none');
+        
+        const result = await api.recipeList.getWithUser(currentUser?.idUsuario);
+        
+        console.log('🔍 Backend response for get:', result);
+        console.log('🔍 Backend response type:', typeof result);
+        console.log('🔍 Backend response keys:', result ? Object.keys(result) : 'null');
+        
+        // Handle different response formats from backend
+        let backendData = null;
+        if (Array.isArray(result)) {
+          // Direct array response
+          backendData = result;
+        } else if (result && Array.isArray(result.data)) {
+          // Wrapped in data property
+          backendData = result.data;
+        } else if (result && result.recetas && Array.isArray(result.recetas)) {
+          // Wrapped in recetas property
+          backendData = result.recetas;
+        } else if (result && typeof result === 'object' && !result.error) {
+          // Object response, maybe success but no data
+          backendData = [];
+          console.log('🔍 Backend returned object without data array, treating as empty list');
+        }
+        
+        if (backendData !== null) {
+          backendRecipes = backendData
+            .filter(recipe => {
+              // Filter out permanently removed recipes
+              const recipeId = String(recipe.idReceta || recipe.id);
+              return !permanentlyRemoved.includes(recipeId);
+            })
+            .map(recipe => {
+              const mapped = mapBackendRecipe(recipe);
+              return {
+                ...mapped,
+                id: mapped.id || mapped.idReceta,
+                idReceta: mapped.idReceta || mapped.id,
+                // Keep the completed status from backend, don't override it
+                completed: mapped.completed || false,
+                addedDate: mapped.addedDate || new Date().toISOString()
+              };
+            });
+          backendAvailable = true;
+          console.log(`🗄️ Backend returned ${backendRecipes.length} recipes (filtered ${backendData.length - backendRecipes.length} permanently removed)`);
+        } else {
+          console.log('🚫 Backend response format not recognized as success:', result);
+        }
+      } catch (backendError) {
+        console.log('🚫 Backend not available:', backendError.message);
+      }
+      
+      // Get local storage data (for completion states and fallback)
+      const stored = await AsyncStorage.getItem('pending_recipes_list');
+      let localRecipes = stored ? JSON.parse(stored) : [];
+      
+      // Ensure compatibility - add missing id or idReceta fields
+      localRecipes = localRecipes.map(recipe => ({
+        ...recipe,
+        id: recipe.id || recipe.idReceta,
+        idReceta: recipe.idReceta || recipe.id
+      }))
+      .filter(recipe => {
+        // Filter out permanently removed recipes from localStorage too
+        const recipeId = String(recipe.id || recipe.idReceta);
+        return !permanentlyRemoved.includes(recipeId);
+      });
+      
+      console.log(`💾 localStorage contains ${localRecipes.length} recipes`);
+      
+      if (backendAvailable) {
+        // STRICT MODE: Only show recipes that exist in backend
+        const backendIds = new Set(backendRecipes.map(r => String(r.id || r.idReceta)));
+        
+        // First, clean up localStorage to remove orphaned recipes
+        const cleanedLocalRecipes = localRecipes.filter(localRecipe => {
+          const localId = String(localRecipe.id || localRecipe.idReceta);
+          return backendIds.has(localId);
+        });
+        
+        // Save cleaned localStorage if changed
+        if (cleanedLocalRecipes.length !== localRecipes.length) {
+          await AsyncStorage.setItem('pending_recipes_list', JSON.stringify(cleanedLocalRecipes));
+          console.log(`🧹 Cleaned ${localRecipes.length - cleanedLocalRecipes.length} orphaned recipes from localStorage`);
+        }
+        
+        // Merge backend recipes with local completion states (only for existing recipes)
+        const mergedRecipes = backendRecipes.map(backendRecipe => {
+          const localMatch = cleanedLocalRecipes.find(localRecipe => {
+            const backendId = String(backendRecipe.id || backendRecipe.idReceta);
+            const localId = String(localRecipe.id || localRecipe.idReceta);
+            return backendId === localId;
+          });
+          
+          return {
+            ...backendRecipe,
+            // Backend is now the source of truth for completion status
+            completed: backendRecipe.completed || false,
+            completedDate: backendRecipe.completedDate || localMatch?.completedDate || null,
+            addedDate: backendRecipe.addedDate || localMatch?.addedDate
+          };
+        });
+        
+        console.log(`✅ ${mergedRecipes.length} recipes merged (STRICT: backend-only + localStorage states)`);
+        return mergedRecipes;
+      } else {
+        // Fallback to localStorage only
+        console.log(`✅ ${localRecipes.length} recipes loaded from localStorage (fallback)`);
+        return localRecipes;
+      }
+    } catch (error) {
+      console.error('❌ Error getting pending recipes list:', error);
+      return [];
+    }
+  }
+
+  // Clean up orphaned recipes (recipes in localStorage that are no longer in backend)
+  async cleanupOrphanedRecipes(backendRecipes, localRecipes) {
+    try {
+      const backendIds = new Set(backendRecipes.map(r => String(r.id || r.idReceta)));
+      
+      // Filter out local recipes that are no longer in the backend
+      const cleanedLocalRecipes = localRecipes.filter(localRecipe => {
+        const localId = String(localRecipe.id || localRecipe.idReceta);
+        return backendIds.has(localId);
+      });
+      
+      // Only update localStorage if there was a change
+      if (cleanedLocalRecipes.length !== localRecipes.length) {
+        await AsyncStorage.setItem('pending_recipes_list', JSON.stringify(cleanedLocalRecipes));
+        console.log(`🧹 Cleaned up ${localRecipes.length - cleanedLocalRecipes.length} orphaned recipes from localStorage`);
+      }
+    } catch (error) {
+      console.error('❌ Error cleaning up orphaned recipes:', error);
+    }
+  }
+
+  // Mark recipe as completed in pending list (backend + localStorage fallback)
+  async markRecipeAsCompleted(idReceta, completed = true) {
+    try {
+      console.log(`🔄 Marking recipe ${completed ? 'completed' : 'uncompleted'}:`, idReceta);
+      
+      // Get current user for backend request
+      let currentUser = null;
+      try {
+        const userData = await AsyncStorage.getItem('user_data');
+        if (userData) {
+          currentUser = JSON.parse(userData);
+        }
+      } catch (error) {
+        console.log('🚫 Error getting current user:', error.message);
+      }
+
+      // Try backend first
+      try {
+        console.log('🔄 Marking completion in backend with user ID:', currentUser?.idUsuario || 'none');
+        
+        const result = await api.recipeList.markAsCompleted(idReceta, completed, currentUser?.idUsuario);
+        
+        console.log('🔍 Backend response for mark completion:', result);
+        console.log('🔍 Backend response type:', typeof result);
+        
+        // Check if backend operation was successful
+        const isBackendSuccess = result && (
+          result.success === true ||  // Explicit success
+          result.success !== false || // Not explicitly failed
+          (typeof result === 'object' && !result.error) || // Object without error
+          (typeof result === 'string' && (result.includes('marcada') || result.includes('completed'))) // Success message
+        );
+        
+        if (isBackendSuccess) {
+          console.log('✅ Recipe completion status updated in backend');
+          
+          // Backend succeeded, return success immediately
+          return { 
+            success: true, 
+            message: completed ? 'Receta marcada como completada' : 'Receta marcada como pendiente' 
+          };
+        } else {
+          console.log('🚫 Backend response not recognized as success:', result);
+        }
+      } catch (backendError) {
+        console.log('🚫 Backend failed for mark completion:', backendError.message);
+        console.log('🚫 Backend error details:', backendError);
+      }
+
+      // Fallback to localStorage if backend fails
+      console.log('🔄 Marking completion in localStorage as fallback');
+      
+      const storedList = await AsyncStorage.getItem('pending_recipes_list');
+      const localList = storedList ? JSON.parse(storedList) : [];
+      
+      let recipeFound = false;
+      const updatedList = localList.map(recipe => {
+        const targetId = String(idReceta);
+        const recipeIdStr = String(recipe.id || recipe.idReceta);
+        
+        if (recipeIdStr === targetId) {
+          recipeFound = true;
+          console.log('✅ Found recipe to mark in localStorage:', recipe.title || recipe.nombreReceta);
+          return { 
+            ...recipe, 
+            completed, 
+            completedDate: completed ? new Date().toISOString() : null 
+          };
+        }
+        return recipe;
+      });
+      
+      if (recipeFound) {
+        await AsyncStorage.setItem('pending_recipes_list', JSON.stringify(updatedList));
+        console.log(`✅ Recipe completion state updated in localStorage`);
+        return { 
+          success: true, 
+          message: `${completed ? 'Receta marcada como completada' : 'Receta marcada como pendiente'} (offline)` 
+        };
+      } else {
+        console.log('❌ Recipe not found for marking');
+        return { success: false, message: 'Receta no encontrada en tu lista' };
+      }
+    } catch (error) {
+      console.error('❌ Error marking recipe as completed:', error);
+      return { success: false, message: 'Error al actualizar el estado de la receta' };
+    }
+  }
+
+  // Get pending recipes count
+  async getPendingRecipesCount() {
+    try {
+      const list = await this.getPendingRecipesList();
+      const pendingCount = list.filter(recipe => !recipe.completed).length;
+      const completedCount = list.filter(recipe => recipe.completed).length;
+      
+      return {
+        total: list.length,
+        pending: pendingCount,
+        completed: completedCount
+      };
+    } catch (error) {
+      console.error('❌ Error getting pending recipes count:', error);
+      return { total: 0, pending: 0, completed: 0 };
+    }
+  }
+
+  // ===== PERMANENTLY REMOVED RECIPES MANAGEMENT =====
+  
+  // Add recipe to permanently removed list
+  async addToPermanentlyRemovedList(idReceta) {
+    try {
+      const currentList = await this.getPermanentlyRemovedList();
+      const recipeId = String(idReceta);
+      
+      if (!currentList.includes(recipeId)) {
+        currentList.push(recipeId);
+        await AsyncStorage.setItem('permanently_removed_recipes', JSON.stringify(currentList));
+        console.log(`✅ Recipe ${recipeId} added to permanently removed list`);
+      }
+    } catch (error) {
+      console.error('❌ Error adding to permanently removed list:', error);
+    }
+  }
+
+  // Get permanently removed recipes list
+  async getPermanentlyRemovedList() {
+    try {
+      const stored = await AsyncStorage.getItem('permanently_removed_recipes');
+      return stored ? JSON.parse(stored) : [];
+    } catch (error) {
+      console.error('❌ Error getting permanently removed list:', error);
+      return [];
+    }
+  }
+
+  // Clear permanently removed list (for debugging or reset)
+  async clearPermanentlyRemovedList() {
+    try {
+      await AsyncStorage.removeItem('permanently_removed_recipes');
+      console.log('🧹 Permanently removed list cleared');
+    } catch (error) {
+      console.error('❌ Error clearing permanently removed list:', error);
+    }
+  }
+
+  // Clear ALL localStorage related to pending recipes (for debugging)
+  async clearAllLocalStorage() {
+    try {
+      await AsyncStorage.removeItem('pending_recipes_list');
+      await AsyncStorage.removeItem('permanently_removed_recipes');
+      await AsyncStorage.removeItem('cache_pending_recipes');
+      console.log('🧹 All localStorage for pending recipes cleared');
+    } catch (error) {
+      console.error('❌ Error clearing localStorage:', error);
+    }
+  }
+
+  // ===== DEBUG METHODS =====
+  
+  // Test backend connectivity
+  async testBackendConnection() {
+    try {
+      console.log('🔄 Testing backend connection...');
+      const result = await api.utils.checkConnection();
+      console.log('✅ Backend connection successful:', result);
+      return { success: true, message: 'Backend conectado correctamente' };
+    } catch (error) {
+      console.error('❌ Backend connection failed:', error);
+      return { success: false, message: `Backend no disponible: ${error.message}` };
+    }
+  }
+  
+  // Debug method to show current state
+  async debugRecipeListState() {
+    try {
+      console.log('🔍 === DEBUG: Recipe List State ===');
+      
+      // Backend recipes
+      let backendRecipes = [];
+      try {
+        const result = await api.recipeList.get();
+        backendRecipes = result?.data || [];
+        console.log('🗄️ Backend recipes:', backendRecipes.length);
+      } catch (error) {
+        console.log('🚫 Backend unavailable:', error.message);
+      }
+      
+      // Local storage recipes
+      const storedList = await AsyncStorage.getItem('pending_recipes_list');
+      const localRecipes = storedList ? JSON.parse(storedList) : [];
+      console.log('💾 Local storage recipes:', localRecipes.length);
+      
+      // Permanently removed
+      const permanentlyRemoved = await this.getPermanentlyRemovedList();
+      console.log('🚫 Permanently removed recipes:', permanentlyRemoved.length, permanentlyRemoved);
+      
+      // Current merged list
+      const mergedList = await this.getPendingRecipesList();
+      console.log('📋 Final merged list:', mergedList.length);
+      
+      console.log('🔍 === END DEBUG ===');
+      
+      return {
+        backend: backendRecipes.length,
+        localStorage: localRecipes.length,
+        permanentlyRemoved: permanentlyRemoved.length,
+        finalList: mergedList.length,
+        permanentlyRemovedIds: permanentlyRemoved
+      };
+    } catch (error) {
+      console.error('❌ Error in debug method:', error);
+      return null;
+    }
+  }
+
+  // Method to completely reset recipe list state (for troubleshooting)
+  async resetRecipeListState() {
+    try {
+      console.log('🔄 Resetting recipe list state...');
+      
+      // Use the dedicated clear method
+      await this.clearAllLocalStorage();
+      
+      console.log('✅ Recipe list state reset complete');
+      return { success: true, message: 'Estado de lista de recetas reiniciado' };
+    } catch (error) {
+      console.error('❌ Error resetting recipe list state:', error);
+      return { success: false, message: 'Error al reiniciar estado' };
     }
   }
 }
