@@ -56,12 +56,9 @@ const AddRecipeScreen = ({ navigation, route }) => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [prepTime, setPrepTime] = useState('');
-  const [cookTime, setCookTime] = useState('');
   const [servings, setServings] = useState('');
-  const [calories, setCalories] = useState('');
-  const [difficulty, setDifficulty] = useState('Medio');
   const [recipeImage, setRecipeImage] = useState(null);
-  const [ingredients, setIngredients] = useState(['']);
+  const [ingredients, setIngredients] = useState([{ quantity: '', name: '' }]);
   const [instructions, setInstructions] = useState(['']);
   const [selectedCategories, setSelectedCategories] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -101,7 +98,6 @@ const AddRecipeScreen = ({ navigation, route }) => {
     }
   };
 
-  const difficultyOptions = ['Fácil', 'Medio', 'Difícil'];
   const categoryOptions = [
     'Desayuno',
     'Almuerzo',
@@ -138,12 +134,12 @@ const AddRecipeScreen = ({ navigation, route }) => {
   };
 
   const handleAddIngredient = () => {
-    setIngredients([...ingredients, '']);
+    setIngredients([...ingredients, { quantity: '', name: '' }]);
   };
 
-  const handleUpdateIngredient = (text, index) => {
+  const handleUpdateIngredient = (field, text, index) => {
     const updatedIngredients = [...ingredients];
-    updatedIngredients[index] = text;
+    updatedIngredients[index][field] = text;
     setIngredients(updatedIngredients);
   };
 
@@ -187,17 +183,20 @@ const AddRecipeScreen = ({ navigation, route }) => {
     setTitle(recipe.title || recipe.nombreReceta || '');
     setDescription(recipe.description || recipe.descripcionReceta || '');
     setPrepTime(recipe.prepTime?.toString() || '');
-    setCookTime(recipe.cookTime?.toString() || '');
     setServings(recipe.servings?.toString() || recipe.porciones?.toString() || '');
-    setCalories(recipe.calories?.toString() || '');
-    setDifficulty(recipe.difficulty || 'Medio');
     setRecipeImage(recipe.imageUrl || recipe.fotoPrincipal);
     
     // Handle ingredients
     if (recipe.ingredients && Array.isArray(recipe.ingredients)) {
-      setIngredients(recipe.ingredients.map(ing => ing.name || ing.toString()));
+      setIngredients(recipe.ingredients.map(ing => ({
+        quantity: ing.amount || ing.cantidad || '',
+        name: ing.name || ing.nombre || ing.toString()
+      })));
     } else if (recipe.ingredientes && Array.isArray(recipe.ingredientes)) {
-      setIngredients(recipe.ingredientes.map(ing => ing.nombre || ing.toString()));
+      setIngredients(recipe.ingredientes.map(ing => ({
+        quantity: ing.cantidad?.toString() || '',
+        name: ing.nombre || ing.toString()
+      })));
     }
     
     // Handle instructions
@@ -494,7 +493,7 @@ const AddRecipeScreen = ({ navigation, route }) => {
       return;
     }
 
-    if (ingredients.filter(ing => ing.trim()).length === 0) {
+    if (ingredients.filter(ing => ing.name.trim()).length === 0) {
       Alert.alert('Error', 'Debes agregar al menos un ingrediente');
       return;
     }
@@ -510,14 +509,11 @@ const AddRecipeScreen = ({ navigation, route }) => {
       title: title.trim(),
       description: description.trim(),
       prepTime: parseInt(prepTime) || 0,
-      cookTime: parseInt(cookTime) || 0,
       servings: parseInt(servings) || 1,
-      calories: parseInt(calories) || 0,
-      difficulty,
       imageUrl: recipeImage || 'https://images.unsplash.com/photo-1546548970-71785318a17b',
-      ingredients: ingredients.filter(ing => ing.trim()).map(ing => ({
-        name: ing.trim(),
-        amount: '1',
+      ingredients: ingredients.filter(ing => ing.name.trim()).map(ing => ({
+        name: ing.name.trim(),
+        amount: ing.quantity.trim() || '1',
         preparation: ''
       })),
       instructions: instructions.filter(inst => inst.trim()).map((inst, index) => ({
@@ -638,17 +634,6 @@ const AddRecipeScreen = ({ navigation, route }) => {
               />
 
               <Input
-                label="Tiempo de Cocción (min)"
-                value={cookTime}
-                onChangeText={setCookTime}
-                placeholder="20"
-                keyboardType="number-pad"
-                style={styles.halfField}
-              />
-            </View>
-
-            <View style={styles.rowFields}>
-              <Input
                 label="Porciones"
                 value={servings}
                 onChangeText={setServings}
@@ -656,39 +641,9 @@ const AddRecipeScreen = ({ navigation, route }) => {
                 keyboardType="number-pad"
                 style={styles.halfField}
               />
-
-              <Input
-                label="Calorías"
-                value={calories}
-                onChangeText={setCalories}
-                placeholder="400"
-                keyboardType="number-pad"
-                style={styles.halfField}
-              />
             </View>
 
-            <Text style={styles.labelText}>Dificultad</Text>
-            <View style={styles.difficultyContainer}>
-              {difficultyOptions.map((option) => (
-                <TouchableOpacity
-                  key={option}
-                  style={[
-                    styles.difficultyOption,
-                    difficulty === option && styles.selectedDifficulty,
-                  ]}
-                  onPress={() => setDifficulty(option)}
-                >
-                  <Text
-                    style={[
-                      styles.difficultyText,
-                      difficulty === option && styles.selectedDifficultyText,
-                    ]}
-                  >
-                    {option}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
+
 
             <Text style={styles.labelText}>Categorías</Text>
             <View style={styles.categoriesContainer}>
@@ -726,29 +681,38 @@ const AddRecipeScreen = ({ navigation, route }) => {
             </View>
 
             {ingredients.map((ingredient, index) => (
-              <View key={`ingredient-${index}`} style={styles.inputRow}>
-                <TextInput
-                  style={styles.ingredientInput}
-                  value={ingredient}
-                  onChangeText={(text) => handleUpdateIngredient(text, index)}
-                  placeholder={`Ingrediente ${index + 1}`}
-                  placeholderTextColor={Colors.textLight}
-                />
-                <TouchableOpacity
-                  style={styles.removeButton}
-                  onPress={() => handleRemoveIngredient(index)}
-                  disabled={ingredients.length === 1}
-                >
-                  <Icon
-                    name="x"
-                    size={18}
-                    color={
-                      ingredients.length === 1
-                        ? Colors.textLight
-                        : Colors.textDark
-                    }
+              <View key={`ingredient-${index}`} style={styles.ingredientContainer}>
+                <View style={styles.ingredientRow}>
+                  <TextInput
+                    style={styles.quantityInput}
+                    value={ingredient.quantity}
+                    onChangeText={(text) => handleUpdateIngredient('quantity', text, index)}
+                    placeholder="Cantidad"
+                    placeholderTextColor={Colors.textLight}
                   />
-                </TouchableOpacity>
+                  <TextInput
+                    style={styles.ingredientNameInput}
+                    value={ingredient.name}
+                    onChangeText={(text) => handleUpdateIngredient('name', text, index)}
+                    placeholder={`Ingrediente ${index + 1}`}
+                    placeholderTextColor={Colors.textLight}
+                  />
+                  <TouchableOpacity
+                    style={styles.removeButton}
+                    onPress={() => handleRemoveIngredient(index)}
+                    disabled={ingredients.length === 1}
+                  >
+                    <Icon
+                      name="x"
+                      size={18}
+                      color={
+                        ingredients.length === 1
+                          ? Colors.textLight
+                          : Colors.textDark
+                      }
+                    />
+                  </TouchableOpacity>
+                </View>
               </View>
             ))}
 
@@ -885,33 +849,7 @@ const styles = StyleSheet.create({
     color: Colors.textDark,
     marginBottom: Metrics.baseSpacing,
   },
-  difficultyContainer: {
-    flexDirection: 'row',
-    marginBottom: Metrics.mediumSpacing,
-  },
-  difficultyOption: {
-    flex: 1,
-    paddingVertical: Metrics.baseSpacing,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: Colors.card,
-    marginRight: Metrics.baseSpacing,
-    borderRadius: Metrics.baseBorderRadius,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  selectedDifficulty: {
-    backgroundColor: Colors.primary,
-    borderColor: Colors.primary,
-  },
-  difficultyText: {
-    color: Colors.textDark,
-    fontSize: Metrics.baseFontSize,
-  },
-  selectedDifficultyText: {
-    color: Colors.card,
-    fontWeight: '500',
-  },
+
   categoriesContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -966,7 +904,25 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: Metrics.baseSpacing,
   },
-  ingredientInput: {
+  ingredientContainer: {
+    marginBottom: Metrics.baseSpacing,
+  },
+  ingredientRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  quantityInput: {
+    width: 80,
+    height: Metrics.inputHeight,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: Metrics.baseBorderRadius,
+    paddingHorizontal: Metrics.baseSpacing,
+    backgroundColor: Colors.card,
+    color: Colors.textDark,
+    marginRight: Metrics.baseSpacing,
+  },
+  ingredientNameInput: {
     flex: 1,
     height: Metrics.inputHeight,
     borderWidth: 1,

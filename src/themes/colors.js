@@ -1,8 +1,8 @@
 export default {
     // Primary colors
-    primary: '#4f46e5',
-    primaryDark: '#4338ca',
-    primaryLight: '#6366f1',
+    primary: '#00A4A4',
+    primaryDark: '#008B8B',
+    primaryLight: '#26B5B5',
     
     // Secondary colors
     secondary: '#7c3aed',

@@ -9,6 +9,7 @@ import {
   Platform,
   Keyboard,
   Alert,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
@@ -22,8 +23,8 @@ import Metrics from '../../themes/metrics';
 
 const LoginScreen = ({ navigation }) => {
   const [activeTab, setActiveTab] = useState('signIn');
-  const [email, setEmail] = useState('test@example.com');  // Default email for development
-  const [password, setPassword] = useState('password');    // Default password for development
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   
   const emailInputRef = useRef(null);
@@ -188,7 +189,7 @@ const LoginScreen = ({ navigation }) => {
   );
   
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView style={styles.container} edges={['bottom']}>
       <KeyboardAvoidingView
         style={styles.keyboardAvoidingView}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -201,29 +202,26 @@ const LoginScreen = ({ navigation }) => {
           keyboardShouldPersistTaps="handled"
         >
           <LinearGradient
-            colors={[Colors.gradientStart, Colors.gradientEnd]}
+            colors={['#00A4A4', '#00A4A4']}
             style={styles.headerContainer}
           >
-            <View style={styles.headerContent}>
-              <TouchableOpacity 
-                style={styles.backButton}
-                onPress={() => navigation.goBack()}
-              >
-                <Icon name="chevron-left" size={24} color={Colors.textDark} />
-              </TouchableOpacity>
-              <Text style={styles.headerTitle}>Cuenta</Text>
+            <View style={styles.logoContainer}>
+              <Text style={styles.headerTitle}>Chef Net</Text>
+              <Image
+                source={require('../../assets/images/chef_hat.png')}
+                style={styles.headerChefHat}
+                resizeMode="contain"
+              />
+            </View>
+
+            <View style={styles.welcomeContainer}>
+              <Text style={styles.welcomeTitleHeader}>Bienvenido a ChefNet!</Text>
+              <Text style={styles.welcomeSubtitleHeader}>
+                Inicia sesión para acceder a tus recetas y cursos
+              </Text>
             </View>
           </LinearGradient>
-          
-          <View style={styles.logoContainer}>
-            <View style={styles.logoCircle}>
-              <Icon name="pie-chart" size={48} color={Colors.card} />
-            </View>
-            <Text style={styles.welcomeTitle}>Bienvenido a ChefNet</Text>
-            <Text style={styles.welcomeSubtitle}>
-              Inicia sesión para acceder a tus recetas y cursos
-            </Text>
-          </View>
+
           <View style={styles.tabsContainer}>
             <TouchableOpacity
               style={[
@@ -292,41 +290,59 @@ const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
   },
-  headerContainer: {
+    headerContainer: {
     paddingHorizontal: Metrics.mediumSpacing,
-    paddingVertical: Metrics.mediumSpacing,
+    paddingTop: Metrics.xxLargeSpacing * 2,
+    paddingBottom: Metrics.mediumSpacing,
+    backgroundColor: '#00A4A4',
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30,
+  },
+  
+  logoContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: Metrics.largeSpacing,  // Más espacio con el texto de bienvenida
   },
   headerContent: {
     flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: Metrics.mediumSpacing,
+  },
+  headerTitleContainer: {
+    flexDirection: 'row',
     alignItems: 'center',
   },
-  backButton: {
-    marginRight: Metrics.baseSpacing,
-  },
+  
   headerTitle: {
     fontSize: Metrics.xxLargeFontSize,
-    fontWeight: '600',
-    color: Colors.textDark,
+    fontWeight: '700',
+    color: Colors.card,
+    marginRight: Metrics.smallSpacing,
   },
-  logoContainer: {
-    alignItems: 'center',
-    paddingHorizontal: Metrics.largeSpacing,
-    paddingTop: Metrics.baseSpacing,
-    paddingBottom: Metrics.xLargeSpacing,
+  headerChefHat: {
+    width: 32,
+    height: 32,
+    tintColor: Colors.card,
   },
-  logoCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: Metrics.xLargeBorderRadius,
-    backgroundColor: Colors.primary,
+  welcomeContainer: {
     alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: Metrics.mediumSpacing,
-    shadowColor: Colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 5,
+  },
+
+  welcomeTitleHeader: {
+    fontSize: Metrics.xLargeFontSize,
+    fontWeight: '700',
+    color: Colors.card,
+    marginBottom: Metrics.baseSpacing,
+    textAlign: 'center',
+  },
+  welcomeSubtitleHeader: {
+    fontSize: Metrics.baseFontSize,
+    color: Colors.card,
+    textAlign: 'center',
+    opacity: 0.9,
   },
   welcomeTitle: {
     fontSize: Metrics.xLargeFontSize,

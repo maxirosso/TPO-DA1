@@ -462,17 +462,7 @@ const RecipeDetailScreen = ({ navigation, route }) => {
     return Math.round(servings * scaleFactor);
   };
 
-  const getCaloriesPerServing = () => {
-    const calories = safeNumber(recipe.calories, 300);
-    const servings = safeNumber(recipe.servings, 2);
-    return Math.round(calories / servings);
-  };
 
-  const getNutrientPerServing = (nutrient, defaultValue = 10) => {
-    const value = safeNumber(recipe[nutrient], defaultValue);
-    const servings = safeNumber(recipe.servings, 2);
-    return Math.round(value / servings);
-  };
 
   // Función auxiliar mejorada para escalar cantidades por persona
   const scaleAmount = (amount, factor) => {
@@ -784,39 +774,6 @@ const RecipeDetailScreen = ({ navigation, route }) => {
                     {getServings()}
                   </Text>
               <Text style={styles.statLabel}>Porciones</Text>
-            </View>
-            
-            <View style={styles.statDivider} />
-            
-            <View style={styles.statItem}>
-              <Icon name="activity" size={20} color={Colors.primary} />
-                  <Text style={styles.statValue}>
-                    {getCaloriesPerServing()}
-                  </Text>
-                  <Text style={styles.statLabel}>Calorías/porción</Text>
-            </View>
-          </View>
-          
-          <View style={styles.nutritionContainer}>
-            <View style={styles.nutritionItem}>
-                  <Text style={styles.nutritionValue}>
-                    {getNutrientPerServing('protein')}g
-                  </Text>
-              <Text style={styles.nutritionLabel}>Proteína</Text>
-            </View>
-            
-            <View style={styles.nutritionItem}>
-                  <Text style={styles.nutritionValue}>
-                    {getNutrientPerServing('carbs')}g
-                  </Text>
-              <Text style={styles.nutritionLabel}>Carbohidratos</Text>
-            </View>
-            
-            <View style={styles.nutritionItem}>
-                  <Text style={styles.nutritionValue}>
-                    {getNutrientPerServing('fat')}g
-                  </Text>
-              <Text style={styles.nutritionLabel}>Grasa</Text>
             </View>
           </View>
           
@@ -1310,15 +1267,15 @@ const styles = StyleSheet.create({
   },
   statsContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'space-around',
     backgroundColor: Colors.background,
     borderRadius: Metrics.mediumBorderRadius,
     padding: Metrics.mediumSpacing,
     marginBottom: Metrics.mediumSpacing,
   },
   statItem: {
-    flex: 1,
     alignItems: 'center',
+    paddingHorizontal: Metrics.largeSpacing,
   },
   statValue: {
     fontSize: Metrics.baseFontSize,
@@ -1336,30 +1293,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.border,
     height: '80%',
   },
-  nutritionContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: Metrics.mediumSpacing,
-  },
-  nutritionItem: {
-    alignItems: 'center',
-    backgroundColor: Colors.background,
-    borderRadius: Metrics.baseBorderRadius,
-    paddingVertical: Metrics.baseSpacing,
-    paddingHorizontal: Metrics.mediumSpacing,
-    flex: 1,
-    marginHorizontal: 4,
-  },
-  nutritionValue: {
-    fontSize: Metrics.baseFontSize,
-    fontWeight: '600',
-    color: Colors.textDark,
-    marginBottom: 2,
-  },
-  nutritionLabel: {
-    fontSize: Metrics.xSmallFontSize,
-    color: Colors.textMedium,
-  },
+
   actionButtons: {
     flexDirection: 'row',
     justifyContent: 'space-between',
