@@ -232,21 +232,51 @@ class DataService {
   // Recipe methods
   async getAllRecipes() {
     try {
+      console.log('📲 Solicitando todas las recetas al backend...');
       // Usar el endpoint real del backend
       const response = await api.recipes.getAll(); // Este debe mapear a /getAllRecetas
-      return response.data.map(mapBackendRecipe) || [];
+      console.log(`📊 Total de recetas recibidas: ${response.data?.length || 0}`);
+      
+      // Mapear y filtrar solo recetas autorizadas
+      const recipes = response.data.map(mapBackendRecipe);
+      const authorizedRecipes = recipes.filter(recipe => recipe.autorizada === true);
+      
+      console.log(`🔍 Recetas autorizadas filtradas: ${authorizedRecipes.length} de ${recipes.length}`);
+      
+      return authorizedRecipes;
     } catch (error) {
-      console.log('Error al obtener recetas:', error.message);
+      console.log('❌ Error al obtener recetas:', error.message);
       return [];
     }
   }
 
   async getLatestRecipes() {
     try {
+      console.log('📲 Solicitando últimas recetas al backend (ordenadas por ID descendente)...');
       const result = await api.recipes.getLatest();
-      return result.data.map(mapBackendRecipe) || [];
+      console.log(`📊 Recetas recibidas del backend: ${result.data?.length || 0}`);
+      
+      // Mapear las recetas del backend al formato frontend
+      const recipes = result.data.map(mapBackendRecipe);
+      
+      // Mostrar información detallada de cada receta
+      if (recipes.length > 0) {
+        console.log('📝 Detalle de las recetas recibidas:');
+        recipes.forEach(recipe => {
+          console.log(`🍽️ Receta: ${recipe.title || recipe.nombreReceta}`);
+          console.log(`   ID: ${recipe.id || recipe.idReceta}`);
+          console.log(`   Autorizada: ${recipe.autorizada === true ? 'Sí' : 'No'}`);
+          console.log(`   Fecha: ${recipe.date || recipe.fecha || 'No especificada'}`);
+          console.log(`   Categoría: ${recipe.category || 'Sin categoría'}`);
+          console.log(`   Autor: ${recipe.author || 'Desconocido'}`);
+        });
+      } else {
+        console.log('⚠️ No se recibieron recetas del backend');
+      }
+      
+      return recipes;
     } catch (error) {
-      console.log('Error al obtener últimas recetas:', error.message);
+      console.log('❌ Error al obtener últimas recetas:', error.message);
       return [];
     }
   }
@@ -791,6 +821,84 @@ class DataService {
     } catch (error) {
       console.error('Error approving recipe:', error);
       throw error;
+    }
+  }
+
+  async updateUserRecipe(recipeId, recipeData, userId) {
+    try {
+      console.log(`Updating recipe ${recipeId} for user ${userId}`, recipeData);
+      
+      // Formato esperado por el backend
+      const formattedData = {
+        nombreReceta: recipeData.title || recipeData.nombreReceta,
+        descripcionReceta: recipeData.description || recipeData.descripcionReceta,
+        fotoPrincipal: recipeData.imageUrl || recipeData.fotoPrincipal,
+        porciones: parseInt(recipeData.servings || recipeData.porciones || 1),
+        cantidadPersonas: parseInt(recipeData.servings || recipeData.cantidadPersonas || 1),
+        instrucciones: Array.isArray(recipeData.instructions) 
+          ? recipeData.instructions.map(i => i.text || i).join('\n')
+          : (recipeData.instructions || recipeData.instrucciones || ''),
+        usuario: {
+          idUsuario: userId
+        },
+        idTipo: recipeData.tipoReceta || recipeData.idTipo || { idTipo: 1 },
+        ingredientes: []
+      };
+
+      // Procesar ingredientes con un formato consistente
+      const ingredientesToProcess = recipeData.ingredients || recipeData.ingredientes || [];
+      console.log('Ingredientes a procesar:', JSON.stringify(ingredientesToProcess));
+      
+      if (ingredientesToProcess.length > 0) {
+        formattedData.ingredientes = ingredientesToProcess.map(ing => {
+          // Normalizar ingrediente según su formato
+          if (typeof ing === 'string') {
+            return {
+              nombre: ing,
+              cantidad: 1,
+              unidadMedida: 'unidad'
+            };
+          }
+          
+          // Para ingredientes en formato de objeto
+          let nombre = ing.name || ing.nombre || '';
+          let cantidad = 1;
+          let unidadMedida = ing.unit || ing.unidadMedida || 'unidad';
+          
+          // Analizar la cantidad si viene como string en 'amount'
+          if (ing.amount && typeof ing.amount === 'string') {
+            const match = ing.amount.match(/^(\d*\.?\d+)\s*(.*)$/);
+            if (match) {
+              cantidad = parseFloat(match[1]) || 1;
+              if (!ing.unit && match[2].trim()) {
+                unidadMedida = match[2].trim();
+              }
+            }
+          } else if (ing.quantity) {
+            // Si viene como quantity separado (formato de interfaz de edición)
+            cantidad = parseFloat(ing.quantity) || 1;
+          } else if (ing.cantidad) {
+            // Si viene en formato backend
+            cantidad = parseFloat(ing.cantidad) || 1;
+          }
+          
+          console.log(`Ingrediente procesado: ${nombre}, ${cantidad} ${unidadMedida}`);
+          
+          return {
+            nombre: nombre,
+            cantidad: cantidad,
+            unidadMedida: unidadMedida
+          };
+        });
+      }
+      
+      console.log('Datos formateados para actualización:', JSON.stringify(formattedData, null, 2));
+      const result = await api.recipes.update(recipeId, formattedData);
+      console.log('Recipe updated successfully:', result);
+      return { success: true, data: result.data || 'Receta actualizada correctamente' };
+    } catch (error) {
+      console.log('Error updating recipe:', error.message);
+      return { success: false, message: error.message || 'No se pudo actualizar la receta' };
     }
   }
 

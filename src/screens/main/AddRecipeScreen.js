@@ -26,6 +26,7 @@ import Colors from '../../themes/colors';
 import Metrics from '../../themes/metrics';
 import { AuthContext } from '../../context/AuthContext';
 import { api } from '../../services/api';
+import dataService from '../../services/dataService';
 
 const AddRecipeScreen = ({ navigation, route }) => {
   const { isVisitor, user } = useContext(AuthContext);
@@ -85,6 +86,8 @@ const AddRecipeScreen = ({ navigation, route }) => {
   const [selectedRecipeType, setSelectedRecipeType] = useState(null);
   const [currentEditingIngredient, setCurrentEditingIngredient] = useState(null);
   const [showUnitSelector, setShowUnitSelector] = useState(false);
+  const [isTitleValid, setIsTitleValid] = useState(true);
+  const [titleError, setTitleError] = useState('');
 
   // Unidades de medida disponibles según la tabla
   const unidadesMedida = [
@@ -184,6 +187,8 @@ const AddRecipeScreen = ({ navigation, route }) => {
   };
 
   const loadExistingRecipe = (recipe) => {
+    console.log('Cargando receta existente:', JSON.stringify(recipe, null, 2));
+    
     setTitle(recipe.title || recipe.nombreReceta || '');
     setDescription(recipe.description || recipe.descripcionReceta || '');
     setServings(recipe.servings?.toString() || recipe.porciones?.toString() || '');
@@ -191,17 +196,73 @@ const AddRecipeScreen = ({ navigation, route }) => {
     
     // Handle ingredients
     if (recipe.ingredients && Array.isArray(recipe.ingredients)) {
-      setIngredients(recipe.ingredients.map(ing => ({
-        quantity: ing.amount || ing.cantidad || '',
-        name: ing.name || ing.nombre || ing.toString(),
-        unit: ing.unidadMedida || 'gramos'
-      })));
+      console.log('Cargando ingredientes del formato frontend:', JSON.stringify(recipe.ingredients));
+      const formattedIngredients = recipe.ingredients.map(ing => {
+        // Extraer cantidad y unidad desde 'amount' si existe
+        let quantity = '';
+        let name = '';
+        let unit = 'gramos';
+        
+        if (ing.name) {
+          name = ing.name;
+        } else if (ing.nombre) {
+          name = ing.nombre;
+        } else if (typeof ing === 'string') {
+          name = ing;
+        }
+        
+        if (ing.amount && typeof ing.amount === 'string') {
+          // Intentar extraer cantidad y unidad desde el formato "X unidad"
+          const match = ing.amount.match(/^(\d*\.?\d+)\s*(.*)$/);
+          if (match) {
+            quantity = match[1];
+            if (match[2].trim()) {
+              unit = match[2].trim();
+            }
+          } else {
+            quantity = ing.amount;
+          }
+        } else if (ing.cantidad) {
+          quantity = ing.cantidad.toString();
+          if (ing.unidadMedida) {
+            unit = ing.unidadMedida;
+          }
+        }
+        
+        console.log(`Ingrediente formateado: ${name}, ${quantity} ${unit}`);
+        return { quantity, name, unit };
+      });
+      
+      setIngredients(formattedIngredients);
     } else if (recipe.ingredientes && Array.isArray(recipe.ingredientes)) {
-      setIngredients(recipe.ingredientes.map(ing => ({
-        quantity: ing.cantidad?.toString() || '',
-        name: ing.nombre || ing.toString(),
-        unit: ing.unidadMedida || 'gramos'
-      })));
+      console.log('Cargando ingredientes del formato backend:', JSON.stringify(recipe.ingredientes));
+      const formattedIngredients = recipe.ingredientes.map(ing => {
+        let quantity = '';
+        let name = '';
+        let unit = 'gramos';
+        
+        if (ing.nombre) {
+          name = ing.nombre;
+        } else if (typeof ing === 'string') {
+          name = ing;
+        }
+        
+        if (ing.cantidad) {
+          quantity = ing.cantidad.toString();
+        }
+        
+        if (ing.unidadMedida) {
+          unit = ing.unidadMedida;
+        }
+        
+        console.log(`Ingrediente formateado desde backend: ${name}, ${quantity} ${unit}`);
+        return { quantity, name, unit };
+      });
+      
+      setIngredients(formattedIngredients);
+    } else {
+      // Si no hay ingredientes, inicializar con uno vacío
+      setIngredients([{ quantity: '', name: '', unit: 'gramos' }]);
     }
     
     // Handle instructions
@@ -252,45 +313,66 @@ const AddRecipeScreen = ({ navigation, route }) => {
         return;
       }
 
-      const updateData = {
-        nombreReceta: recipeData.title,
-        descripcionReceta: recipeData.description,
-        fotoPrincipal: recipeData.imageUrl,
-        porciones: parseInt(recipeData.servings) || 1,
-        cantidadPersonas: parseInt(recipeData.servings) || 1,
-        instrucciones: recipeData.instructions.map(inst => inst.text).join('\n'),
-        usuario: {
-          idUsuario: currentUser.idUsuario
-        },
-        idTipo: selectedRecipeType // Usar el tipo de receta seleccionado
+      // Asegurar que los ingredientes estén correctamente formateados para actualización
+      console.log('Ingredientes originales:', JSON.stringify(recipeData.ingredients));
+      
+      // Formatear adecuadamente la receta con todos los datos necesarios
+      const completeRecipeData = {
+        ...recipeData,
+        tipoReceta: selectedRecipeType,
+        // Asegurar que los ingredientes tienen los campos requeridos
+        ingredients: recipeData.ingredients.map(ing => ({
+          name: ing.name.trim(),
+          quantity: ing.quantity || '1',
+          unit: ing.unit || 'unidad'
+        }))
       };
-
-      console.log('Updating recipe with data:', updateData);
-      console.log('Recipe ID:', recipeId);
-      console.log('Current user ID:', currentUser.idUsuario);
-
-      const response = await api.recipes.update(recipeId, updateData);
       
-      // Handle both text and object responses
-      const message = typeof response.data === 'string' ? response.data : 'Receta actualizada exitosamente';
-      
-      Alert.alert(
-        'Receta Actualizada',
-        message,
-        [{ text: 'OK', onPress: () => navigation.navigate('HomeTab') }]
+      console.log('Datos completos de receta para actualización:', JSON.stringify(completeRecipeData, null, 2));
+
+      // Usar el método centralizado para actualizar la receta
+      const result = await dataService.updateUserRecipe(
+        recipeId, 
+        completeRecipeData, 
+        currentUser.idUsuario
       );
+      
+      // Ejecutar el callback onRecipeUpdated si existe
+      const onRecipeUpdated = route.params?.onRecipeUpdated;
+      
+      if (result.success) {
+        Alert.alert(
+          'Receta Actualizada',
+          typeof result.data === 'string' ? result.data : 'Receta actualizada exitosamente',
+          [{ 
+            text: 'OK', 
+            onPress: () => {
+              // Llamar al callback si existe
+              if (typeof onRecipeUpdated === 'function') {
+                onRecipeUpdated();
+              }
+              // Navegar a la pantalla principal
+              navigation.navigate('HomeTab');
+            } 
+          }]
+        );
+      } else {
+        Alert.alert('Error', result.message || 'No se pudo actualizar la receta');
+      }
     } catch (error) {
       console.error('Error updating recipe:', error);
       // Show more specific error message
       let errorMessage = 'No se pudo actualizar la receta';
-      if (error.message.includes('403') || error.message.includes('Forbidden')) {
-        errorMessage = 'No tienes permisos para editar esta receta';
-      } else if (error.message.includes('404') || error.message.includes('not found')) {
-        errorMessage = 'Receta no encontrada';
-      } else if (error.message.includes('400') || error.message.includes('Bad Request')) {
-        errorMessage = 'Datos incorrectos. Verifica la información e intenta nuevamente';
-      } else if (error.message) {
-        errorMessage = error.message;
+      if (error.message && typeof error.message === 'string') {
+        if (error.message.includes('403') || error.message.includes('Forbidden')) {
+          errorMessage = 'No tienes permisos para editar esta receta';
+        } else if (error.message.includes('404') || error.message.includes('not found')) {
+          errorMessage = 'Receta no encontrada';
+        } else if (error.message.includes('400') || error.message.includes('Bad Request')) {
+          errorMessage = 'Datos incorrectos. Verifica la información e intenta nuevamente';
+        } else {
+          errorMessage = error.message;
+        }
       }
       
       Alert.alert('Error', errorMessage);
@@ -398,6 +480,18 @@ const AddRecipeScreen = ({ navigation, route }) => {
         return;
       }
 
+      // Verificar si el nombre ya existe
+      const recipeExists = await checkRecipeTitleExists(recipeData.title);
+      if (recipeExists) {
+        Alert.alert(
+          'Nombre Duplicado',
+          'Ya tienes una receta con el nombre "' + recipeData.title + '". Por favor elige otro título.',
+          [{ text: 'Entendido', style: 'default' }]
+        );
+        setIsLoading(false);
+        return;
+      }
+
       // Map frontend recipe data to backend format
       const backendRecipeData = {
         nombreReceta: recipeData.title.trim(),
@@ -484,10 +578,62 @@ const AddRecipeScreen = ({ navigation, route }) => {
     }
   };
 
+  // Verificar si el nombre de la receta ya existe
+  const checkRecipeTitleExists = async (title) => {
+    try {
+      if (!title.trim() || isEditing) return false;
+      
+      // Obtener el usuario actual
+      const currentUser = user || await getCurrentUser();
+      if (!currentUser || !currentUser.idUsuario) return false;
+
+      // Buscar recetas con nombre similar
+      const { data } = await api.recipes.getByName(title.trim());
+      
+      // Filtrar solo recetas del usuario actual con nombre exacto
+      const matchingRecipes = Array.isArray(data) ? data.filter(r => 
+        r.usuario && 
+        r.usuario.idUsuario === currentUser.idUsuario && 
+        r.nombreReceta.toLowerCase() === title.trim().toLowerCase()
+      ) : [];
+
+      return matchingRecipes.length > 0;
+    } catch (error) {
+      console.error('Error verificando nombre de receta:', error);
+      return false;
+    }
+  };
+
+  // Manejar cambios en el título
+  const handleTitleChange = (newTitle) => {
+    setTitle(newTitle);
+    
+    if (newTitle.trim().length > 0) {
+      // Verificar después de un breve retraso para evitar demasiadas consultas
+      setTimeout(async () => {
+        const exists = await checkRecipeTitleExists(newTitle);
+        setIsTitleValid(!exists);
+        if (exists) {
+          setTitleError('Ya tienes una receta con este nombre. Por favor elige otro título.');
+        } else {
+          setTitleError('');
+        }
+      }, 500);
+    } else {
+      setIsTitleValid(true);
+      setTitleError('');
+    }
+  };
+
   const handleSaveRecipe = async () => {
     // Validation
     if (!title.trim()) {
       Alert.alert('Error', 'El título de la receta es obligatorio');
+      return;
+    }
+
+    if (!isTitleValid) {
+      Alert.alert('Error', titleError);
       return;
     }
 
@@ -508,6 +654,9 @@ const AddRecipeScreen = ({ navigation, route }) => {
 
     setIsLoading(true);
 
+    // Debug de ingredientes
+    console.log('Ingredientes actuales en handleSaveRecipe:', JSON.stringify(ingredients));
+
     const recipeData = {
       title: title.trim(),
       description: description.trim(),
@@ -524,6 +673,8 @@ const AddRecipeScreen = ({ navigation, route }) => {
         text: inst.trim()
       }))
     };
+
+    console.log('Datos de receta formateados para guardar/actualizar:', JSON.stringify(recipeData, null, 2));
 
     try {
       if (isEditing && editingRecipe) {
@@ -611,8 +762,16 @@ const AddRecipeScreen = ({ navigation, route }) => {
             <Input
               label="Título de la Receta"
               value={title}
-              onChangeText={setTitle}
+              onChangeText={handleTitleChange}
               placeholder="Ingresa el título de la receta"
+              error={titleError}
+              rightComponent={
+                titleError ? (
+                  <Icon name="alert-circle" size={20} color={Colors.error} />
+                ) : (title.trim().length > 0 && isTitleValid ? (
+                  <Icon name="check-circle" size={20} color={Colors.success} />
+                ) : null)
+              }
             />
 
             <Input

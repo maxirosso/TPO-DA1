@@ -19,6 +19,7 @@ import Slider from '@react-native-community/slider';
 import { Rating } from 'react-native-ratings';
 import { useSelector, useDispatch } from 'react-redux';
 import { AuthContext } from '../../context/AuthContext';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import Button from '../../components/common/Button';
 import Colors from '../../themes/colors';
@@ -49,6 +50,8 @@ const RecipeDetailScreen = ({ navigation, route }) => {
   const [userRating, setUserRating] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [addingToPendingList, setAddingToPendingList] = useState(false);
+  const [savingRecipe, setSavingRecipe] = useState(false);
+  const [isSaved, setIsSaved] = useState(false);
   
   // Obtener el ID o datos iniciales de la receta de los parámetros de navegación
   const recipeFromParams = route.params?.recipe || {};
@@ -155,6 +158,7 @@ const RecipeDetailScreen = ({ navigation, route }) => {
   useEffect(() => {
     if (!isVisitor && user && user.idUsuario && recipe.id) {
       loadRecipeReviews();
+      checkIfSaved();
     }
   }, [user?.idUsuario, recipe.id]);
   
@@ -171,6 +175,98 @@ const RecipeDetailScreen = ({ navigation, route }) => {
       console.error('Error toggling favorite:', error);
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const checkIfSaved = async () => {
+    if (isVisitor || !user || !recipe.id) {
+      console.log('No se puede verificar si la receta está guardada: usuario invitado o sin ID de receta');
+      return;
+    }
+    
+    try {
+      console.log(`Verificando si la receta ${recipe.id} está guardada para el usuario ${user.idUsuario}`);
+      // Obtener recetas guardadas del usuario
+      const response = await api.savedRecipes.get();
+      console.log('Respuesta de recetas guardadas:', response);
+      
+      const { data } = response;
+      
+      // Verificar si la receta actual está en la lista de guardadas
+      if (data && Array.isArray(data)) {
+        console.log(`Receta actual ID: ${recipe.id}`);
+        console.log('IDs de recetas guardadas:', data.map(r => r.idReceta));
+        
+        const found = data.some(savedRecipe => 
+          savedRecipe.idReceta == recipe.id || savedRecipe.id == recipe.id
+        );
+        console.log(`¿Receta encontrada en guardadas?: ${found}`);
+        setIsSaved(found);
+      } else {
+        console.log('No se recibieron datos de recetas guardadas o no es un array');
+      }
+    } catch (error) {
+      console.error('Error checking if recipe is saved:', error);
+    }
+  };
+
+  const saveRecipe = async () => {
+    if (isVisitor) {
+      Alert.alert('Funcionalidad Limitada', 'Debes registrarte para guardar recetas.');
+      return;
+    }
+    
+    try {
+      setSavingRecipe(true);
+      
+      if (isSaved) {
+        // Si ya está guardada, eliminarla
+        console.log(`Eliminando receta ${recipe.id} de guardadas`);
+        const removeResponse = await api.savedRecipes.remove(recipe.id);
+        console.log('Respuesta al eliminar receta:', removeResponse);
+        
+        setIsSaved(false);
+        Alert.alert('Receta eliminada', 'La receta ha sido eliminada de tu colección');
+      } else {
+        // Si no está guardada, guardarla
+        console.log(`Guardando receta ${recipe.id} para el usuario ${user?.idUsuario}`);
+        const saveResponse = await api.savedRecipes.save(recipe.id);
+        console.log('Respuesta al guardar receta:', saveResponse);
+        
+        setIsSaved(true);
+        Alert.alert('Receta guardada', 'La receta ha sido guardada en tu colección');
+        
+        // Actualizar las recetas guardadas localmente (para fallback)
+        try {
+          console.log('Actualizando recetas guardadas localmente');
+          const savedStr = await AsyncStorage.getItem('saved_recipes');
+          const saved = savedStr ? JSON.parse(savedStr) : [];
+          console.log('Recetas guardadas actuales:', saved);
+          
+          if (!saved.some(r => r.id === recipe.id)) {
+            const recipeToSave = {
+              id: recipe.id,
+              title: recipe.title,
+              imageUrl: recipe.imageUrl,
+              tags: recipe.tags || []
+            };
+            console.log('Añadiendo receta a guardadas locales:', recipeToSave);
+            
+            saved.push(recipeToSave);
+            await AsyncStorage.setItem('saved_recipes', JSON.stringify(saved));
+            console.log('Recetas guardadas localmente actualizadas');
+          } else {
+            console.log('La receta ya está en el almacenamiento local');
+          }
+        } catch (storageError) {
+          console.error('Error updating local saved recipes:', storageError);
+        }
+      }
+    } catch (error) {
+      console.error('Error saving recipe:', error);
+      Alert.alert('Error', 'No se pudo guardar la receta. Intenta nuevamente.');
+    } finally {
+      setSavingRecipe(false);
     }
   };
 
@@ -791,12 +887,26 @@ const RecipeDetailScreen = ({ navigation, route }) => {
               </Text>
             </TouchableOpacity>
 
-             <TouchableOpacity style={styles.actionButton} onPress={() => {
-                Alert.alert('Guardar', 'Guardar esta receta a tu colección');
-             }}>
-               <Icon name="bookmark" size={20} color={Colors.primary} />
-               <Text style={styles.actionButtonText}>Guardar</Text>
-             </TouchableOpacity>
+             <TouchableOpacity 
+                style={[styles.actionButton, savingRecipe && styles.disabledButton]} 
+                onPress={saveRecipe}
+                disabled={savingRecipe}
+              >
+                <Icon 
+                  name={savingRecipe ? "loader" : (isSaved ? "check" : "bookmark")} 
+                  size={20} 
+                  color={savingRecipe ? Colors.textLight : (isSaved ? Colors.success : Colors.primary)} 
+                />
+                <Text 
+                  style={[
+                    styles.actionButtonText, 
+                    savingRecipe && styles.disabledText,
+                    isSaved && { color: Colors.success }
+                  ]}
+                >
+                  {savingRecipe ? 'Guardando...' : (isSaved ? 'Guardada' : 'Guardar')}
+                </Text>
+              </TouchableOpacity>
           </View>
           
           <View style={styles.tabContainer}>

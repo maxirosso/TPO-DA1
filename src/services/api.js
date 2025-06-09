@@ -303,7 +303,7 @@ export const api = {
   // Recipe endpoints (matching Spring Boot controller)
   recipes: {
     getAll: () => apiService.get('/getAllRecetas'),
-    getLatest: () => apiService.get('/ultimasRecetas'), // Las 3 últimas recetas
+    getLatest: () => apiService.get('/ultimasRecetas', { timestamp: new Date().getTime() }), // Las 3 últimas recetas
     getById: (id) => apiService.get(`/getRecetaById/${id}`),
     getByUser: (idUsuario) => apiService.get('/getRecetasUsuario', { idUsuario }),
     getByName: (nombrePlato, orden = 'alfabetico') => apiService.get('/getNombrereceta', { nombrePlato, orden }),
@@ -427,6 +427,43 @@ export const api = {
         `/marcarRecetaCompletada/${idReceta}?completada=${completada}&idUsuario=${idUsuario}` : 
         `/marcarRecetaCompletada/${idReceta}?completada=${completada}`;
       return apiService.put(endpoint);
+    },
+  },
+
+  // Saved recipes endpoints (Recetas guardadas)
+  savedRecipes: {
+    save: (idReceta) => {
+      console.log(`[API] Guardando receta ${idReceta}`);
+      return apiService.post(`/guardarReceta/${idReceta}`);
+    },
+    saveWithUser: (idReceta, idUsuario) => {
+      const endpoint = idUsuario ? 
+        `/guardarReceta/${idReceta}?idUsuario=${idUsuario}` : 
+        `/guardarReceta/${idReceta}`;
+      console.log(`[API] Guardando receta ${idReceta} con usuario ${idUsuario}, endpoint: ${endpoint}`);
+      return apiService.post(endpoint);
+    },
+    get: () => {
+      console.log('[API] Obteniendo recetas guardadas');
+      return apiService.get('/recetasGuardadas');
+    },
+    getWithUser: (idUsuario) => {
+      const endpoint = idUsuario ? 
+        `/recetasGuardadas?idUsuario=${idUsuario}` : 
+        `/recetasGuardadas`;
+      console.log(`[API] Obteniendo recetas guardadas para usuario ${idUsuario}, endpoint: ${endpoint}`);
+      return apiService.get(endpoint);
+    },
+    remove: (idReceta) => {
+      console.log(`[API] Eliminando receta guardada ${idReceta}`);
+      return apiService.delete(`/eliminarRecetaGuardada/${idReceta}`);
+    },
+    removeWithUser: (idReceta, idUsuario) => {
+      const endpoint = idUsuario ? 
+        `/eliminarRecetaGuardada/${idReceta}?idUsuario=${idUsuario}` : 
+        `/eliminarRecetaGuardada/${idReceta}`;
+      console.log(`[API] Eliminando receta guardada ${idReceta} con usuario ${idUsuario}, endpoint: ${endpoint}`);
+      return apiService.delete(endpoint);
     },
   },
 

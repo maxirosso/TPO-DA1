@@ -13,6 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/Feather';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useFocusEffect } from '@react-navigation/native';
 
 import RecipeCard from '../../components/recipe/RecipeCard';
 import Button from '../../components/common/Button';
@@ -34,6 +35,13 @@ const MyRecipesScreen = ({ navigation }) => {
     loadMyRecipes();
     loadCurrentUser();
   }, []);
+
+  // Cargar recetas cuando la pantalla recibe el foco
+  useFocusEffect(
+    React.useCallback(() => {
+      loadMyRecipes();
+    }, [])
+  );
 
   const loadCurrentUser = async () => {
     try {
@@ -119,7 +127,11 @@ const MyRecipesScreen = ({ navigation }) => {
           text: 'Editar', 
           onPress: () => navigation.navigate('AddTab', { 
             editingRecipe: recipe,
-            isEditing: true 
+            isEditing: true,
+            onRecipeUpdated: () => {
+              // Recargar las recetas después de actualizar
+              loadMyRecipes();
+            }
           })
         },
         { text: 'Ver Detalles', onPress: () => handleRecipePress(recipe) },
