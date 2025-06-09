@@ -1099,7 +1099,7 @@ const styles = StyleSheet.create({
     borderColor: Colors.primary,
   },
   selectedUnitOptionText: {
-    color: Colors.primary,
+    color: Colors.card,
     fontWeight: '600',
   },
   unitLabelText: {

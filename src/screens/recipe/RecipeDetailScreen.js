@@ -728,16 +728,8 @@ const RecipeDetailScreen = ({ navigation, route }) => {
         )}
         
         <View style={styles.content}>
-          <Text style={styles.title}>{recipe.title}</Text>
-          
-          <View style={styles.authorRow}>
-            <View style={styles.authorInfo}>
-              <Image
-                source={{ uri: recipe.author?.avatar }}
-                style={styles.authorAvatar}
-              />
-              <Text style={styles.authorName}>por {recipe.author?.name}</Text>
-            </View>
+          <View style={{flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center'}}>
+            <Text style={styles.title}>{recipe.title}</Text>
             
             <TouchableOpacity onPress={openReviewModal}>
               <View style={styles.ratingContainer}>
@@ -747,6 +739,16 @@ const RecipeDetailScreen = ({ navigation, route }) => {
                 </Text>
               </View>
             </TouchableOpacity>
+          </View>
+          
+          <View style={styles.authorRow}>
+            <View style={styles.authorInfo}>
+              <Image
+                source={{ uri: recipe.author?.avatar }}
+                style={styles.authorAvatar}
+              />
+              <Text style={styles.authorName}>{recipe.author?.name}</Text>
+            </View>
           </View>
           
           <Text style={styles.description}>{recipe.description}</Text>
@@ -1214,13 +1216,14 @@ const styles = StyleSheet.create({
     fontSize: Metrics.xxLargeFontSize,
     fontWeight: '700',
     color: Colors.textDark,
-    marginBottom: Metrics.baseSpacing,
+    marginBottom: 0,
   },
   authorRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: Metrics.mediumSpacing,
+    marginTop: Metrics.baseSpacing,
   },
   authorInfo: {
     flexDirection: 'row',
