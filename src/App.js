@@ -37,7 +37,7 @@ const AppContent = () => {
     signIn: async (email, password) => {
       try {
         const result = await authService.login(email, password);
-        setUserToken('dummy-token');
+        setUserToken(result.token || 'dummy-token');
         setCurrentUser(result.user);
         setIsVisitor(false);
         return result;
@@ -93,7 +93,7 @@ const AppContent = () => {
         if (result) {
           try {
             const loginResult = await authService.login(email, profileData.password || '');
-            setUserToken('dummy-token');
+            setUserToken(loginResult.token || 'dummy-token');
             setCurrentUser(loginResult.user);
             setIsVisitor(false);
           } catch (loginErr) {

@@ -88,8 +88,22 @@ export const authService = {
           params.toString(), // send as plain string
           { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
         );
+        console.log('Login response:', response.data); // Debug log to see JWT token
         if (response.data) {
-          const user = response.data;
+          const responseData = response.data;
+          // Handle the new JWT response format
+          let user, token;
+          
+          if (responseData.user && responseData.token) {
+            // New JWT format
+            user = responseData.user;
+            token = responseData.token;
+          } else {
+            // Fallback for old format
+            user = responseData;
+            token = null;
+          }
+          
           // Map backend user data to expected format
           const mappedUser = {
             id: user.idUsuario || user.id,
@@ -100,8 +114,13 @@ export const authService = {
             rol: user.rol, // Add rol field from backend
             ...user
           };
+          
           await AsyncStorage.setItem(USER_STORAGE_KEY, JSON.stringify(mappedUser));
-          return { user: mappedUser, token: null };
+          if (token) {
+            await AsyncStorage.setItem(TOKEN_STORAGE_KEY, token);
+          }
+          
+          return { user: mappedUser, token: token };
         } else {
           throw new Error('Invalid response from server');
         }

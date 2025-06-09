@@ -21,7 +21,7 @@ class ApiService {
   // Get auth token from storage
   async getAuthToken() {
     try {
-      const token = await AsyncStorage.getItem('authToken');
+      const token = await AsyncStorage.getItem('user_token');
       return token;
     } catch (error) {
       console.log('Error getting auth token:', error);
@@ -33,9 +33,9 @@ class ApiService {
   async setAuthToken(token) {
     try {
       if (token) {
-        await AsyncStorage.setItem('authToken', token);
+        await AsyncStorage.setItem('user_token', token);
       } else {
-        await AsyncStorage.removeItem('authToken');
+        await AsyncStorage.removeItem('user_token');
       }
     } catch (error) {
       console.log('Error setting auth token:', error);
