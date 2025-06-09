@@ -193,7 +193,7 @@ const HomeScreen = ({ navigation }) => {
       imageUrl: recipe.fotoPrincipal || recipe.imageUrl,
       description: recipe.descripcionReceta || recipe.description,
       servings: recipe.porciones || recipe.servings,
-      time: recipe.tiempo || recipe.time || 30,
+
       ingredients: recipe.ingredientes || recipe.ingredients || [],
       instructions: recipe.pasos || recipe.instructions || [],
       author: recipe.usuario || recipe.author,
@@ -241,7 +241,6 @@ const HomeScreen = ({ navigation }) => {
       id={item.idReceta || item.id}
       title={item.nombreReceta || item.title}
       imageUrl={item.fotoPrincipal || item.imageUrl}
-      time={item.tiempo || item.time || 30}
       category={item.tipoReceta?.descripcion || item.category}
       rating={item.calificacionPromedio || item.rating}
       type="grid"
@@ -254,7 +253,6 @@ const HomeScreen = ({ navigation }) => {
       id={item.idReceta || item.id}
       title={item.nombreReceta || item.title}
       imageUrl={item.fotoPrincipal || item.imageUrl}
-      time={item.tiempo || item.time || 30}
       tags={item.tags || [item.tipoReceta?.descripcion || item.category]}
       rating={item.calificacionPromedio || item.rating}
       type="list"

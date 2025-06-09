@@ -137,9 +137,35 @@ const MyRecipesScreen = ({ navigation }) => {
           text: 'Eliminar',
           style: 'destructive',
           onPress: async () => {
-            const updatedRecipes = myRecipes.filter(recipe => recipe.id !== recipeId);
-            setMyRecipes(updatedRecipes);
-            await AsyncStorage.setItem('myRecipes', JSON.stringify(updatedRecipes));
+            try {
+              // Get user ID for backend deletion
+              const userId = currentUser?.idUsuario || currentUser?.id;
+              
+              if (userId) {
+                // Try to delete from backend first
+                const result = await dataService.deleteUserRecipe(recipeId, userId);
+                
+                if (result.success) {
+                  Alert.alert('Éxito', 'Receta eliminada correctamente');
+                } else {
+                  Alert.alert('Error', result.message || 'No se pudo eliminar la receta del servidor');
+                }
+              }
+              
+              // Update local state regardless of backend success (for offline capabilities)
+              const updatedRecipes = myRecipes.filter(recipe => recipe.id !== recipeId);
+              setMyRecipes(updatedRecipes);
+              await AsyncStorage.setItem('myRecipes', JSON.stringify(updatedRecipes));
+              
+              // Reload recipes from backend to ensure sync
+              setTimeout(() => {
+                loadMyRecipes();
+              }, 1000);
+              
+            } catch (error) {
+              console.error('Error deleting recipe:', error);
+              Alert.alert('Error', 'No se pudo eliminar la receta. Intenta nuevamente.');
+            }
           }
         }
       ]
@@ -264,7 +290,7 @@ const MyRecipesScreen = ({ navigation }) => {
           id={item.id}
           title={item.title}
           imageUrl={item.imageUrl}
-          time={item.time}
+  
           tags={item.tags}
           type="list"
           onPress={() => handleRecipePress(item)}

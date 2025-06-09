@@ -317,6 +317,12 @@ export const api = {
     createWithFiles: (receta, files) => apiService.uploadFile('/cargarReceta', files[0], receta),
     publish: (recipeData) => apiService.post('/publicarRecetas', recipeData),
     update: (idReceta, recipeData) => apiService.put(`/recetas/${idReceta}`, recipeData),
+    delete: (idReceta, idUsuario) => {
+      const endpoint = idUsuario ? 
+        `/eliminarRecetaCompleta/${idReceta}?idUsuario=${idUsuario}` : 
+        `/eliminarRecetaCompleta/${idReceta}`;
+      return apiService.delete(endpoint);
+    },
     scale: (idReceta, tipo, porciones) => apiService.scale(idReceta, tipo, porciones),
     scaleByIngredient: (idReceta, nombreIngrediente, nuevaCantidad) => 
       apiService.postForm(`/ajustarPorIngrediente/${idReceta}`, { nombreIngrediente, nuevaCantidad }),

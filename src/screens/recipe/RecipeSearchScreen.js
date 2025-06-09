@@ -455,7 +455,7 @@ const RecipeSearchScreen = ({ navigation }) => {
             id={item.id}
             title={item.title}
             imageUrl={item.imageUrl}
-            time={item.time}
+    
             tags={item.tags}
             ingredients={item.ingredients}
             type="list"

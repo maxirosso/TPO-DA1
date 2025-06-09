@@ -55,7 +55,6 @@ const AddRecipeScreen = ({ navigation, route }) => {
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [prepTime, setPrepTime] = useState('');
   const [servings, setServings] = useState('');
   const [recipeImage, setRecipeImage] = useState(null);
   const [ingredients, setIngredients] = useState([{ quantity: '', name: '' }]);
@@ -182,7 +181,6 @@ const AddRecipeScreen = ({ navigation, route }) => {
   const loadExistingRecipe = (recipe) => {
     setTitle(recipe.title || recipe.nombreReceta || '');
     setDescription(recipe.description || recipe.descripcionReceta || '');
-    setPrepTime(recipe.prepTime?.toString() || '');
     setServings(recipe.servings?.toString() || recipe.porciones?.toString() || '');
     setRecipeImage(recipe.imageUrl || recipe.fotoPrincipal);
     
@@ -429,13 +427,26 @@ const AddRecipeScreen = ({ navigation, route }) => {
           idUsuario: currentUser.idUsuario
         },
         idTipo: selectedRecipeType || { idTipo: 1 }, // Use selected recipe type or default
-        // Ingredientes will be handled separately on the backend
-        // We send basic ingredient data but the backend will create proper Ingredientes entities
-        ingredientes: recipeData.ingredients.map((ing, index) => ({
-          nombre: ing.name,
-          cantidad: parseFloat(ing.amount) || 1,
-          unidadMedida: ing.unit || 'unidad'
-        }))
+        // Ingredientes correctly mapped to backend format
+        ingredientes: recipeData.ingredients.map((ing, index) => {
+          // Parse amount more safely
+          const amountText = ing.amount || '1 unidad';
+          const match = amountText.match(/^(\d*\.?\d+)\s*(.*)$/);
+          
+          let cantidad = 1;
+          let unidadMedida = 'unidad';
+          
+          if (match) {
+            cantidad = parseFloat(match[1]) || 1;
+            unidadMedida = match[2].trim() || 'unidad';
+          }
+          
+          return {
+            nombre: ing.name,
+            cantidad: cantidad,
+            unidadMedida: unidadMedida
+          };
+        })
       };
 
       console.log('Sending recipe data to backend:', backendRecipeData);
@@ -466,7 +477,11 @@ const AddRecipeScreen = ({ navigation, route }) => {
       let errorMessage = 'No se pudo subir la receta.';
       
       // Provide more specific error messages
-      if (error.message.includes('400')) {
+      if (error.message.includes('Ya existe una receta con este nombre')) {
+        errorMessage = 'Ya tienes una receta con este nombre. Por favor elige un título diferente.';
+        Alert.alert('Receta Duplicada', errorMessage);
+        return; // Don't save locally for duplicates
+      } else if (error.message.includes('400')) {
         errorMessage = 'Datos de receta inválidos. Verifica que todos los campos estén completos.';
       } else if (error.message.includes('401')) {
         errorMessage = 'No tienes autorización para crear recetas. Inicia sesión nuevamente.';
@@ -508,12 +523,11 @@ const AddRecipeScreen = ({ navigation, route }) => {
     const recipeData = {
       title: title.trim(),
       description: description.trim(),
-      prepTime: parseInt(prepTime) || 0,
       servings: parseInt(servings) || 1,
       imageUrl: recipeImage || 'https://images.unsplash.com/photo-1546548970-71785318a17b',
       ingredients: ingredients.filter(ing => ing.name.trim()).map(ing => ({
         name: ing.name.trim(),
-        amount: ing.quantity.trim() || '1',
+        amount: ing.quantity.trim() || '1 unidad',
         preparation: ''
       })),
       instructions: instructions.filter(inst => inst.trim()).map((inst, index) => ({
@@ -623,25 +637,13 @@ const AddRecipeScreen = ({ navigation, route }) => {
               numberOfLines={3}
             />
 
-            <View style={styles.rowFields}>
-              <Input
-                label="Tiempo de Preparación (min)"
-                value={prepTime}
-                onChangeText={setPrepTime}
-                placeholder="10"
-                keyboardType="number-pad"
-                style={styles.halfField}
-              />
-
-              <Input
-                label="Porciones"
-                value={servings}
-                onChangeText={setServings}
-                placeholder="4"
-                keyboardType="number-pad"
-                style={styles.halfField}
-              />
-            </View>
+            <Input
+              label="Porciones"
+              value={servings}
+              onChangeText={setServings}
+              placeholder="4"
+              keyboardType="number-pad"
+            />
 
 
 

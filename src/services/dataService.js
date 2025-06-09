@@ -21,8 +21,8 @@ export function mapBackendRecipe(receta) {
     time: 30, // Default cooking time
     ingredients: Array.isArray(receta.ingredientes) ? receta.ingredientes.map(ing => ({
       name: ing.nombre || ing.name,
-      amount: ing.cantidad || ing.amount || '1',
-      unit: ing.unidadMedida || ing.unit || 'unidad'
+      amount: ing.cantidad && ing.unidadMedida ? `${ing.cantidad} ${ing.unidadMedida}`.trim() : (ing.amount || '1 unidad'),
+      preparation: ''
     })) : [],
     ingredientes: receta.ingredientes || [],
     instructions: Array.isArray(receta.instrucciones) ? receta.instrucciones : 
@@ -368,6 +368,18 @@ class DataService {
     } catch (error) {
       console.log('Error al obtener recetas del usuario:', error.message);
       throw error;
+    }
+  }
+
+  async deleteUserRecipe(idReceta, idUsuario) {
+    try {
+      console.log(`Deleting recipe ${idReceta} for user ${idUsuario}`);
+      const result = await api.recipes.delete(idReceta, idUsuario);
+      console.log('Recipe deleted successfully:', result);
+      return { success: true, message: result.data || 'Receta eliminada correctamente' };
+    } catch (error) {
+      console.log('Error al eliminar receta:', error.message);
+      return { success: false, message: error.message || 'No se pudo eliminar la receta' };
     }
   }
 

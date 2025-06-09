@@ -127,7 +127,7 @@ const AdminPanelScreen = ({ navigation }) => {
           id={item.id}
           title={item.title}
           imageUrl={item.imageUrl}
-          time={item.time}
+  
           tags={item.tags}
           type="list"
           onPress={() => navigation.navigate('RecipeDetail', { recipe: item })}

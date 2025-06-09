@@ -155,7 +155,7 @@ const PendingRecipesScreen = ({ navigation }) => {
       <RecipeCard
         title={item.title || item.nombreReceta}
         imageUrl={item.imageUrl || item.fotoPrincipal}
-        time={item.time || 30}
+
         servings={item.servings || item.porciones}
         author={item.author}
         tags={item.tags || []}

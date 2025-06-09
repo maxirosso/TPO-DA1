@@ -15,7 +15,6 @@ const RecipeCard = ({
   id,
   title,
   imageUrl,
-  time,
   category,
   rating,
   tags = [],
@@ -51,7 +50,6 @@ const RecipeCard = ({
         id: id, // Asegurarse de pasar el ID correctamente
         title,
         imageUrl,
-        time,
         category,
         rating
       });
@@ -106,11 +104,6 @@ const RecipeCard = ({
           )}
           
           <View style={styles.metaContainer}>
-            <View style={styles.timeContainer}>
-              <Icon name="clock" size={14} color={Colors.textDark} />
-              <Text style={styles.metaText}>{time} min</Text>
-            </View>
-            
             {/* Mostrar rating si está disponible */}
             {rating && rating > 0 && (
               <View style={styles.ratingContainer}>
@@ -150,11 +143,6 @@ const RecipeCard = ({
         )}
         
         <View style={styles.metaContainer}>
-          <View style={styles.timeContainer}>
-            <Icon name="clock" size={14} color={Colors.textDark} />
-            <Text style={styles.metaText}>{time} min</Text>
-          </View>
-          
           {/* Mostrar rating si está disponible */}
           {rating && rating > 0 && (
             <View style={styles.ratingContainer}>
@@ -241,11 +229,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: Metrics.baseSpacing,
   },
-  timeContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginRight: Metrics.baseSpacing,
-  },
+
   ratingContainer: {
     flexDirection: 'row',
     alignItems: 'center',

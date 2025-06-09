@@ -63,8 +63,7 @@ const RecipeDetailScreen = ({ navigation, route }) => {
     imageUrl: recipeFromParams.imageUrl || 'https://images.unsplash.com/photo-1527515637462-cff94eecc1ac',
     rating: recipeFromParams.rating || 4.5,
     reviews: recipeFromParams.reviews || 0,
-    cookTime: recipeFromParams.cookTime || 15,
-    prepTime: recipeFromParams.prepTime || 10,
+
     servings: recipeFromParams.servings || 2,
     calories: recipeFromParams.calories || 300,
     protein: recipeFromParams.protein || 10,
@@ -117,15 +116,26 @@ const RecipeDetailScreen = ({ navigation, route }) => {
           ...prevRecipe,
           ...fullRecipe,
           // Asegurar valores numéricos válidos
-          prepTime: safeNumber(fullRecipe.prepTime, 10),
-          cookTime: safeNumber(fullRecipe.cookTime, 15),
+
           servings: safeNumber(fullRecipe.servings || fullRecipe.porciones, 2),
           calories: safeNumber(fullRecipe.calories, 300),
           protein: safeNumber(fullRecipe.protein, 10),
           carbs: safeNumber(fullRecipe.carbs, 30),
           fat: safeNumber(fullRecipe.fat, 15),
-          rating: safeNumber(fullRecipe.rating, 4.5),
-          reviews: safeNumber(fullRecipe.reviews, 0)
+          rating: safeNumber(fullRecipe.rating || fullRecipe.calificacionPromedio, 4.5),
+          reviews: safeNumber(fullRecipe.reviews || fullRecipe.totalCalificaciones, 0),
+          // Mapear correctamente ingredientes e instrucciones del backend
+          ingredients: fullRecipe.ingredientes ? fullRecipe.ingredientes.map(ing => ({
+            name: ing.nombre,
+            amount: ing.cantidad ? `${ing.cantidad} ${ing.unidadMedida || ''}`.trim() : '',
+            preparation: ''
+          })) : (fullRecipe.ingredients || []),
+          instructions: fullRecipe.instrucciones ? 
+            fullRecipe.instrucciones.split('\n').filter(step => step.trim()).map((step, index) => ({
+              step: index + 1,
+              text: step.trim(),
+              hasImage: false
+            })) : (fullRecipe.instructions || [])
         }));
 
         // Cargar reseñas y comentarios después de cargar la receta
@@ -229,21 +239,6 @@ const RecipeDetailScreen = ({ navigation, route }) => {
       Alert.alert('Error', errorMessage);
     } finally {
       setIsSubmitting(false);
-    }
-  };
-
-  const addToShoppingList = async () => {
-    if (isVisitor) {
-      Alert.alert('Funcionalidad Limitada', 'Debes registrarte para usar la lista de compras.');
-      return;
-    }
-    
-    try {
-      // Here you would implement shopping list functionality
-      Alert.alert("Lista de compras", "Los ingredientes han sido agregados a tu lista de compras.");
-    } catch (error) {
-      console.error('Error adding to shopping list:', error);
-      Alert.alert('Error', 'No se pudo agregar a la lista. Intenta nuevamente.');
     }
   };
 
@@ -451,18 +446,10 @@ const RecipeDetailScreen = ({ navigation, route }) => {
     return isNaN(num) ? defaultValue : num;
   };
 
-  const getTotalTime = () => {
-    const prep = safeNumber(recipe.prepTime, 10);
-    const cook = safeNumber(recipe.cookTime, 15);
-    return Math.round((prep + cook) * scaleFactor);
-  };
-
   const getServings = () => {
     const servings = safeNumber(recipe.servings, 2);
     return Math.round(servings * scaleFactor);
   };
-
-
 
   // Función auxiliar mejorada para escalar cantidades por persona
   const scaleAmount = (amount, factor) => {
@@ -759,16 +746,6 @@ const RecipeDetailScreen = ({ navigation, route }) => {
           
           <View style={styles.statsContainer}>
             <View style={styles.statItem}>
-              <Icon name="clock" size={20} color={Colors.primary} />
-                  <Text style={styles.statValue}>
-                    {getTotalTime()} min
-                  </Text>
-              <Text style={styles.statLabel}>Tiempo Total</Text>
-            </View>
-            
-            <View style={styles.statDivider} />
-            
-            <View style={styles.statItem}>
               <Icon name="users" size={20} color={Colors.primary} />
                   <Text style={styles.statValue}>
                     {getServings()}
@@ -790,11 +767,6 @@ const RecipeDetailScreen = ({ navigation, route }) => {
               </TouchableOpacity>
             )}
             
-            <TouchableOpacity style={styles.actionButton} onPress={addToShoppingList}>
-              <Icon name="shopping-cart" size={20} color={Colors.primary} />
-              <Text style={styles.actionButtonText}>Compras</Text>
-            </TouchableOpacity>
-            
             <TouchableOpacity 
               style={[styles.actionButton, addingToPendingList && styles.disabledButton]} 
               onPress={addToPendingList}
@@ -809,16 +781,13 @@ const RecipeDetailScreen = ({ navigation, route }) => {
                 {addingToPendingList ? 'Agregando...' : 'A Intentar'}
               </Text>
             </TouchableOpacity>
-            
-            <TouchableOpacity 
-              style={styles.actionButton}
-              onPress={() => {
+
+             <TouchableOpacity style={styles.actionButton} onPress={() => {
                 Alert.alert('Guardar', 'Guardar esta receta a tu colección');
-              }}
-            >
-              <Icon name="bookmark" size={20} color={Colors.primary} />
-              <Text style={styles.actionButtonText}>Guardar</Text>
-            </TouchableOpacity>
+             }}>
+               <Icon name="bookmark" size={20} color={Colors.primary} />
+               <Text style={styles.actionButtonText}>Guardar</Text>
+             </TouchableOpacity>
           </View>
           
           <View style={styles.tabContainer}>
@@ -1288,11 +1257,7 @@ const styles = StyleSheet.create({
     fontSize: Metrics.xSmallFontSize,
     color: Colors.textMedium,
   },
-  statDivider: {
-    width: 1,
-    backgroundColor: Colors.border,
-    height: '80%',
-  },
+
 
   actionButtons: {
     flexDirection: 'row',

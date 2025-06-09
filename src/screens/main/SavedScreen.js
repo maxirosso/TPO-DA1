@@ -188,7 +188,7 @@ const SavedScreen = ({ navigation }) => {
           <RecipeCard
             title={item.title}
             imageUrl={item.imageUrl}
-            time={item.time}
+    
             tags={item.tags}
             type="list"
             onPress={() => handleRecipePress(item)}
