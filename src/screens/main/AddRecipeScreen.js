@@ -10,7 +10,9 @@ import {
   KeyboardAvoidingView,
   Platform,
   Alert,
+  Modal,
 } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Feather';
 import LinearGradient from 'react-native-linear-gradient';
@@ -47,6 +49,25 @@ const AddRecipeScreen = ({ navigation, route }) => {
       );
     }
   }, [isVisitor, navigation]);
+  
+  // Limpiar campos cuando se abre la pantalla (no cuando se está editando)
+  useFocusEffect(
+    React.useCallback(() => {
+      if (!isEditing) {
+        // Resetear todos los campos a sus valores iniciales
+        setTitle('');
+        setDescription('');
+        setServings('');
+        setRecipeImage(null);
+        setIngredients([{ quantity: '', name: '', unit: 'gramos' }]);
+        setInstructions(['']);
+        // Si hay un tipo de receta seleccionado por defecto, mantenerlo
+        if (recipeTypes.length > 0) {
+          setSelectedRecipeType(recipeTypes[0]);
+        }
+      }
+    }, [isEditing, recipeTypes])
+  );
 
   // If visitor, don't render the screen content
   if (isVisitor) {
@@ -57,12 +78,21 @@ const AddRecipeScreen = ({ navigation, route }) => {
   const [description, setDescription] = useState('');
   const [servings, setServings] = useState('');
   const [recipeImage, setRecipeImage] = useState(null);
-  const [ingredients, setIngredients] = useState([{ quantity: '', name: '' }]);
+  const [ingredients, setIngredients] = useState([{ quantity: '', name: '', unit: 'gramos' }]);
   const [instructions, setInstructions] = useState(['']);
-  const [selectedCategories, setSelectedCategories] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [recipeTypes, setRecipeTypes] = useState([]);
   const [selectedRecipeType, setSelectedRecipeType] = useState(null);
+  const [currentEditingIngredient, setCurrentEditingIngredient] = useState(null);
+  const [showUnitSelector, setShowUnitSelector] = useState(false);
+
+  // Unidades de medida disponibles según la tabla
+  const unidadesMedida = [
+    { id: 1, descripcion: 'gramos' },
+    { id: 2, descripcion: 'Unidades' },
+    { id: 3, descripcion: 'piezas' },
+    { id: 4, descripcion: 'tazas' }
+  ];
 
   // Load recipe data if editing
   useEffect(() => {
@@ -97,21 +127,6 @@ const AddRecipeScreen = ({ navigation, route }) => {
     }
   };
 
-  const categoryOptions = [
-    'Desayuno',
-    'Almuerzo',
-    'Cena',
-    'Postre',
-    'Aperitivo',
-    'Sopa',
-    'Ensalada',
-    'Vegetariano',
-    'Vegano',
-    'Sin Gluten',
-    'Keto',
-    'Paleo',
-  ];
-
   const handleSelectImage = () => {
     ImagePicker.launchImageLibrary(
       {
@@ -133,7 +148,7 @@ const AddRecipeScreen = ({ navigation, route }) => {
   };
 
   const handleAddIngredient = () => {
-    setIngredients([...ingredients, { quantity: '', name: '' }]);
+    setIngredients([...ingredients, { quantity: '', name: '', unit: 'gramos' }]);
   };
 
   const handleUpdateIngredient = (field, text, index) => {
@@ -168,16 +183,6 @@ const AddRecipeScreen = ({ navigation, route }) => {
     }
   };
 
-  const handleToggleCategory = (category) => {
-    if (selectedCategories.includes(category)) {
-      setSelectedCategories(
-        selectedCategories.filter((cat) => cat !== category),
-      );
-    } else {
-      setSelectedCategories([...selectedCategories, category]);
-    }
-  };
-
   const loadExistingRecipe = (recipe) => {
     setTitle(recipe.title || recipe.nombreReceta || '');
     setDescription(recipe.description || recipe.descripcionReceta || '');
@@ -188,12 +193,14 @@ const AddRecipeScreen = ({ navigation, route }) => {
     if (recipe.ingredients && Array.isArray(recipe.ingredients)) {
       setIngredients(recipe.ingredients.map(ing => ({
         quantity: ing.amount || ing.cantidad || '',
-        name: ing.name || ing.nombre || ing.toString()
+        name: ing.name || ing.nombre || ing.toString(),
+        unit: ing.unidadMedida || 'gramos'
       })));
     } else if (recipe.ingredientes && Array.isArray(recipe.ingredientes)) {
       setIngredients(recipe.ingredientes.map(ing => ({
         quantity: ing.cantidad?.toString() || '',
-        name: ing.nombre || ing.toString()
+        name: ing.nombre || ing.toString(),
+        unit: ing.unidadMedida || 'gramos'
       })));
     }
     
@@ -226,8 +233,6 @@ const AddRecipeScreen = ({ navigation, route }) => {
         }
       }, 100); // Small delay to ensure recipeTypes are loaded
     }
-    
-    setSelectedCategories(recipe.tags || recipe.categories || []);
   };
 
   const updateRecipe = async (recipeData) => {
@@ -257,9 +262,7 @@ const AddRecipeScreen = ({ navigation, route }) => {
         usuario: {
           idUsuario: currentUser.idUsuario
         },
-        idTipo: {
-          idTipo: getCategoryId(recipeData.category)
-        }
+        idTipo: selectedRecipeType // Usar el tipo de receta seleccionado
       };
 
       console.log('Updating recipe with data:', updateData);
@@ -274,7 +277,7 @@ const AddRecipeScreen = ({ navigation, route }) => {
       Alert.alert(
         'Receta Actualizada',
         message,
-        [{ text: 'OK', onPress: () => navigation.goBack() }]
+        [{ text: 'OK', onPress: () => navigation.navigate('HomeTab') }]
       );
     } catch (error) {
       console.error('Error updating recipe:', error);
@@ -312,25 +315,6 @@ const AddRecipeScreen = ({ navigation, route }) => {
       console.error('Error getting user data:', error);
       return null;
     }
-  };
-
-  const getCategoryId = (categoryName) => {
-    // Map category names to IDs (you'll need to adjust these based on your backend)
-    const categoryMap = {
-      'Desayuno': 1,
-      'Almuerzo': 2,
-      'Cena': 3,
-      'Postre': 4,
-      'Aperitivo': 5,
-      'Sopa': 6,
-      'Ensalada': 7,
-      'Vegetariano': 8,
-      'Vegano': 9,
-      'Sin Gluten': 10,
-      'Keto': 11,
-      'Paleo': 12,
-    };
-    return categoryMap[categoryName] || 1;
   };
 
   const checkNetworkCost = async () => {
@@ -388,6 +372,7 @@ const AddRecipeScreen = ({ navigation, route }) => {
         id: Date.now().toString(),
         status: 'pending_upload',
         createdAt: new Date().toISOString(),
+        tipoReceta: selectedRecipeType, // Guardar el tipo de receta seleccionado
       };
       
       recipes.push(newRecipe);
@@ -396,7 +381,7 @@ const AddRecipeScreen = ({ navigation, route }) => {
       Alert.alert(
         'Receta Guardada',
         'Tu receta se ha guardado localmente y se subirá automáticamente cuando tengas conexión WiFi.',
-        [{ text: 'OK', onPress: () => navigation.goBack() }]
+        [{ text: 'OK', onPress: () => navigation.navigate('HomeTab') }]
       );
     } catch (error) {
       Alert.alert('Error', 'No se pudo guardar la receta localmente');
@@ -426,7 +411,7 @@ const AddRecipeScreen = ({ navigation, route }) => {
         usuario: {
           idUsuario: currentUser.idUsuario
         },
-        idTipo: selectedRecipeType || { idTipo: 1 }, // Use selected recipe type or default
+        idTipo: selectedRecipeType, // Usar directamente el tipo de receta seleccionado
         // Ingredientes correctly mapped to backend format
         ingredientes: recipeData.ingredients.map((ing, index) => {
           // Parse amount more safely
@@ -434,11 +419,14 @@ const AddRecipeScreen = ({ navigation, route }) => {
           const match = amountText.match(/^(\d*\.?\d+)\s*(.*)$/);
           
           let cantidad = 1;
-          let unidadMedida = 'unidad';
+          let unidadMedida = ing.unit || 'unidad';
           
           if (match) {
             cantidad = parseFloat(match[1]) || 1;
-            unidadMedida = match[2].trim() || 'unidad';
+            // Solo usar la unidad del texto si no hay una unidad seleccionada
+            if (!ing.unit && match[2].trim()) {
+              unidadMedida = match[2].trim();
+            }
           }
           
           return {
@@ -466,7 +454,7 @@ const AddRecipeScreen = ({ navigation, route }) => {
         Alert.alert(
           'Receta Enviada',
           'Tu receta ha sido enviada y está pendiente de aprobación. Una vez aprobada por nuestro equipo, será visible para otros usuarios.',
-          [{ text: 'OK', onPress: () => navigation.goBack() }]
+          [{ text: 'OK', onPress: () => navigation.navigate('HomeTab') }]
         );
       } else {
         throw new Error(response.message || 'Error al enviar la receta');
@@ -524,18 +512,17 @@ const AddRecipeScreen = ({ navigation, route }) => {
       title: title.trim(),
       description: description.trim(),
       servings: parseInt(servings) || 1,
-      imageUrl: recipeImage || 'https://images.unsplash.com/photo-1546548970-71785318a17b',
+      imageUrl: recipeImage || null,
       ingredients: ingredients.filter(ing => ing.name.trim()).map(ing => ({
         name: ing.name.trim(),
-        amount: ing.quantity.trim() || '1 unidad',
+        amount: ing.quantity.trim() || '1',
+        unit: ing.unit || 'unidad',
         preparation: ''
       })),
       instructions: instructions.filter(inst => inst.trim()).map((inst, index) => ({
         step: index + 1,
         text: inst.trim()
-      })),
-      tags: selectedCategories,
-      category: selectedCategories[0] || 'Otros',
+      }))
     };
 
     try {
@@ -645,32 +632,35 @@ const AddRecipeScreen = ({ navigation, route }) => {
               keyboardType="number-pad"
             />
 
-
-
-            <Text style={styles.labelText}>Categorías</Text>
+            <Text style={styles.labelText}>Tipo de Receta</Text>
             <View style={styles.categoriesContainer}>
-              {categoryOptions.map((category) => (
+              {recipeTypes.map((tipo) => (
                 <TouchableOpacity
-                  key={category}
+                  key={tipo.idTipo}
                   style={[
                     styles.categoryTag,
-                    selectedCategories.includes(category) &&
+                    selectedRecipeType && selectedRecipeType.idTipo === tipo.idTipo &&
                       styles.selectedCategory,
                   ]}
-                  onPress={() => handleToggleCategory(category)}
+                  onPress={() => setSelectedRecipeType(tipo)}
                 >
                   <Text
                     style={[
                       styles.categoryText,
-                      selectedCategories.includes(category) &&
+                      selectedRecipeType && selectedRecipeType.idTipo === tipo.idTipo &&
                         styles.selectedCategoryText,
                     ]}
                   >
-                    {category}
+                    {tipo.descripcion}
                   </Text>
                 </TouchableOpacity>
               ))}
             </View>
+            {selectedRecipeType && (
+              <Text style={styles.infoText}>
+                Tipo de receta seleccionado: <Text style={styles.highlightText}>{selectedRecipeType.descripcion}</Text>
+              </Text>
+            )}
 
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Ingredientes</Text>
@@ -691,7 +681,18 @@ const AddRecipeScreen = ({ navigation, route }) => {
                     onChangeText={(text) => handleUpdateIngredient('quantity', text, index)}
                     placeholder="Cantidad"
                     placeholderTextColor={Colors.textLight}
+                    keyboardType="numeric"
                   />
+                  <TouchableOpacity
+                    style={styles.unitPickerButton}
+                    onPress={() => {
+                      setCurrentEditingIngredient(index);
+                      setShowUnitSelector(true);
+                    }}
+                  >
+                    <Text style={styles.unitLabelText}>{ingredient.unit}</Text>
+                    <Icon name="chevron-down" size={16} color={Colors.primary} />
+                  </TouchableOpacity>
                   <TextInput
                     style={styles.ingredientNameInput}
                     value={ingredient.name}
@@ -769,6 +770,62 @@ const AddRecipeScreen = ({ navigation, route }) => {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* Modal selector de unidades */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={showUnitSelector}
+        onRequestClose={() => setShowUnitSelector(false)}
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Seleccionar unidad</Text>
+            
+            {unidadesMedida.map((unidad) => (
+              <TouchableOpacity 
+                key={unidad.id} 
+                style={[
+                  styles.unitOption,
+                  currentEditingIngredient !== null && 
+                  ingredients[currentEditingIngredient]?.unit === unidad.descripcion &&
+                  styles.selectedUnitOption
+                ]}
+                onPress={() => {
+                  if (currentEditingIngredient !== null) {
+                    const updatedIngredients = [...ingredients];
+                    updatedIngredients[currentEditingIngredient].unit = unidad.descripcion;
+                    setIngredients(updatedIngredients);
+                  }
+                  setShowUnitSelector(false);
+                }}
+              >
+                <Text 
+                  style={[
+                    styles.unitOptionText,
+                    currentEditingIngredient !== null &&
+                    ingredients[currentEditingIngredient]?.unit === unidad.descripcion &&
+                    styles.selectedUnitOptionText
+                  ]}
+                >
+                  {unidad.descripcion}
+                </Text>
+                {currentEditingIngredient !== null && 
+                 ingredients[currentEditingIngredient]?.unit === unidad.descripcion && (
+                  <Icon name="check" size={16} color={Colors.card} />
+                )}
+              </TouchableOpacity>
+            ))}
+            
+            <TouchableOpacity 
+              style={styles.closeButton}
+              onPress={() => setShowUnitSelector(false)}
+            >
+              <Text style={styles.closeButtonText}>Cancelar</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -914,7 +971,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   quantityInput: {
-    width: 80,
+    width: 90,
     height: Metrics.inputHeight,
     borderWidth: 1,
     borderColor: Colors.border,
@@ -922,7 +979,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: Metrics.baseSpacing,
     backgroundColor: Colors.card,
     color: Colors.textDark,
-    marginRight: Metrics.baseSpacing,
+    marginRight: 0,
+  },
+  unitPickerButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    height: Metrics.inputHeight,
+    width: 90,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: Metrics.baseBorderRadius,
+    backgroundColor: Colors.card,
+    paddingHorizontal: 10,
+    marginLeft: 10,
+    marginRight: 10,
   },
   ingredientNameInput: {
     flex: 1,
@@ -975,6 +1046,77 @@ const styles = StyleSheet.create({
   saveRecipeButton: {
     marginTop: Metrics.largeSpacing,
     marginBottom: Metrics.xxLargeSpacing,
+  },
+  modalContainer: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: Colors.card,
+    padding: Metrics.mediumSpacing,
+    borderRadius: Metrics.mediumBorderRadius,
+    width: '80%',
+    maxHeight: '80%',
+  },
+  modalTitle: {
+    fontSize: Metrics.mediumFontSize,
+    fontWeight: '600',
+    color: Colors.textDark,
+    marginBottom: Metrics.mediumSpacing,
+    textAlign: 'center',
+  },
+  unitOption: {
+    padding: Metrics.baseSpacing,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: Metrics.baseBorderRadius,
+    marginBottom: Metrics.baseSpacing,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  unitOptionText: {
+    fontSize: Metrics.baseFontSize,
+    color: Colors.textDark,
+    padding: 10,
+  },
+  closeButton: {
+    backgroundColor: Colors.primary,
+    padding: Metrics.mediumSpacing,
+    borderRadius: Metrics.baseBorderRadius,
+    alignItems: 'center',
+    marginTop: Metrics.baseSpacing,
+  },
+  closeButtonText: {
+    fontSize: Metrics.baseFontSize,
+    fontWeight: '600',
+    color: Colors.card,
+  },
+  selectedUnitOption: {
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
+  },
+  selectedUnitOptionText: {
+    color: Colors.primary,
+    fontWeight: '600',
+  },
+  unitLabelText: {
+    fontSize: Metrics.smallFontSize,
+    color: Colors.textDark,
+    marginRight: 4,
+  },
+  infoText: {
+    fontSize: Metrics.smallFontSize,
+    color: Colors.textMedium,
+    marginBottom: Metrics.baseSpacing,
+    marginTop: -Metrics.smallSpacing,
+    paddingHorizontal: 4,
+  },
+  highlightText: {
+    fontWeight: '600',
+    color: Colors.primary,
   },
 });
 

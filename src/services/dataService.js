@@ -10,7 +10,7 @@ export function mapBackendRecipe(receta) {
     nombreReceta: receta.nombreReceta,
     description: receta.descripcionReceta,
     descripcionReceta: receta.descripcionReceta,
-    imageUrl: receta.fotoPrincipal || 'https://via.placeholder.com/300x200?text=Recipe',
+    imageUrl: receta.fotoPrincipal || null,
     fotoPrincipal: receta.fotoPrincipal,
     servings: receta.porciones,
     porciones: receta.porciones,
@@ -385,8 +385,70 @@ class DataService {
 
   async createRecipe(recipeData) {
     try {
+      console.log('Creating recipe with data:', recipeData);
+      
       if (this.useBackend) {
-        return await api.recipes.create(recipeData);
+        // Formatear datos para el nuevo endpoint
+        const formattedData = {
+          nombreReceta: recipeData.title || recipeData.nombreReceta,
+          descripcionReceta: recipeData.description || recipeData.descripcionReceta,
+          fotoPrincipal: recipeData.imageUrl || recipeData.fotoPrincipal,
+          porciones: parseInt(recipeData.servings || recipeData.porciones || 1),
+          cantidadPersonas: parseInt(recipeData.servings || recipeData.cantidadPersonas || 1),
+          instrucciones: Array.isArray(recipeData.instructions) 
+            ? recipeData.instructions.map(i => i.text || i).join('\n')
+            : (recipeData.instructions || recipeData.instrucciones || ''),
+          usuario: {
+            idUsuario: recipeData.user?.id || recipeData.usuario?.idUsuario || recipeData.idUsuario
+          },
+          idTipo: recipeData.tipoReceta || recipeData.idTipo || { idTipo: 1 },
+          ingredientes: (recipeData.ingredients || recipeData.ingredientes || []).map(ing => {
+            // Normalizar ingrediente
+            if (typeof ing === 'string') {
+              return {
+                nombre: ing,
+                cantidad: 1,
+                unidadMedida: 'unidad'
+              };
+            }
+            
+            // Extraer cantidad y unidad desde amount si existe
+            let cantidad = 1;
+            let unidadMedida = 'unidad';
+            
+            if (ing.amount) {
+              const match = ing.amount.match(/^(\d*\.?\d+)\s*(.*)$/);
+              if (match) {
+                cantidad = parseFloat(match[1]) || 1;
+                unidadMedida = match[2].trim() || 'unidad';
+              }
+            } else if (ing.cantidad) {
+              cantidad = parseFloat(ing.cantidad) || 1;
+              unidadMedida = ing.unidadMedida || 'unidad';
+            }
+            
+            return {
+              nombre: ing.name || ing.nombre,
+              cantidad: cantidad,
+              unidadMedida: unidadMedida
+            };
+          })
+        };
+        
+        console.log('Formatted recipe data:', formattedData);
+        
+        // Intentar con el nuevo endpoint primero
+        try {
+          const response = await api.recipes.create(formattedData);
+          console.log('Recipe created successfully:', response);
+          return response;
+        } catch (primaryError) {
+          console.log('Primary create endpoint failed:', primaryError);
+          // Intentar con el endpoint alternativo
+          const altResponse = await api.recipes.createAlternative(formattedData);
+          console.log('Recipe created with alternative endpoint:', altResponse);
+          return altResponse;
+        }
       }
     } catch (error) {
       console.log('Failed to create recipe on backend:', error);

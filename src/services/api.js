@@ -312,8 +312,8 @@ export const api = {
     getWithoutIngredient: (ingrediente, orden = 'alfabetico') => apiService.get('/getSinIngredienteReceta', { ingrediente, orden }),
     getByUserProfile: (usuario, orden = 'alfabetico') => apiService.get('/getUsuarioReceta', { usuario, orden }),
     search: (nombre) => apiService.get('/buscarRecetas', { nombre }),
-    create: (recipeData) => apiService.post('/CargarNuevasRecetas', recipeData),
-    createAlternative: (recipeData) => apiService.post('/publicarRecetas', recipeData), // Alternative endpoint
+    create: (recipeData) => apiService.post('/crearRecetaConIngredientes', recipeData),
+    createAlternative: (recipeData) => apiService.post('/CargarNuevasRecetas', recipeData), // Alternative endpoint
     createWithFiles: (receta, files) => apiService.uploadFile('/cargarReceta', files[0], receta),
     publish: (recipeData) => apiService.post('/publicarRecetas', recipeData),
     update: (idReceta, recipeData) => apiService.put(`/recetas/${idReceta}`, recipeData),

@@ -86,11 +86,17 @@ const RecipeCard = ({
         onPress={handlePress}
         activeOpacity={0.8}
       >
-        <Image
-          source={{ uri: imageUrl }}
-          style={styles.gridImage}
-          resizeMode="cover"
-        />
+        {imageUrl ? (
+          <Image
+            source={{ uri: imageUrl }}
+            style={styles.gridImage}
+            resizeMode="cover"
+          />
+        ) : (
+          <View style={[styles.gridImage, styles.noImageContainer]}>
+            <Icon name="image" size={30} color={Colors.textLight} />
+          </View>
+        )}
         <View style={styles.gridContent}>
           <Text style={styles.title} numberOfLines={1}>
             {title}
@@ -125,11 +131,17 @@ const RecipeCard = ({
       onPress={handlePress}
       activeOpacity={0.8}
     >
-      <Image
-        source={{ uri: imageUrl }}
-        style={styles.listImage}
-        resizeMode="cover"
-      />
+      {imageUrl ? (
+        <Image
+          source={{ uri: imageUrl }}
+          style={styles.listImage}
+          resizeMode="cover"
+        />
+      ) : (
+        <View style={[styles.listImage, styles.noImageContainer]}>
+          <Icon name="image" size={24} color={Colors.textLight} />
+        </View>
+      )}
       <View style={styles.listContent}>
         <Text style={styles.title} numberOfLines={2}>
           {title}
@@ -248,6 +260,11 @@ const styles = StyleSheet.create({
   },
   metaText: {
     fontSize: Metrics.smallFontSize,
+  },
+  noImageContainer: {
+    backgroundColor: Colors.background,
+    justifyContent: 'center',
+    alignItems: 'center',
     color: Colors.textDark,
     marginLeft: Metrics.smallSpacing,
   },

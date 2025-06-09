@@ -23,20 +23,13 @@ import Colors from '../../themes/colors';
 import Metrics from '../../themes/metrics';
 import { AuthContext } from '../../context/AuthContext';
 import dataService from '../../services/dataService';
+import { api } from '../../services/api';
 
-// Filtros de categorías
-const categories = [
-  'Todas las Recetas',
-  'Desayuno',
-  'Almuerzo',
-  'Cena',
-  'Postres',
-  'Aperitivos',
-  'Bebidas',
-];
+// Categoría por defecto
+const DEFAULT_CATEGORY = 'Todas las Recetas';
 
 const HomeScreen = ({ navigation }) => {
-  const [selectedCategory, setSelectedCategory] = useState('Todas las Recetas');
+  const [selectedCategory, setSelectedCategory] = useState(DEFAULT_CATEGORY);
   const [searchQuery, setSearchQuery] = useState('');
   const [latestRecipes, setLatestRecipes] = useState([]);
   const [popularRecipes, setPopularRecipes] = useState([]);
@@ -48,6 +41,8 @@ const HomeScreen = ({ navigation }) => {
   const [backendAvailable, setBackendAvailable] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
+  const [recipeTypes, setRecipeTypes] = useState([]);
+  const [categories, setCategories] = useState([DEFAULT_CATEGORY]);
 
   // Initialize data service and load recipes
   useEffect(() => {
@@ -67,6 +62,10 @@ const HomeScreen = ({ navigation }) => {
       setBackendAvailable(dataService.useBackend);
       
       console.log(`📡 Backend disponible: ${dataService.useBackend}`);
+
+      // Load recipe types
+      console.log('📥 Cargando tipos de recetas...');
+      await loadRecipeTypes();
 
       // Load latest recipes (3 most recent)
       console.log('📥 Cargando últimas recetas...');
@@ -107,6 +106,54 @@ const HomeScreen = ({ navigation }) => {
     }
   };
 
+  const loadRecipeTypes = async () => {
+    try {
+      // Usar la API para obtener los tipos de recetas
+      const response = await api.recipes.getTypes();
+      if (response && response.data) {
+        const types = response.data;
+        console.log(`✅ Tipos de recetas cargados: ${types.length}`);
+        
+        // Guardar los tipos de recetas
+        setRecipeTypes(types);
+        
+        // Crear la lista de categorías con "Todas las Recetas" al inicio
+        const categoryList = [DEFAULT_CATEGORY];
+        types.forEach(type => {
+          if (type.descripcion) {
+            categoryList.push(type.descripcion);
+          }
+        });
+        
+        setCategories(categoryList);
+      } else {
+        console.log('⚠️ No se pudieron cargar los tipos de recetas');
+        // Fallback a categorías predefinidas
+        setCategories([
+          DEFAULT_CATEGORY,
+          'Postres',
+          'Ensaladas',
+          'Sopas',
+          'Cena',
+          'Desayuno',
+          'Almuerzo',
+        ]);
+      }
+    } catch (error) {
+      console.error('❌ Error loading recipe types:', error);
+      // Fallback a categorías predefinidas
+      setCategories([
+        DEFAULT_CATEGORY,
+        'Postres',
+        'Ensaladas',
+        'Sopas',
+        'Cena',
+        'Desayuno',
+        'Almuerzo',
+      ]);
+    }
+  };
+
   const setupNetworkListener = () => {
     const unsubscribe = NetInfo.addEventListener(state => {
       console.log(`🌐 Estado de conexión: ${state.isConnected}`);
@@ -132,6 +179,10 @@ const HomeScreen = ({ navigation }) => {
   const loadRecipes = async () => {
     try {
       console.log('🔄 Recargando recetas...');
+      
+      // Recargar tipos de recetas
+      await loadRecipeTypes();
+      
       const latest = await dataService.getLatestRecipes();
       const allRecipes = await dataService.getAllRecipes();
       
@@ -162,13 +213,17 @@ const HomeScreen = ({ navigation }) => {
   const filterRecipesByCategory = (category, latest = latestRecipes, popular = popularRecipes) => {
     console.log(`🔍 Filtrando por categoría: ${category}`);
     
-    if (category === 'Todas las Recetas') {
+    if (category === DEFAULT_CATEGORY) {
       setFilteredPopularRecipes(popular);
       setFilteredRecentRecipes(latest);
     } else {
       const categoryFilter = (recipe) => {
         // Handle different data structures from backend vs mock
-        const recipeCategory = recipe.tipoReceta?.descripcion || recipe.category;
+        const recipeCategory = recipe.tipoReceta?.descripcion || 
+                              recipe.idTipo?.descripcion || 
+                              recipe.tipo?.descripcion || 
+                              recipe.category;
+        
         return recipeCategory === category;
       };
       

@@ -60,7 +60,7 @@ const RecipeDetailScreen = ({ navigation, route }) => {
   const [recipe, setRecipe] = useState({
     id: recipeFromParams.id || '0',
     title: recipeFromParams.title || 'Receta sin título',
-    imageUrl: recipeFromParams.imageUrl || 'https://images.unsplash.com/photo-1527515637462-cff94eecc1ac',
+    imageUrl: recipeFromParams.imageUrl || null,
     rating: recipeFromParams.rating || 4.5,
     reviews: recipeFromParams.reviews || 0,
 
@@ -714,11 +714,18 @@ const RecipeDetailScreen = ({ navigation, route }) => {
           </View>
         </View>
         
-        <Image
-          source={{ uri: recipe.imageUrl }}
-          style={styles.recipeImage}
-          resizeMode="cover"
-        />
+        {recipe.imageUrl ? (
+          <Image
+            source={{ uri: recipe.imageUrl }}
+            style={styles.recipeImage}
+            resizeMode="cover"
+          />
+        ) : (
+          <View style={[styles.recipeImage, styles.noImageContainer]}>
+            <Icon name="image" size={40} color={Colors.textLight} />
+            <Text style={styles.noImageText}>Sin imagen</Text>
+          </View>
+        )}
         
         <View style={styles.content}>
           <Text style={styles.title}>{recipe.title}</Text>
@@ -1183,6 +1190,16 @@ const styles = StyleSheet.create({
   recipeImage: {
     width,
     height: 300,
+  },
+  noImageContainer: {
+    backgroundColor: Colors.background,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  noImageText: {
+    fontSize: Metrics.baseFontSize,
+    color: Colors.textLight,
+    marginTop: Metrics.smallSpacing,
   },
   content: {
     backgroundColor: Colors.card,
