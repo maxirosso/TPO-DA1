@@ -2,8 +2,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import NetInfo from '@react-native-community/netinfo';
 import apiConfig from '../config/api.config';
 
-// Base configuration - Updated to match the Spring Boot backend
-const API_TIMEOUT = 10000; // 10 seconds
+// Configuración base 
+const API_TIMEOUT = 10000; 
 
 class ApiService {
   constructor() {
@@ -18,18 +18,18 @@ class ApiService {
     return apiConfig.API_BASE_URL;
   }
 
-  // Get auth token from storage
+  // Obtener token de autenticación del almacenamiento
   async getAuthToken() {
     try {
       const token = await AsyncStorage.getItem('user_token');
       return token;
     } catch (error) {
-      console.log('Error getting auth token:', error);
+      console.log('Error al obtener token de autenticación:', error);
       return null;
     }
   }
 
-  // Set auth token in storage
+  // Guardar token de autenticación en el almacenamiento
   async setAuthToken(token) {
     try {
       if (token) {
@@ -38,11 +38,11 @@ class ApiService {
         await AsyncStorage.removeItem('user_token');
       }
     } catch (error) {
-      console.log('Error setting auth token:', error);
+      console.log('Error al guardar token de autenticación:', error);
     }
   }
   
-  // Check network connectivity
+  // Verificar conectividad de red
   async isConnected() {
     try {
       const netInfo = await NetInfo.fetch();
@@ -52,7 +52,7 @@ class ApiService {
     }
   }
 
-  // Build headers with auth token
+  // Construir cabeceras con token de autenticación
   async buildHeaders(customHeaders = {}) {
     const token = await this.getAuthToken();
     const headers = { ...this.defaultHeaders, ...customHeaders };
@@ -64,7 +64,7 @@ class ApiService {
     return headers;
   }
 
-  // Generic request method
+  // Método de solicitud genérico
   async request(endpoint, options = {}) {
     const url = `${this.baseURL}${endpoint}`;
     const headers = await this.buildHeaders(options.headers);
@@ -76,7 +76,7 @@ class ApiService {
       ...options,
     };
 
-    // Add body for POST/PUT requests
+    // Agregar cuerpo para solicitudes POST/PUT
     if (
       config.body &&
       typeof config.body === 'object' &&
@@ -88,10 +88,10 @@ class ApiService {
     }
 
     try {
-      // Check connectivity first
+      // Verificar conectividad primero
       const connected = await this.isConnected();
       if (!connected) {
-        throw new Error('No internet connection');
+        throw new Error('Sin conexión a internet');
       }
 
       const controller = new AbortController();
@@ -104,12 +104,12 @@ class ApiService {
       
       clearTimeout(timeoutId);
 
-      // Handle HTTP errors
+      // Manejar errores HTTP
       if (!response.ok) {
         let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
         try {
           const errorData = await response.text();
-          // Try to parse as JSON first, fallback to text
+          // Intentar analizar como JSON primero, si falla usar texto
           try {
             const jsonError = JSON.parse(errorData);
             errorMessage = jsonError.message || jsonError.error || errorData;
@@ -117,12 +117,12 @@ class ApiService {
             errorMessage = errorData || errorMessage;
           }
         } catch (textError) {
-          // Use default error message if we can't read response
+          // Usar mensaje de error predeterminado si no podemos leer la respuesta
         }
         throw new Error(errorMessage);
       }
 
-      // Parse response based on content type
+      // Analizar respuesta según el tipo de contenido
       const contentType = response.headers.get('content-type');
       let data;
       
@@ -130,9 +130,9 @@ class ApiService {
         if (contentType && contentType.includes('application/json')) {
           data = await response.json();
         } else {
-          // Handle text responses (like success messages)
+          // Manejar respuestas de texto (como mensajes de éxito)
           const textData = await response.text();
-          // Try to parse as JSON if possible, otherwise keep as text
+          // Intentar analizar como JSON si es posible, de lo contrario mantener como texto
           try {
             data = JSON.parse(textData);
           } catch (jsonError) {
@@ -140,30 +140,30 @@ class ApiService {
           }
         }
       } catch (parseError) {
-        console.warn('Error parsing response:', parseError);
-        // Fallback to empty response
+        console.warn('Error al analizar respuesta:', parseError);
+        // Respuesta vacía como alternativa
         data = '';
       }
       
       return { success: true, data };
 
     } catch (error) {
-      console.log(`API Error [${config.method} ${url}]:`, error.message);
+      console.log(`Error de API [${config.method} ${url}]:`, error.message);
       
-      // Handle specific error types
+      // Manejar tipos de errores específicos
       if (error.name === 'AbortError') {
-        throw new Error('Request timeout');
+        throw new Error('Tiempo de espera agotado');
       }
       
-      if (error.message === 'No internet connection') {
-        throw new Error('No internet connection');
+      if (error.message === 'Sin conexión a internet') {
+        throw new Error('Sin conexión a internet');
       }
       
       throw error;
     }
   }
 
-  // GET request
+  // Solicitud GET
   async get(endpoint, params = {}) {
     const queryString = new URLSearchParams(params).toString();
     const url = queryString ? `${endpoint}?${queryString}` : endpoint;
@@ -171,7 +171,7 @@ class ApiService {
     return this.request(url, { method: 'GET' });
   }
 
-  // POST request
+  // Solicitud POST
   async post(endpoint, data = {}) {
     return this.request(endpoint, {
       method: 'POST',
@@ -179,11 +179,11 @@ class ApiService {
     });
   }
 
-  // POST request with form data (for Spring Boot @RequestParam)
+  // Solicitud POST con datos de formulario (para Spring Boot @RequestParam)
   async postForm(endpoint, data = {}) {
     const formData = new URLSearchParams();
     Object.keys(data).forEach(key => {
-      // Handle null and undefined values
+      // Manejar valores nulos e indefinidos
       const value = data[key];
       if (value !== null && value !== undefined) {
         formData.append(key, value.toString());
@@ -199,7 +199,7 @@ class ApiService {
     });
   }
 
-  // PUT request
+  // Solicitud PUT
   async put(endpoint, data = {}, options = {}) {
     const queryString = options.params ? new URLSearchParams(options.params).toString() : '';
     const url = queryString ? `${endpoint}?${queryString}` : endpoint;
@@ -210,11 +210,11 @@ class ApiService {
     });
   }
 
-  // PUT request with form data (for Spring Boot @RequestParam)
+  // Solicitud PUT con datos de formulario (para Spring Boot @RequestParam)
   async putForm(endpoint, data = {}) {
     const formData = new URLSearchParams();
     Object.keys(data).forEach(key => {
-      // Handle null and undefined values
+      // Manejar valores nulos e indefinidos
       const value = data[key];
       if (value !== null && value !== undefined) {
         formData.append(key, value.toString());
@@ -230,23 +230,23 @@ class ApiService {
     });
   }
 
-  // DELETE request
+  // Solicitud DELETE
   async delete(endpoint) {
     return this.request(endpoint, { method: 'DELETE' });
   }
 
-  // Upload file (for recipe images)
+  // Cargar archivo (para imágenes de recetas)
   async uploadFile(endpoint, file, additionalData = {}) {
     const formData = new FormData();
     
-    // Add file
+    // Agregar archivo
     formData.append('archivos', {
       uri: file.uri,
       type: file.type || 'image/jpeg',
       name: file.name || 'image.jpg',
     });
 
-    // Add additional data
+    // Agregar datos adicionales
     Object.keys(additionalData).forEach(key => {
       formData.append(key, additionalData[key]);
     });
@@ -262,31 +262,31 @@ class ApiService {
     });
   }
 
-  // Scale function
+  // Función de escalado
   async scale(idReceta, tipo, porciones) {
-    console.log('API scale called with:', { idReceta, tipo, porciones });
+    console.log('API scale llamada con:', { idReceta, tipo, porciones });
     const endpoint = `/ajustarPorciones/${idReceta}`;
-    console.log('Scale endpoint:', endpoint);
+    console.log('Endpoint de escalado:', endpoint);
     return this.get(endpoint, { tipo, porciones });
   }
 
-  // Approve method
+  // Método de aprobación
   async approve(idReceta, aprobar = true) {
-    console.log('API approve called with:', { idReceta, aprobar });
+    console.log('API approve llamada con:', { idReceta, aprobar });
     const params = { aprobar: aprobar.toString() };
-    console.log('API approve params:', params);
+    console.log('Parámetros de API approve:', params);
     return this.put(`/aprobarReceta/${idReceta}`, {}, { params });
   }
 }
 
-// Create singleton instance
+// Crear instancia singleton
 const apiService = new ApiService();
 
 export default apiService;
 
-// Convenience methods matching the Spring Boot backend endpoints
+
 export const api = {
-  // Auth endpoints (matching Spring Boot controller)
+
   auth: {
     login: (mail, password) => apiService.postForm('/login', { mail, password }),
     register: (userData) => apiService.post('/registrarUsuario', userData),
@@ -300,7 +300,7 @@ export const api = {
     createAdminUser: (userData) => apiService.post('/crearUsuarioAdmin', userData),
   },
 
-  // Endpoints de recetas (correspondientes al controlador de Spring Boot)
+  // Endpoints de recetas 
   recipes: {
     getAll: () => apiService.get('/getAllRecetas'),
     getLatest: () => apiService.get('/ultimasRecetas', { timestamp: new Date().getTime() }), // Las 3 últimas recetas
@@ -333,7 +333,7 @@ export const api = {
     getTypes: () => apiService.get('/getTiposReceta'),
   },
 
-  // Endpoints de cursos (correspondientes al controlador de Spring Boot)
+  // Endpoints de cursos 
   courses: {
     getAll: (idUsuario) => apiService.get('/getCursosDisponibles', { idUsuario }),
     getAvailable: (idUsuario) => apiService.get('/getCursosDisponibles', { idUsuario }),
@@ -345,19 +345,16 @@ export const api = {
     unenroll: (idAlumno, idCronograma) => apiService.delete('/cancelarInscripcion', { idAlumno, idCronograma }),
     cancelEnrollment: (idInscripcion, reintegroEnTarjeta) => 
       apiService.postForm(`/baja/${idInscripcion}`, { reintegroEnTarjeta }),
-    // Nota: endpoint markAttendance no implementado en el controlador del backend
   },
 
-  // Nota: Endpoints de sedes no implementados en el controlador del backend
 
   // Endpoints de estudiantes
   students: {
     register: (mail, idUsuario, medioPago, dniFrente, dniFondo, tramite) => 
       apiService.postForm('/registrarAlumno', { mail, idUsuario, medioPago, dniFrente, dniFondo, tramite }),
-    // Nota: endpoints getById y getAll no implementados en el controlador del backend
+    // todavia no esta implementado del todo. 
   },
 
-  // Nota: Endpoints de tipo de receta no implementados en el controlador del backend
 
   // Endpoints de calificaciones
   ratings: {
@@ -372,7 +369,7 @@ export const api = {
     updateProfile: (userData) => apiService.put('/usuarios/perfil', userData),
   },
 
-  // Endpoints de reseñas (correspondientes al controlador de Spring Boot)
+  // Endpoints de reseñas 
   reviews: {
     getByRecipe: (idReceta) => apiService.get(`/getValoracionReceta/${idReceta}`),
     create: (idReceta, reviewData, idUsuario) => {
@@ -398,7 +395,7 @@ export const api = {
     authorize: (idCalificacion) => apiService.put(`/autorizarComentario/${idCalificacion}`),
   },
 
-  // Recipe list endpoints (Lista de recetas a intentar)
+  // Endpoints de lista de recetas (Lista de recetas a intentar)
   recipeList: {
     add: (idUsuario, receta) => apiService.post(`/lista/${idUsuario}`, receta),
     addById: (idReceta) => apiService.post(`/agregarReceta/${idReceta}`),
@@ -430,7 +427,7 @@ export const api = {
     },
   },
 
-  // Saved recipes endpoints (Recetas guardadas)
+  // Endpoints de recetas guardadas
   savedRecipes: {
     save: (idReceta) => {
       console.log(`[API] Guardando receta ${idReceta}`);
@@ -467,7 +464,7 @@ export const api = {
     },
   },
 
-  // Utility endpoints
+  // Endpoints de utilidad
   utils: {
     checkConnection: () => apiService.get('/'),
   },

@@ -34,7 +34,7 @@ export const initializeTestUsers = async () => {
     
     return pendingUsers;
   } catch (error) {
-    console.error('Error initializing test users:', error);
+    console.error('Error al inicializar usuarios de prueba:', error);
     return {};
   }
 };
@@ -52,7 +52,7 @@ const markEmailVerified = async (email) => {
     
     return true;
   } catch (error) {
-    console.error('Error marking email as verified:', error);
+    console.error('Error al marcar email como verificado:', error);
     return false;
   }
 };
@@ -65,7 +65,7 @@ export const resetLocalDatabase = async () => {
     await initializeTestUsers();
     return true;
   } catch (error) {
-    console.error('Error resetting local database:', error);
+    console.error('Error al resetear la base de datos local:', error);
     return false;
   }
 };
@@ -78,40 +78,40 @@ export const authService = {
     try {
       await initializeTestUsers();
       try {
-        // Always use Axios for login to ensure correct form data
+        // Siempre usar Axios para login para asegurar datos de formulario correctos
         const params = new URLSearchParams();
         params.append('mail', email);
         params.append('password', password);
-        console.log('Login request body:', params.toString()); // Debug log
+        console.log('Cuerpo de solicitud de login:', params.toString()); // Registro de depuración
         const response = await axios.post(
           `${apiConfig.API_BASE_URL}/login`,
-          params.toString(), // send as plain string
+          params.toString(), // enviar como cadena de texto plana
           { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
         );
-        console.log('Login response:', response.data); // Debug log to see JWT token
+        console.log('Respuesta de login:', response.data); // Registro de depuración para ver token JWT
         if (response.data) {
           const responseData = response.data;
-          // Handle the new JWT response format
+          // Manejar el nuevo formato de respuesta JWT
           let user, token;
           
           if (responseData.user && responseData.token) {
-            // New JWT format
+            // Nuevo formato JWT
             user = responseData.user;
             token = responseData.token;
           } else {
-            // Fallback for old format
+            // Formato antiguo alternativo
             user = responseData;
             token = null;
           }
           
-          // Map backend user data to expected format
+          // Mapear datos de usuario del backend al formato esperado
           const mappedUser = {
             id: user.idUsuario || user.id,
             nombre: user.nombre || user.name,
             mail: user.mail || user.email,
             nickname: user.nickname || user.username,
             tipo: user.tipo || 'comun', // comun, visitante, alumno
-            rol: user.rol, // Add rol field from backend
+            rol: user.rol, // Añadir campo rol del backend
             ...user
           };
           
@@ -122,16 +122,16 @@ export const authService = {
           
           return { user: mappedUser, token: token };
         } else {
-          throw new Error('Invalid response from server');
+          throw new Error('Respuesta inválida del servidor');
         }
       } catch (error) {
-        console.error('Login error with backend:', error);
+        console.error('Error de login con el backend:', error);
         if (error.response && error.response.status === 401) {
           const localAuthResult = await attemptLocalAuthentication(email, password);
           if (localAuthResult) {
             return localAuthResult;
           }
-          throw new Error('Invalid credentials');
+          throw new Error('Credenciales inválidas');
         }
         const localAuthResult = await attemptLocalAuthentication(email, password);
         if (localAuthResult) {
@@ -140,20 +140,20 @@ export const authService = {
         throw error;
       }
     } catch (error) {
-      console.error('Login error:', error);
+      console.error('Error de login:', error);
       throw error;
     }
   },
   
   register: async (userData) => {
     try {
-      // Validate username (nickname) is present and non-empty
+      // Validar que el nombre de usuario (nickname) esté presente y no esté vacío
       if (!userData.username || typeof userData.username !== 'string' || userData.username.trim() === '') {
         throw new Error('El nombre de usuario (nickname) es obligatorio.');
       }
-      // Attempt registration with the backend using the correct endpoint and payload
+      // Intentar registro con el backend usando el endpoint y carga correctos
       try {
-        // Map frontend fields to backend expected fields
+        // Mapear campos del frontend a campos esperados por el backend
         const backendPayload = {
           mail: userData.email,
           password: userData.password,
@@ -164,26 +164,26 @@ export const authService = {
         if (response.data && typeof response.data === 'string' && response.data.includes('exitosamente')) {
           return { success: true };
         } else if (response.data && typeof response.data === 'string' && response.data.includes('Ya existe')) {
-          throw new Error('Email already registered');
+          throw new Error('Email ya registrado');
         } else if (response.data && typeof response.data === 'string' && response.data.includes('nickname')) {
           throw new Error('El nombre de usuario (nickname) es obligatorio.');
         } else {
-          throw new Error(response.data?.message || 'Error during registration');
+          throw new Error(response.data?.message || 'Error durante el registro');
         }
       } catch (error) {
-        console.error('Registration error with backend:', error);
+        console.error('Error de registro con el backend:', error);
         // Fallback a modo local para desarrollo/testing
         const { email, password, username, name } = userData;
         if (!username || typeof username !== 'string' || username.trim() === '') {
           throw new Error('El nombre de usuario (nickname) es obligatorio.');
         }
-        // Check if user already exists
+        // Verificar si el usuario ya existe
         const pendingUsersStr = await AsyncStorage.getItem(PENDING_USERS_KEY);
         const pendingUsers = pendingUsersStr ? JSON.parse(pendingUsersStr) : {};
         if (pendingUsers[email]) {
-          throw new Error('Email already registered');
+          throw new Error('Email ya registrado');
         }
-        // Store the new user data
+        // Almacenar los nuevos datos de usuario
         pendingUsers[email] = {
           id: Date.now().toString(),
           email,
@@ -193,14 +193,14 @@ export const authService = {
           createdAt: new Date().toISOString(),
           isVerified: true
         };
-        // Save to storage
+        // Guardar en almacenamiento
         await AsyncStorage.setItem(PENDING_USERS_KEY, JSON.stringify(pendingUsers));
-        // Auto-verify the email for development
+        // Auto-verificar el email para desarrollo
         await authService.markEmailAsVerified(email);
         return { email, success: true };
       }
     } catch (error) {
-      console.error('Registration error:', error);
+      console.error('Error de registro:', error);
       throw error;
     }
   },
@@ -212,13 +212,13 @@ export const authService = {
         await axios.post(`${apiConfig.API_BASE_URL}/auth/verify-email`, { email });
         return true;
       } catch (error) {
-        console.error('Error marking email as verified in backend:', error);
+        console.error('Error al marcar email como verificado en el backend:', error);
         
         // Fallback local
         return await markEmailVerified(email);
       }
     } catch (error) {
-      console.error('Error marking email as verified:', error);
+      console.error('Error al marcar email como verificado:', error);
       return false;
     }
   },
@@ -230,7 +230,7 @@ export const authService = {
       await AsyncStorage.removeItem(TOKEN_STORAGE_KEY);
       return true;
     } catch (error) {
-      console.error('Logout error:', error);
+      console.error('Error de cierre de sesión:', error);
       throw error;
     }
   },
@@ -243,7 +243,7 @@ export const authService = {
       }
       return null;
     } catch (error) {
-      console.error('Get current user error:', error);
+      console.error('Error al obtener usuario actual:', error);
       return null;
     }
   },
@@ -253,7 +253,7 @@ export const authService = {
       const token = await AsyncStorage.getItem(TOKEN_STORAGE_KEY);
       return !!token;
     } catch (error) {
-      console.error('Auth check error:', error);
+      console.error('Error en verificación de autenticación:', error);
       return false;
     }
   },
@@ -264,12 +264,12 @@ export const authService = {
         const response = await axios.post(`${apiConfig.API_BASE_URL}/auth/verify-code`, { email, code });
         return response.data && response.data.success;
       } catch (error) {
-        console.error('Error verifying code with backend:', error);
-        // Always return true for development fallback
+        console.error('Error al verificar código con el backend:', error);
+        // Siempre devolver true para desarrollo como fallback
         return true;
       }
     } catch (error) {
-      console.error('Error verifying code:', error);
+      console.error('Error al verificar código:', error);
       return false;
     }
   },
@@ -280,12 +280,12 @@ export const authService = {
         const response = await axios.post(`${apiConfig.API_BASE_URL}/auth/resend-code`, { email });
         return response.data && response.data.success;
       } catch (error) {
-        console.error('Error resending code with backend:', error);
-        // Always return true for development fallback
+        console.error('Error al reenviar código con el backend:', error);
+        // Siempre devolver true para desarrollo como fallback
         return true;
       }
     } catch (error) {
-      console.error('Error resending verification code:', error);
+      console.error('Error al reenviar código de verificación:', error);
       return false;
     }
   },
@@ -303,11 +303,11 @@ export const authService = {
         });
         return response.data && response.data.success;
       } catch (error) {
-        console.error('Complete profile error with backend:', error);
+        console.error('Error al completar perfil con el backend:', error);
         // Fallback local
         const pendingUsersStr = await AsyncStorage.getItem(PENDING_USERS_KEY);
         const pendingUsers = pendingUsersStr ? JSON.parse(pendingUsersStr) : {};
-        // Update user profile data
+        // Actualizar datos de perfil del usuario
         if (pendingUsers[email]) {
           pendingUsers[email] = {
             ...pendingUsers[email],
@@ -320,7 +320,7 @@ export const authService = {
         return false;
       }
     } catch (error) {
-      console.error('Error completing profile:', error);
+      console.error('Error al completar perfil:', error);
       return false;
     }
   },
@@ -332,30 +332,30 @@ export const authService = {
         const response = await axios.get(`${apiConfig.API_BASE_URL}/auth/check-username?username=${username}`);
         return response.data;
       } catch (error) {
-        console.error('Username check error with backend:', error);
+        console.error('Error al verificar nombre de usuario con el backend:', error);
         
         // Fallback local
         const pendingUsersStr = await AsyncStorage.getItem(PENDING_USERS_KEY);
         const pendingUsers = pendingUsersStr ? JSON.parse(pendingUsersStr) : {};
         
-        // Check if username is taken
+        // Verificar si el nombre de usuario está en uso
         const isTaken = Object.values(pendingUsers).some(user => user.username === username);
         
         if (!isTaken) {
           return { available: true, suggestions: [] };
         }
         
-        // Generate suggestions if username is taken
+        // Generar sugerencias si el nombre de usuario está en uso
         const suggestions = [];
-        const baseUsername = username.replace(/\d+$/, ''); // Remove any trailing numbers
+        const baseUsername = username.replace(/\d+$/, ''); // Eliminar cualquier número al final
         
-        // Add random numbers
+        // Añadir números aleatorios
         for (let i = 0; i < 3; i++) {
           const randomNum = Math.floor(Math.random() * 1000);
           suggestions.push(`${baseUsername}${randomNum}`);
         }
         
-        // Add current year
+        // Añadir año actual
         const currentYear = new Date().getFullYear();
         suggestions.push(`${baseUsername}${currentYear}`);
         
@@ -365,8 +365,8 @@ export const authService = {
         };
       }
     } catch (error) {
-      console.error('Error checking username availability:', error);
-      // Return a safe default to prevent app crashes
+      console.error('Error al verificar disponibilidad de nombre de usuario:', error);
+      // Devolver un valor predeterminado seguro para evitar fallos en la app
       return { available: true, suggestions: [] };
     }
   },
@@ -381,7 +381,7 @@ const attemptLocalAuthentication = async (email, password) => {
     const userData = pendingUsers[email];
     
     if (userData && userData.password === password) {
-      // Create user object for session
+      // Crear objeto de usuario para la sesión
       const sessionUser = {
         id: userData.id,
         name: userData.name || email.split('@')[0],
@@ -391,7 +391,7 @@ const attemptLocalAuthentication = async (email, password) => {
       
       const token = 'mock-jwt-token-' + Math.random().toString(36).substring(2);
       
-      // Store user data and token
+      // Almacenar datos de usuario y token
       await AsyncStorage.setItem(USER_STORAGE_KEY, JSON.stringify(sessionUser));
       await AsyncStorage.setItem(TOKEN_STORAGE_KEY, token);
       
@@ -400,7 +400,7 @@ const attemptLocalAuthentication = async (email, password) => {
     
     return null;
   } catch (error) {
-    console.error('Local authentication error:', error);
+    console.error('Error de autenticación local:', error);
     return null;
   }
 };
