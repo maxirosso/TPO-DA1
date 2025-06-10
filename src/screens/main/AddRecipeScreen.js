@@ -31,11 +31,11 @@ import dataService from '../../services/dataService';
 const AddRecipeScreen = ({ navigation, route }) => {
   const { isVisitor, user } = useContext(AuthContext);
   
-  // Get editing parameters from navigation
+  // Obtener parámetros de edición desde la navegación
   const editingRecipe = route?.params?.editingRecipe;
   const isEditing = route?.params?.isEditing || false;
   
-  // Redirect visitors to registration
+  // Redirigir visitantes al registro
   useEffect(() => {
     if (isVisitor) {
       Alert.alert(
@@ -70,7 +70,7 @@ const AddRecipeScreen = ({ navigation, route }) => {
     }, [isEditing, recipeTypes])
   );
 
-  // If visitor, don't render the screen content
+  // Si es visitante, no renderizar el contenido de la pantalla
   if (isVisitor) {
     return null;
   }
@@ -97,14 +97,14 @@ const AddRecipeScreen = ({ navigation, route }) => {
     { id: 4, descripcion: 'tazas' }
   ];
 
-  // Load recipe data if editing
+  // Cargar datos de receta si está en modo edición
   useEffect(() => {
     if (isEditing && editingRecipe) {
       loadExistingRecipe(editingRecipe);
     }
   }, [isEditing, editingRecipe]);
 
-  // Load recipe types from backend
+  // Cargar tipos de receta desde el backend
   useEffect(() => {
     loadRecipeTypes();
   }, []);
@@ -114,16 +114,16 @@ const AddRecipeScreen = ({ navigation, route }) => {
       const { api } = await import('../../services/api');
       const response = await api.recipes.getTypes();
       const types = response.data || response;
-      console.log('Loaded recipe types:', types);
+      console.log('Tipos de receta cargados:', types);
       setRecipeTypes(types);
       
-      // Set default type if none selected
+      // Establecer tipo por defecto si ninguno está seleccionado
       if (types.length > 0 && !selectedRecipeType) {
         setSelectedRecipeType(types[0]);
       }
     } catch (error) {
-      console.error('Error loading recipe types:', error);
-      // Fallback to a default type
+      console.error('Error al cargar tipos de receta:', error);
+      // Alternativa a un tipo por defecto
       const defaultTypes = [{ idTipo: 1, descripcion: 'Postres' }];
       setRecipeTypes(defaultTypes);
       setSelectedRecipeType(defaultTypes[0]);
@@ -139,13 +139,13 @@ const AddRecipeScreen = ({ navigation, route }) => {
         maxWidth: 800,
       },
       (response) => {
-        if (response.didCancel) {
-          return;
-        }
+              if (response.didCancel) {
+        return;
+      }
 
-        if (response.assets && response.assets.length > 0) {
-          setRecipeImage(response.assets[0].uri);
-        }
+      if (response.assets && response.assets.length > 0) {
+        setRecipeImage(response.assets[0].uri);
+      }
       },
     );
   };
@@ -194,7 +194,7 @@ const AddRecipeScreen = ({ navigation, route }) => {
     setServings(recipe.servings?.toString() || recipe.porciones?.toString() || '');
     setRecipeImage(recipe.imageUrl || recipe.fotoPrincipal);
     
-    // Handle ingredients
+    // Manejar ingredientes
     if (recipe.ingredients && Array.isArray(recipe.ingredients)) {
       console.log('Cargando ingredientes del formato frontend:', JSON.stringify(recipe.ingredients));
       const formattedIngredients = recipe.ingredients.map(ing => {
@@ -265,7 +265,7 @@ const AddRecipeScreen = ({ navigation, route }) => {
       setIngredients([{ quantity: '', name: '', unit: 'gramos' }]);
     }
     
-    // Handle instructions
+    // Manejar instrucciones
     if (recipe.instructions && Array.isArray(recipe.instructions)) {
       setInstructions(recipe.instructions.map(inst => inst.text || inst.toString()));
     } else if (recipe.instrucciones) {
@@ -276,12 +276,12 @@ const AddRecipeScreen = ({ navigation, route }) => {
       }
     }
     
-    // Handle recipe type - prefer actual type object over categories
+    // Manejar tipo de receta - preferir objeto de tipo real sobre categorías
     if (recipe.tipo || recipe.tipoReceta) {
       const recipeTypeFromData = recipe.tipo || recipe.tipoReceta;
-      console.log('Recipe type from data:', recipeTypeFromData);
+      console.log('Tipo de receta desde datos:', recipeTypeFromData);
       
-      // Set the selected recipe type based on the data
+      // Establecer el tipo de receta seleccionado basado en los datos
       setTimeout(() => {
         if (recipeTypes.length > 0) {
           const matchingType = recipeTypes.find(type => 
@@ -292,13 +292,13 @@ const AddRecipeScreen = ({ navigation, route }) => {
             setSelectedRecipeType(matchingType);
           }
         }
-      }, 100); // Small delay to ensure recipeTypes are loaded
+      }, 100); // Pequeño retraso para asegurar que recipeTypes esté cargado
     }
   };
 
   const updateRecipe = async (recipeData) => {
     try {
-      // Get current user data
+      // Obtener datos del usuario actual
       const currentUser = user || await getCurrentUser();
       
       if (!currentUser || !currentUser.idUsuario) {
@@ -306,7 +306,7 @@ const AddRecipeScreen = ({ navigation, route }) => {
         return;
       }
 
-      // Validate recipe ID
+      // Validar ID de receta
       const recipeId = editingRecipe.id || editingRecipe.idReceta;
       if (!recipeId) {
         Alert.alert('Error', 'ID de receta no válido');
@@ -360,8 +360,8 @@ const AddRecipeScreen = ({ navigation, route }) => {
         Alert.alert('Error', result.message || 'No se pudo actualizar la receta');
       }
     } catch (error) {
-      console.error('Error updating recipe:', error);
-      // Show more specific error message
+      console.error('Error al actualizar receta:', error);
+      // Mostrar mensaje de error más específico
       let errorMessage = 'No se pudo actualizar la receta';
       if (error.message && typeof error.message === 'string') {
         if (error.message.includes('403') || error.message.includes('Forbidden')) {
@@ -381,7 +381,7 @@ const AddRecipeScreen = ({ navigation, route }) => {
 
   const getCurrentUser = async () => {
     try {
-      // Try different possible storage keys
+      // Intentar diferentes claves de almacenamiento posibles
       let userData = await AsyncStorage.getItem('user_data');
       if (!userData) {
         userData = await AsyncStorage.getItem('user');
@@ -391,10 +391,10 @@ const AddRecipeScreen = ({ navigation, route }) => {
       }
       
       const parsedUser = userData ? JSON.parse(userData) : null;
-      console.log('Current user from storage:', parsedUser);
+      console.log('Usuario actual desde almacenamiento:', parsedUser);
       return parsedUser;
     } catch (error) {
-      console.error('Error getting user data:', error);
+      console.error('Error al obtener datos de usuario:', error);
       return null;
     }
   };
@@ -403,7 +403,7 @@ const AddRecipeScreen = ({ navigation, route }) => {
     try {
       const netInfo = await NetInfo.fetch();
       
-      // Check if connected
+      // Verificar si está conectado
       if (!netInfo.isConnected) {
         Alert.alert(
           'Sin Conexión',
@@ -413,7 +413,7 @@ const AddRecipeScreen = ({ navigation, route }) => {
         return 'offline';
       }
 
-      // Check connection type
+      // Verificar tipo de conexión
       const connectionType = netInfo.type;
       const isWiFi = connectionType === 'wifi';
       
@@ -439,7 +439,7 @@ const AddRecipeScreen = ({ navigation, route }) => {
 
       return 'free';
     } catch (error) {
-      console.log('Error checking network:', error);
+      console.log('Error al verificar la red:', error);
       return 'unknown';
     }
   };
@@ -472,7 +472,7 @@ const AddRecipeScreen = ({ navigation, route }) => {
 
   const uploadRecipe = async (recipeData) => {
     try {
-      // Get current user data
+      // Obtener datos del usuario actual
       const currentUser = user || await getCurrentUser();
       
       if (!currentUser || !currentUser.idUsuario) {
@@ -492,7 +492,7 @@ const AddRecipeScreen = ({ navigation, route }) => {
         return;
       }
 
-      // Map frontend recipe data to backend format
+      // Mapear datos de receta del frontend al formato del backend
       const backendRecipeData = {
         nombreReceta: recipeData.title.trim(),
         descripcionReceta: recipeData.description.trim(),
@@ -500,15 +500,15 @@ const AddRecipeScreen = ({ navigation, route }) => {
         porciones: parseInt(recipeData.servings) || 1,
         cantidadPersonas: parseInt(recipeData.servings) || 1,
         instrucciones: recipeData.instructions.map(inst => inst.text).join('\n'),
-        fecha: new Date().toISOString().split('T')[0], // Current date in YYYY-MM-DD format
-        autorizada: false, // Always false for new recipes requiring approval
+        fecha: new Date().toISOString().split('T')[0], // Fecha actual en formato YYYY-MM-DD
+        autorizada: false, // Siempre falso para recetas nuevas que requieren aprobación
         usuario: {
           idUsuario: currentUser.idUsuario
         },
         idTipo: selectedRecipeType, // Usar directamente el tipo de receta seleccionado
-        // Ingredientes correctly mapped to backend format
+        // Ingredientes mapeados correctamente al formato del backend
         ingredientes: recipeData.ingredients.map((ing, index) => {
-          // Parse amount more safely
+          // Analizar cantidad de forma más segura
           const amountText = ing.amount || '1 unidad';
           const match = amountText.match(/^(\d*\.?\d+)\s*(.*)$/);
           
@@ -531,16 +531,16 @@ const AddRecipeScreen = ({ navigation, route }) => {
         })
       };
 
-      console.log('Sending recipe data to backend:', backendRecipeData);
+      console.log('Enviando datos de receta al backend:', backendRecipeData);
 
       let response;
       
       try {
-        // Try primary endpoint first
+        // Intentar primero el endpoint principal
         response = await api.recipes.create(backendRecipeData);
       } catch (primaryError) {
-        console.log('Primary endpoint failed, trying alternative:', primaryError.message);
-        // Try alternative endpoint if primary fails
+        console.log('Falló el endpoint principal, intentando alternativa:', primaryError.message);
+        // Intentar endpoint alternativo si el principal falla
         response = await api.recipes.createAlternative(backendRecipeData);
       }
 
@@ -555,14 +555,14 @@ const AddRecipeScreen = ({ navigation, route }) => {
       }
 
     } catch (error) {
-      console.error('Error uploading recipe:', error);
+      console.error('Error al subir la receta:', error);
       let errorMessage = 'No se pudo subir la receta.';
       
-      // Provide more specific error messages
+      // Proporcionar mensajes de error más específicos
       if (error.message.includes('Ya existe una receta con este nombre')) {
         errorMessage = 'Ya tienes una receta con este nombre. Por favor elige un título diferente.';
         Alert.alert('Receta Duplicada', errorMessage);
-        return; // Don't save locally for duplicates
+        return; // No guardar localmente para duplicados
       } else if (error.message.includes('400')) {
         errorMessage = 'Datos de receta inválidos. Verifica que todos los campos estén completos.';
       } else if (error.message.includes('401')) {
@@ -626,7 +626,7 @@ const AddRecipeScreen = ({ navigation, route }) => {
   };
 
   const handleSaveRecipe = async () => {
-    // Validation
+    // Validación
     if (!title.trim()) {
       Alert.alert('Error', 'El título de la receta es obligatorio');
       return;
@@ -678,10 +678,10 @@ const AddRecipeScreen = ({ navigation, route }) => {
 
     try {
       if (isEditing && editingRecipe) {
-        // Update existing recipe
+        // Actualizar receta existente
         await updateRecipe(recipeData);
       } else {
-        // Create new recipe (existing logic)
+        // Crear nueva receta (lógica existente)
         const networkStatus = await checkNetworkCost();
 
         switch (networkStatus) {

@@ -53,7 +53,7 @@ const LoginScreen = ({ navigation }) => {
           'El correo electrónico o la contraseña son incorrectos. Si no tienes una cuenta, por favor regístrate primero.'
         );
       } else if (error.message === 'EMAIL_NOT_VERIFIED') {
-        // This shouldn't happen with our development modifications
+        // Esto no debería ocurrir con nuestras modificaciones de desarrollo
         Alert.alert(
           'Correo No Verificado',
           'Tu correo electrónico aún no ha sido verificado. ¿Deseas que te enviemos un nuevo código de verificación?',
@@ -76,7 +76,7 @@ const LoginScreen = ({ navigation }) => {
                     );
                   }
                 } catch (err) {
-                  console.error('Error sending verification code:', err);
+                  console.error('Error al enviar código de verificación:', err);
                   Alert.alert(
                     'Error',
                     'Ha ocurrido un error al enviar el código de verificación.'

@@ -3,7 +3,7 @@ import rootReducer from './reducers';
 
 const store = configureStore({
   reducer: rootReducer,
-  // middleware is configured automatically with sensible defaults
+  // el middleware se configura automáticamente con valores predeterminados sensatos
 });
 
 export default store;

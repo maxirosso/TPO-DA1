@@ -5,23 +5,23 @@ import { StatusBar } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Provider, useDispatch } from 'react-redux';
 import store from './store/store';
-import 'react-native-gesture-handler'; // Add this import for React Navigation
+import 'react-native-gesture-handler'; // Agregar esta importación para React Navigation
 import { View, ActivityIndicator } from 'react-native';
 
-// Navigators
+// Navegadores
 import AppNavigator from './navigation/AppNavigator';
 import AuthNavigator from './navigation/AuthNavigator';
 
-// Authentication Context
+// Contexto de Autenticación
 import { AuthContext, AuthProvider } from './context/AuthContext';
 
-// Services
+// Servicios
 import { authService } from './services/auth';
 
-// Actions
+// Acciones
 import { loadFavorites } from './store/actions/recipeActions';
 
-// Components
+// Componentes
 import SplashScreen from './components/common/SplashScreen';
 
 const AppContent = () => {
@@ -32,7 +32,7 @@ const AppContent = () => {
   const [isVisitor, setIsVisitor] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
 
-  // Authentication functions
+  // Funciones de autenticación
   const authContext = React.useMemo(() => ({
     signIn: async (email, password) => {
       try {
@@ -42,7 +42,7 @@ const AppContent = () => {
         setIsVisitor(false);
         return result;
       } catch (e) {
-        console.log('Sign in error:', e);
+        console.log('Error de inicio de sesión:', e);
         throw e;
       }
     },
@@ -54,7 +54,7 @@ const AppContent = () => {
         setCurrentUser(null);
         setIsVisitor(false);
       } catch (e) {
-        console.log('Sign out error:', e);
+        console.log('Error al cerrar sesión:', e);
       }
     },
     
@@ -63,7 +63,7 @@ const AppContent = () => {
         const result = await authService.register(userData);
         return result;
       } catch (e) {
-        console.log('Sign up error:', e);
+        console.log('Error de registro:', e);
         throw e;
       }
     },
@@ -72,7 +72,7 @@ const AppContent = () => {
       try {
         return true;
       } catch (e) {
-        console.log('Verification error:', e);
+        console.log('Error de verificación:', e);
         throw e;
       }
     },
@@ -81,7 +81,7 @@ const AppContent = () => {
       try {
         return true;
       } catch (e) {
-        console.log('Resend verification error:', e);
+        console.log('Error al reenviar código de verificación:', e);
         throw e;
       }
     },
@@ -97,13 +97,13 @@ const AppContent = () => {
             setCurrentUser(loginResult.user);
             setIsVisitor(false);
           } catch (loginErr) {
-            console.log('Auto login after profile completion failed:', loginErr);
+            console.log('Error en inicio de sesión automático después de completar el perfil:', loginErr);
           }
         }
         
         return result;
       } catch (e) {
-        console.log('Complete profile error:', e);
+        console.log('Error al completar perfil:', e);
         throw e;
       }
     },
@@ -124,7 +124,7 @@ const AppContent = () => {
   useEffect(() => {
     const bootstrapAsync = async () => {
       try {
-        // Load favorites from storage
+        // Cargar favoritos desde almacenamiento
         dispatch(loadFavorites());
         
         const isAuthenticated = await authService.isAuthenticated();
@@ -132,20 +132,20 @@ const AppContent = () => {
           const token = await AsyncStorage.getItem('user_token');
           setUserToken(token);
           
-          // Load user data from storage
+          // Cargar datos de usuario desde almacenamiento
           const storedUser = await authService.getCurrentUser();
           if (storedUser) {
             setCurrentUser(storedUser);
           }
         }
       } catch (e) {
-        console.log('Authentication check error:', e);
+        console.log('Error en verificación de autenticación:', e);
       } finally {
         setIsLoading(false);
       }
     };
 
-    // Show splash screen for 3 seconds
+    // Mostrar pantalla de bienvenida por 3 segundos
     const splashTimer = setTimeout(() => {
       setShowSplash(false);
     }, 3000);
@@ -155,12 +155,12 @@ const AppContent = () => {
     return () => clearTimeout(splashTimer);
   }, [dispatch]);
 
-  // Show splash screen
+  // Mostrar pantalla de bienvenida
   if (showSplash) {
     return <SplashScreen />;
   }
 
-  // Simple loading screen
+  // Pantalla de carga simple
   if (isLoading) {
     return (
       <SafeAreaProvider>

@@ -55,35 +55,35 @@ const HomeScreen = ({ navigation }) => {
     setError(null);
     
     try {
-      console.log('🔄 Inicializando conexión con backend...');
+      console.log('Inicializando conexión con backend...');
       
       // Initialize data service
       await dataService.initialize();
       setBackendAvailable(dataService.useBackend);
       
-      console.log(`📡 Backend disponible: ${dataService.useBackend}`);
+      console.log(`Backend disponible: ${dataService.useBackend}`);
 
       // Load recipe types
-      console.log('📥 Cargando tipos de recetas...');
+      console.log('Cargando tipos de recetas...');
       await loadRecipeTypes();
 
       // Load latest recipes (3 most recent)
-      console.log('📥 Cargando últimas recetas...');
+      console.log('Cargando últimas recetas...');
       const latest = await dataService.getLatestRecipes();
-      console.log(`✅ Últimas recetas cargadas: ${latest?.length || 0}`);
+      console.log(`Últimas recetas cargadas: ${latest?.length || 0}`);
       setLatestRecipes(latest || []);
 
       // Load all recipes for popular section
-      console.log('📥 Cargando todas las recetas...');
+      console.log('Cargando todas las recetas...');
       const allRecipes = await dataService.getAllRecipes();
-      console.log(`✅ Todas las recetas cargadas: ${allRecipes?.length || 0}`);
+      console.log(`Todas las recetas cargadas: ${allRecipes?.length || 0}`);
       setPopularRecipes(allRecipes || []);
 
       // Apply initial filter
       filterRecipesByCategory(selectedCategory, latest || [], allRecipes || []);
 
     } catch (error) {
-      console.error('❌ Error loading data:', error);
+      console.error('Error loading data:', error);
       setError(error.message);
       
       // Show user-friendly error message
@@ -112,7 +112,7 @@ const HomeScreen = ({ navigation }) => {
       const response = await api.recipes.getTypes();
       if (response && response.data) {
         const types = response.data;
-        console.log(`✅ Tipos de recetas cargados: ${types.length}`);
+        console.log(`Tipos de recetas cargados: ${types.length}`);
         
         // Guardar los tipos de recetas
         setRecipeTypes(types);
@@ -127,7 +127,7 @@ const HomeScreen = ({ navigation }) => {
         
         setCategories(categoryList);
       } else {
-        console.log('⚠️ No se pudieron cargar los tipos de recetas');
+        console.log('No se pudieron cargar los tipos de recetas');
         // Fallback a categorías predefinidas
         setCategories([
           DEFAULT_CATEGORY,
@@ -140,7 +140,7 @@ const HomeScreen = ({ navigation }) => {
         ]);
       }
     } catch (error) {
-      console.error('❌ Error loading recipe types:', error);
+      console.error('Error loading recipe types:', error);
       // Fallback a categorías predefinidas
       setCategories([
         DEFAULT_CATEGORY,
@@ -156,15 +156,15 @@ const HomeScreen = ({ navigation }) => {
 
   const setupNetworkListener = () => {
     const unsubscribe = NetInfo.addEventListener(state => {
-      console.log(`🌐 Estado de conexión: ${state.isConnected}`);
+      console.log(`Estado de conexión: ${state.isConnected}`);
       setIsConnected(state.isConnected);
       
       // If connection is restored, try to sync data
       if (state.isConnected && !backendAvailable) {
-        console.log('🔄 Conexión restaurada, verificando backend...');
+        console.log('Conexión restaurada, verificando backend...');
         dataService.checkBackendAvailability().then(available => {
           if (available) {
-            console.log('✅ Backend disponible, sincronizando datos...');
+            console.log('Backend disponible, sincronizando datos...');
             setBackendAvailable(true);
             dataService.syncPendingData();
             loadRecipes();
@@ -178,7 +178,7 @@ const HomeScreen = ({ navigation }) => {
 
   const loadRecipes = async () => {
     try {
-      console.log('🔄 Recargando recetas...');
+      console.log('Recargando recetas...');
       
       // Recargar tipos de recetas
       await loadRecipeTypes();
@@ -192,9 +192,9 @@ const HomeScreen = ({ navigation }) => {
       // Apply current filters
       filterRecipesByCategory(selectedCategory, latest || [], allRecipes || []);
       
-      console.log('✅ Recetas recargadas exitosamente');
+      console.log('Recetas recargadas exitosamente');
     } catch (error) {
-      console.error('❌ Error reloading recipes:', error);
+      console.error('Error reloading recipes:', error);
     }
   };
 
@@ -211,7 +211,7 @@ const HomeScreen = ({ navigation }) => {
 
   // Filtrar recetas por categoría
   const filterRecipesByCategory = (category, latest = latestRecipes, popular = popularRecipes) => {
-    console.log(`🔍 Filtrando por categoría: ${category}`);
+    console.log(`Filtrando por categoría: ${category}`);
     
     if (category === DEFAULT_CATEGORY) {
       setFilteredPopularRecipes(popular);
@@ -230,8 +230,8 @@ const HomeScreen = ({ navigation }) => {
       const filteredPopular = popular.filter(categoryFilter);
       const filteredLatest = latest.filter(categoryFilter);
       
-      console.log(`📊 Recetas populares filtradas: ${filteredPopular.length}`);
-      console.log(`📊 Recetas recientes filtradas: ${filteredLatest.length}`);
+      console.log(`Recetas populares filtradas: ${filteredPopular.length}`);
+      console.log(`Recetas recientes filtradas: ${filteredLatest.length}`);
       
       setFilteredPopularRecipes(filteredPopular);
       setFilteredRecentRecipes(filteredLatest);
@@ -239,7 +239,7 @@ const HomeScreen = ({ navigation }) => {
   };
 
   const handleRecipePress = (recipe) => {
-    console.log('🍽️ Navegando a receta:', recipe.nombreReceta || recipe.title);
+    console.log('Navegando a receta:', recipe.nombreReceta || recipe.title);
     
     // Normalize recipe data for navigation
     const normalizedRecipe = {
@@ -433,7 +433,7 @@ const HomeScreen = ({ navigation }) => {
           />
         }
       >
-        {/* Categories */}
+        {/* Categorías */}
         <View style={styles.categoriesSection}>
           <FlatList
             data={categories}
@@ -463,7 +463,7 @@ const HomeScreen = ({ navigation }) => {
           </View>
         ) : (
           <>
-            {/* Latest Recipes */}
+            {/* Últimas Recetas */}
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
                 <Text style={styles.sectionTitle}>Últimas Recetas</Text>
@@ -487,7 +487,7 @@ const HomeScreen = ({ navigation }) => {
               )}
             </View>
 
-            {/* Popular Recipes */}
+            {/* Recetas Populares */}
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
                 <Text style={styles.sectionTitle}>Recetas Populares</Text>

@@ -73,7 +73,7 @@ const SavedScreen = ({ navigation }) => {
       const response = await api.recipes.getTypes();
       if (response && response.data) {
         const types = response.data;
-        console.log(`✅ Tipos de recetas cargados: ${types.length}`);
+        console.log(`Tipos de recetas cargados: ${types.length}`);
         
         // Guardar los tipos de recetas
         setRecipeTypes(types);
@@ -93,12 +93,12 @@ const SavedScreen = ({ navigation }) => {
         
         setCollections(categoryList);
       } else {
-        console.log('⚠️ No se pudieron cargar los tipos de recetas');
+        console.log('No se pudieron cargar los tipos de recetas');
         // Fallback a categorías predefinidas
         setCollections(initialCollections);
       }
     } catch (error) {
-      console.error('❌ Error loading recipe types:', error);
+      console.error('Error al cargar tipos de receta:', error);
       // Fallback a categorías predefinidas
       setCollections(initialCollections);
     }

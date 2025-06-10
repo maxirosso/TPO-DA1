@@ -351,11 +351,11 @@ const RecipeDetailScreen = ({ navigation, route }) => {
     
     try {
       setAddingToPendingList(true);
-      console.log('🔄 Frontend: Adding recipe to pending list:', recipe.id || recipe.idReceta);
+      console.log('Frontend: Adding recipe to pending list:', recipe.id || recipe.idReceta);
       
       const result = await dataService.addRecipeToPendingList(recipe.id || recipe.idReceta);
       
-      console.log('🔍 Frontend: Result from dataService:', result);
+      console.log('Frontend: Result from dataService:', result);
       
       if (result.success) {
         Alert.alert('Éxito', result.message);
@@ -363,7 +363,7 @@ const RecipeDetailScreen = ({ navigation, route }) => {
         Alert.alert('Error', result.message);
       }
     } catch (error) {
-      console.error('❌ Frontend: Error adding to pending list:', error);
+      console.error('Frontend: Error adding to pending list:', error);
       Alert.alert('Error', 'No se pudo agregar a la lista de pendientes. Intenta nuevamente.');
     } finally {
       setAddingToPendingList(false);
@@ -393,9 +393,6 @@ const RecipeDetailScreen = ({ navigation, route }) => {
         
         // Escalar porciones
         scaledRecipe.servings = Math.round((prevRecipe.servings || 2) * scaleFactor);
-        
-        // Los demás valores nutricionales se mantienen por porción, 
-        // por lo que no necesitan escalarse individualmente
         
         return scaledRecipe;
       });

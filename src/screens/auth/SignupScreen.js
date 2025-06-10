@@ -60,7 +60,7 @@ const SignupScreen = ({ navigation }) => {
         setUsernameSuggestions([]);
       }
     } catch (error) {
-      console.error('Username check error:', error);
+      console.error('Error al verificar nombre de usuario:', error);
     }
   };
   
@@ -83,7 +83,7 @@ const SignupScreen = ({ navigation }) => {
   const handleSignUp = async () => {
     Keyboard.dismiss();
     
-    // Validate inputs
+    // Validar entradas
     if (!email || !username || !password) {
       Alert.alert('Campos incompletos', 'Por favor, completa todos los campos requeridos.');
       return;

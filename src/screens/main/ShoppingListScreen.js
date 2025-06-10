@@ -193,14 +193,14 @@ const ShoppingListScreen = ({ navigation }) => {
     const listText = shoppingList
       .filter(item => selectedCategory === 'Todos' || item.category === selectedCategory)
       .map(item => {
-        const status = item.completed ? '✅' : '⬜';
+        const status = item.completed ? '' : '';
         const quantity = item.quantity && item.unit ? `${item.quantity} ${item.unit}` : '';
         const notes = item.notes ? ` (${item.notes})` : '';
         return `${status} ${item.name} ${quantity}${notes}`;
       })
       .join('\n');
 
-    const shareText = `Lista de Compras - ChefNet\n\n${listText}\n\nGenerada con ChefNet 📱`;
+    const shareText = `Lista de Compras - ChefNet\n\n${listText}\n\nGenerada con ChefNet`;
     
     // In a real app, you would use React Native's Share API
     Alert.alert('Compartir Lista', shareText);
@@ -271,11 +271,7 @@ const ShoppingListScreen = ({ navigation }) => {
         style={styles.itemCheckbox}
         onPress={() => toggleItemCompleted(item.id)}
       >
-        <Icon 
-          name={item.completed ? "check-square" : "square"} 
-          size={20} 
-          color={item.completed ? Colors.success : Colors.textMedium} 
-        />
+        {item.completed && <Icon name="check" size={16} color={Colors.card} />}
       </TouchableOpacity>
       
       <View style={styles.itemContent}>

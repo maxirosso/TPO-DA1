@@ -87,7 +87,7 @@ export const toggleFavorite = (recipeId) => async (dispatch, getState) => {
       isFavorite ? 'Receta removida de favoritos' : 'Receta agregada a favoritos'
     );
   } catch (error) {
-    console.error('Error toggling favorite:', error);
+    console.error('Error al cambiar favorito:', error);
     Alert.alert(
       'Error',
       'No se pudo actualizar la lista de favoritos. Por favor, intenta nuevamente.'

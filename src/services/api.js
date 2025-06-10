@@ -300,7 +300,7 @@ export const api = {
     createAdminUser: (userData) => apiService.post('/crearUsuarioAdmin', userData),
   },
 
-  // Recipe endpoints (matching Spring Boot controller)
+  // Endpoints de recetas (correspondientes al controlador de Spring Boot)
   recipes: {
     getAll: () => apiService.get('/getAllRecetas'),
     getLatest: () => apiService.get('/ultimasRecetas', { timestamp: new Date().getTime() }), // Las 3 últimas recetas
@@ -313,7 +313,7 @@ export const api = {
     getByUserProfile: (usuario, orden = 'alfabetico') => apiService.get('/getUsuarioReceta', { usuario, orden }),
     search: (nombre) => apiService.get('/buscarRecetas', { nombre }),
     create: (recipeData) => apiService.post('/crearRecetaConIngredientes', recipeData),
-    createAlternative: (recipeData) => apiService.post('/CargarNuevasRecetas', recipeData), // Alternative endpoint
+    createAlternative: (recipeData) => apiService.post('/CargarNuevasRecetas', recipeData), // Endpoint alternativo
     createWithFiles: (receta, files) => apiService.uploadFile('/cargarReceta', files[0], receta),
     publish: (recipeData) => apiService.post('/publicarRecetas', recipeData),
     update: (idReceta, recipeData) => apiService.put(`/recetas/${idReceta}`, recipeData),
@@ -333,7 +333,7 @@ export const api = {
     getTypes: () => apiService.get('/getTiposReceta'),
   },
 
-  // Course endpoints (matching Spring Boot controller)
+  // Endpoints de cursos (correspondientes al controlador de Spring Boot)
   courses: {
     getAll: (idUsuario) => apiService.get('/getCursosDisponibles', { idUsuario }),
     getAvailable: (idUsuario) => apiService.get('/getCursosDisponibles', { idUsuario }),
@@ -345,40 +345,40 @@ export const api = {
     unenroll: (idAlumno, idCronograma) => apiService.delete('/cancelarInscripcion', { idAlumno, idCronograma }),
     cancelEnrollment: (idInscripcion, reintegroEnTarjeta) => 
       apiService.postForm(`/baja/${idInscripcion}`, { reintegroEnTarjeta }),
-    // Note: markAttendance endpoint not implemented in backend controller
+    // Nota: endpoint markAttendance no implementado en el controlador del backend
   },
 
-  // Note: Venue endpoints not implemented in backend controller
+  // Nota: Endpoints de sedes no implementados en el controlador del backend
 
-  // Student endpoints
+  // Endpoints de estudiantes
   students: {
     register: (mail, idUsuario, medioPago, dniFrente, dniFondo, tramite) => 
       apiService.postForm('/registrarAlumno', { mail, idUsuario, medioPago, dniFrente, dniFondo, tramite }),
-    // Note: getById and getAll endpoints not implemented in backend controller
+    // Nota: endpoints getById y getAll no implementados en el controlador del backend
   },
 
-  // Note: Recipe type endpoints not implemented in backend controller
+  // Nota: Endpoints de tipo de receta no implementados en el controlador del backend
 
-  // Rating endpoints
+  // Endpoints de calificaciones
   ratings: {
     add: (idReceta, calificacion) => apiService.post(`/valorarReceta/${idReceta}`, calificacion),
     authorize: (idCalificacion) => apiService.put(`/autorizarComentario/${idCalificacion}`),
     getByRecipe: (idReceta) => apiService.get(`/getValoracionReceta/${idReceta}`),
   },
 
-  // User endpoints
+  // Endpoints de usuarios
   users: {
     getByEmail: (mail) => apiService.get('/getUsuarioByEmail', { mail }),
     updateProfile: (userData) => apiService.put('/usuarios/perfil', userData),
   },
 
-  // Reviews endpoints (matching Spring Boot controller)
+  // Endpoints de reseñas (correspondientes al controlador de Spring Boot)
   reviews: {
     getByRecipe: (idReceta) => apiService.get(`/getValoracionReceta/${idReceta}`),
     create: (idReceta, reviewData, idUsuario) => {
       const endpoint = `/valorarReceta/${idReceta}`;
       
-      console.log('Reviews API call:', {
+      console.log('Llamada a API de reseñas:', {
         endpoint,
         idUsuario,
         reviewData

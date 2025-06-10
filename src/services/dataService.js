@@ -55,7 +55,7 @@ export function mapBackendRecipe(receta) {
     reviews: receta.totalCalificaciones || 0,
     totalCalificaciones: receta.totalCalificaciones || 0,
     autorizada: receta.autorizada,
-    // Recipe list completion status fields
+    // Campos de estado de finalización en lista de recetas
     completed: receta.completada || false,
     completada: receta.completada || false,
     completedDate: receta.fechaCompletada,
@@ -762,7 +762,7 @@ class DataService {
       const response = await api.get('/calificaciones');
       return response.data;
     } catch (error) {
-      console.error('Error fetching calificaciones:', error);
+      console.error('Error al obtener calificaciones:', error);
       throw error;
     }
   }
@@ -782,7 +782,7 @@ class DataService {
       const response = await api.get('/inscripciones');
       return response.data;
     } catch (error) {
-      console.error('Error fetching inscripciones:', error);
+      console.error('Error al obtener inscripciones:', error);
       throw error;
     }
   }
@@ -803,7 +803,7 @@ class DataService {
       const response = await api.recipes.getSuggestions(tipo);
       return response.data || [];
     } catch (error) {
-      console.error('Error fetching sugerencias de recetas:', error);
+      console.error('Error al obtener sugerencias de recetas:', error);
       return [];
     }
   }
@@ -979,7 +979,7 @@ class DataService {
       const result = await api.auth.registerStudent(email, idUsuario, medioPago, dniFrente, dniFondo, tramite);
       return result.data;
     } catch (error) {
-      console.log('Error registering student:', error.message);
+      console.log('Error al registrar estudiante:', error.message);
       throw error;
     }
   }
