@@ -32,7 +32,7 @@ const PendingRecipesScreen = ({ navigation }) => {
     setError(null);
     try {
       console.log('Loading pending recipes...');
-      const recipes = await dataService.getPendingRecipes();
+      const recipes = await dataService.getPendingRecipesList();
       const recipeStats = await dataService.getPendingRecipesCount();
       
       setPendingRecipes(recipes);
@@ -84,7 +84,7 @@ const PendingRecipesScreen = ({ navigation }) => {
           onPress: async () => {
             console.log('Marking recipe as completed:', recipeId, newCompletedState);
             try {
-              const result = await dataService.markRecipeCompletion(recipeId, newCompletedState);
+              const result = await dataService.markRecipeAsCompleted(recipeId, newCompletedState);
               
               console.log('Reloading pending recipes after mark completion');
               loadPendingRecipes();
