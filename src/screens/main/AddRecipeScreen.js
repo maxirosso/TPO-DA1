@@ -587,17 +587,26 @@ const AddRecipeScreen = ({ navigation, route }) => {
       const currentUser = user || await getCurrentUser();
       if (!currentUser || !currentUser.idUsuario) return false;
 
-      // Buscar recetas con nombre similar
-      const { data } = await api.recipes.getByName(title.trim());
-      
-      // Filtrar solo recetas del usuario actual con nombre exacto
-      const matchingRecipes = Array.isArray(data) ? data.filter(r => 
-        r.usuario && 
-        r.usuario.idUsuario === currentUser.idUsuario && 
-        r.nombreReceta.toLowerCase() === title.trim().toLowerCase()
-      ) : [];
+      try {
+        // Buscar recetas con nombre similar
+        const { data } = await api.recipes.getByName(title.trim());
+        
+        // Filtrar solo recetas del usuario actual con nombre exacto
+        const matchingRecipes = Array.isArray(data) ? data.filter(r => 
+          r.usuario && 
+          r.usuario.idUsuario === currentUser.idUsuario && 
+          r.nombreReceta.toLowerCase() === title.trim().toLowerCase()
+        ) : [];
 
-      return matchingRecipes.length > 0;
+        return matchingRecipes.length > 0;
+      } catch (error) {
+        // Si es un error 404, significa que no hay recetas con ese nombre
+        if (error.message && error.message.includes('404')) {
+          return false;
+        }
+        // Para otros errores, lanzamos el error para manejarlo en el catch externo
+        throw error;
+      }
     } catch (error) {
       console.error('Error verificando nombre de receta:', error);
       return false;
