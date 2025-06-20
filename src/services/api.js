@@ -179,7 +179,7 @@ class ApiService {
     });
   }
 
-  // Solicitud POST con datos de formulario (para Spring Boot @RequestParam)
+
   async postForm(endpoint, data = {}) {
     const formData = new URLSearchParams();
     Object.keys(data).forEach(key => {

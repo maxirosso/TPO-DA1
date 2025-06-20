@@ -44,7 +44,7 @@ const HomeScreen = ({ navigation }) => {
   const [recipeTypes, setRecipeTypes] = useState([]);
   const [categories, setCategories] = useState([DEFAULT_CATEGORY]);
 
-  // Initialize data service and load recipes
+  // Inicializar servicio de datos y cargar recetas
   useEffect(() => {
     initializeData();
     setupNetworkListener();
@@ -57,36 +57,36 @@ const HomeScreen = ({ navigation }) => {
     try {
       console.log('Inicializando conexión con backend...');
       
-      // Initialize data service
+      // Inicializar servicio de datos
       await dataService.initialize();
       setBackendAvailable(dataService.useBackend);
       
       console.log(`Backend disponible: ${dataService.useBackend}`);
 
-      // Load recipe types
+      // Cargar tipos de recetas
       console.log('Cargando tipos de recetas...');
       await loadRecipeTypes();
 
-      // Load latest recipes (3 most recent)
+      // Cargar últimas recetas (3 más recientes)
       console.log('Cargando últimas recetas...');
       const latest = await dataService.getLatestRecipes();
       console.log(`Últimas recetas cargadas: ${latest?.length || 0}`);
       setLatestRecipes(latest || []);
 
-      // Load all recipes for popular section
+      // Cargar todas las recetas para la sección popular
       console.log('Cargando todas las recetas...');
       const allRecipes = await dataService.getAllRecipes();
       console.log(`Todas las recetas cargadas: ${allRecipes?.length || 0}`);
       setPopularRecipes(allRecipes || []);
 
-      // Apply initial filter
+      // Aplicar filtro inicial
       filterRecipesByCategory(selectedCategory, latest || [], allRecipes || []);
 
     } catch (error) {
       console.error('Error loading data:', error);
       setError(error.message);
       
-      // Show user-friendly error message
+      // Mostrar mensaje de error amigable para el usuario
       Alert.alert(
         'Error de Conexión',
         'No se pudieron cargar las recetas desde el servidor. Usando datos locales.',
@@ -159,7 +159,7 @@ const HomeScreen = ({ navigation }) => {
       console.log(`Estado de conexión: ${state.isConnected}`);
       setIsConnected(state.isConnected);
       
-      // If connection is restored, try to sync data
+      // Si la conexión se restaura, intentar sincronizar datos
       if (state.isConnected && !backendAvailable) {
         console.log('Conexión restaurada, verificando backend...');
         dataService.checkBackendAvailability().then(available => {
@@ -189,7 +189,7 @@ const HomeScreen = ({ navigation }) => {
       setLatestRecipes(latest || []);
       setPopularRecipes(allRecipes || []);
       
-      // Apply current filters
+      // Aplicar filtros actuales
       filterRecipesByCategory(selectedCategory, latest || [], allRecipes || []);
       
       console.log('Recetas recargadas exitosamente');
@@ -218,7 +218,7 @@ const HomeScreen = ({ navigation }) => {
       setFilteredRecentRecipes(latest);
     } else {
       const categoryFilter = (recipe) => {
-        // Handle different data structures from backend vs mock
+        // Manejar diferentes estructuras de datos del backend vs mock
         const recipeCategory = recipe.tipoReceta?.descripcion || 
                               recipe.idTipo?.descripcion || 
                               recipe.tipo?.descripcion || 
@@ -241,7 +241,7 @@ const HomeScreen = ({ navigation }) => {
   const handleRecipePress = (recipe) => {
     console.log('Navegando a receta:', recipe.nombreReceta || recipe.title);
     
-    // Normalize recipe data for navigation
+    // Normalizar datos de receta para navegación
     const normalizedRecipe = {
       id: recipe.idReceta || recipe.id,
       title: recipe.nombreReceta || recipe.title,
@@ -374,7 +374,7 @@ const HomeScreen = ({ navigation }) => {
     </View>
   );
 
-  // Show offline message if no connection and no cached data
+  // Mostrar mensaje sin conexión si no hay conexión y no hay datos en caché
   if (!isConnected && latestRecipes.length === 0 && !isLoading) {
     return (
       <SafeAreaView style={styles.container} edges={['top']}>
