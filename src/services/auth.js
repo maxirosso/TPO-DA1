@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 import apiConfig from '../config/api.config';
+import { validarDatosRegistroUsuario } from '../utils/validaciones';
 
 const USER_STORAGE_KEY = 'user_data';
 const TOKEN_STORAGE_KEY = 'user_token';
@@ -147,57 +148,82 @@ export const authService = {
   
   register: async (userData) => {
     try {
-      // Validar que el nombre de usuario (nickname) esté presente y no esté vacío
-      if (!userData.username || typeof userData.username !== 'string' || userData.username.trim() === '') {
-        throw new Error('El nombre de usuario (nickname) es obligatorio.');
+      // Usar las utilidades de validación
+      const validacion = validarDatosRegistroUsuario(userData);
+      if (!validacion.valido) {
+        throw new Error(validacion.errores[0]); // Mostrar el primer error
       }
+      
       // Intentar registro con el backend usando el endpoint y carga correctos
       try {
         // Mapear campos del frontend a campos esperados por el backend
         const backendPayload = {
-          mail: userData.email,
+          mail: userData.email.trim(),
           password: userData.password,
           nombre: userData.name || userData.username.trim(),
           nickname: userData.username.trim(),
+          habilitado: 'No', // Por defecto no habilitado hasta verificar email
+          direccion: userData.direccion || '',
+          avatar: userData.avatar || '',
+          tipo: 'comun', // Tipo por defecto
+          medio_pago: userData.medioPago || '',
+          rol: 'user' // Rol por defecto
         };
+        
+        console.log('Enviando datos de registro al backend:', backendPayload);
+        
         const response = await axios.post(`${apiConfig.API_BASE_URL}/registrarUsuario`, backendPayload);
-        if (response.data && typeof response.data === 'string' && response.data.includes('exitosamente')) {
-          return { success: true };
-        } else if (response.data && typeof response.data === 'string' && response.data.includes('Ya existe')) {
-          throw new Error('Email ya registrado');
-        } else if (response.data && typeof response.data === 'string' && response.data.includes('nickname')) {
-          throw new Error('El nombre de usuario (nickname) es obligatorio.');
+        
+        console.log('Respuesta del backend:', response);
+        
+        if (response.data && typeof response.data === 'string') {
+          if (response.data.includes('exitosamente')) {
+            return { success: true };
+          } else if (response.data.includes('Ya existe')) {
+            throw new Error('Email ya registrado');
+          } else if (response.data.includes('nickname')) {
+            throw new Error('El nombre de usuario (nickname) es obligatorio.');
+          } else {
+            throw new Error(response.data);
+          }
         } else {
           throw new Error(response.data?.message || 'Error durante el registro');
         }
+        
       } catch (error) {
         console.error('Error de registro con el backend:', error);
-        // Fallback a modo local para desarrollo/testing
-        const { email, password, username, name } = userData;
-        if (!username || typeof username !== 'string' || username.trim() === '') {
-          throw new Error('El nombre de usuario (nickname) es obligatorio.');
+        
+        // Manejar tipos específicos de errores HTTP
+        if (error.response) {
+          const status = error.response.status;
+          const data = error.response.data;
+          
+          if (status === 400) {
+            if (typeof data === 'string') {
+              if (data.includes('Ya existe')) {
+                throw new Error('Email ya registrado');
+              } else if (data.includes('nickname')) {
+                throw new Error('El nombre de usuario (nickname) es obligatorio.');
+              } else {
+                throw new Error(data || 'Datos incorrectos');
+              }
+            } else {
+              throw new Error('Datos incorrectos. Verifica que todos los campos estén completos.');
+            }
+          } else if (status === 403) {
+            throw new Error('No tienes permisos para realizar esta acción.');
+          } else if (status === 409) {
+            throw new Error('El usuario ya existe en el sistema.');
+          } else if (status === 500) {
+            throw new Error('Error interno del servidor. Intenta nuevamente más tarde.');
+          } else {
+            throw new Error(`Error del servidor (${status}): ${data || 'Error desconocido'}`);
+          }
+        } else if (error.request) {
+          throw new Error('Sin conexión al servidor. Verifica tu conexión a internet.');
+        } else {
+          throw new Error(error.message || 'Error de red');
         }
-        // Verificar si el usuario ya existe
-        const pendingUsersStr = await AsyncStorage.getItem(PENDING_USERS_KEY);
-        const pendingUsers = pendingUsersStr ? JSON.parse(pendingUsersStr) : {};
-        if (pendingUsers[email]) {
-          throw new Error('Email ya registrado');
-        }
-        // Almacenar los nuevos datos de usuario
-        pendingUsers[email] = {
-          id: Date.now().toString(),
-          email,
-          password,
-          username: username.trim(),
-          name: name || username.trim(),
-          createdAt: new Date().toISOString(),
-          isVerified: true
-        };
-        // Guardar en almacenamiento
-        await AsyncStorage.setItem(PENDING_USERS_KEY, JSON.stringify(pendingUsers));
-        // Auto-verificar el email para desarrollo
-        await authService.markEmailAsVerified(email);
-        return { email, success: true };
       }
     } catch (error) {
       console.error('Error de registro:', error);

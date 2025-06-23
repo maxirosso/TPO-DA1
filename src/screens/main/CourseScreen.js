@@ -76,7 +76,19 @@ const CourseScreen = ({ navigation }) => {
       }
       // Set user type based on user data
       if (user) {
-        setUserType(user.tipo || 'visitor');
+        // Map backend types to frontend types
+        const backendType = user.tipo || 'visitor';
+        let mappedType = 'visitor'; // default
+        
+        if (backendType === 'alumno' || backendType === 'student') {
+          mappedType = 'student';
+        } else if (backendType === 'admin') {
+          mappedType = 'admin';
+        } else if (backendType === 'usuario') {
+          mappedType = 'user';
+        }
+        
+        setUserType(mappedType);
       }
     } catch (err) {
       setError('No se pudieron cargar los cursos. Intenta nuevamente.');
@@ -123,45 +135,26 @@ const CourseScreen = ({ navigation }) => {
   };
 
   const handleCoursePress = (course) => {
-    if (userType !== 'student') {
-      Alert.alert(
-        'Acceso Restringido',
-        userType === 'visitor' 
-          ? 'Regístrate como estudiante para ver los detalles completos del curso.'
-          : 'Actualiza tu perfil a estudiante para acceder a todas las funcionalidades.',
-        [
-          { text: 'Cancelar', style: 'cancel' },
-          { 
-            text: userType === 'visitor' ? 'Registrarse' : 'Actualizar Perfil', 
-            onPress: () => navigation.navigate('Profile')
-          }
-        ]
-      );
-      return;
-    }
-
-    // Check if already enrolled
+    // Always navigate to course detail screen first
     const enrollment = enrolledCourses.find(e => e.courseId === course.id);
-    if (enrollment) {
-      navigation.navigate('CourseDetail', { 
-        course, 
-        enrollment,
-        isEnrolled: true 
-      });
-      return;
-    }
-
-    // Show location selection if multiple locations
-    if (course.locations.length > 1) {
-      setSelectedCourse(course);
-      setLocationModalVisible(true);
-    } else {
-      handleEnrollCourse(course, course.locations[0]);
-    }
+    
+    navigation.navigate('CourseDetail', { 
+      course, 
+      enrollment,
+      isEnrolled: !!enrollment,
+      userType,
+      onEnroll: handleEnrollCourse // Pass the enrollment function
+    });
   };
 
-  const handleEnrollCourse = async (course, location) => {
+  const handleEnrollCourse = async (course, sede) => {
     setLocationModalVisible(false);
+    
+    console.log('=== ENROLLMENT DEBUG ===');
+    console.log('User:', user);
+    console.log('UserType:', userType);
+    console.log('Course:', course);
+    console.log('Sede:', sede);
     
     if (!user || userType !== 'student') {
       Alert.alert(
@@ -183,12 +176,20 @@ const CourseScreen = ({ navigation }) => {
       const numericUserId = parseInt(user.id || user.idUsuario, 10);
       const numericCronogramaId = parseInt(course.idCronograma, 10);
 
+      console.log('=== ENROLLMENT PARAMS ===');
+      console.log('numericUserId:', numericUserId);
+      console.log('numericCronogramaId:', numericCronogramaId);
+
       const result = await dataService.enrollInCourse(numericUserId, numericCronogramaId);
       
+      console.log('=== ENROLLMENT RESULT ===');
+      console.log('Result:', result);
+      
       if (result) {
+        const sedeInfo = sede ? ` en ${sede.nombre}` : '';
         Alert.alert(
           'Inscripción Exitosa',
-          `Te has inscrito exitosamente al curso "${course.title}".\n\nRecibirás un email con:\n• Detalles del curso\n• Requisitos e instrucciones\n• Factura de pago\n• Información de la sede`,
+          `Te has inscrito exitosamente al curso "${course.title}"${sedeInfo}.\n\nRecibirás un email con:\n• Detalles del curso\n• Requisitos e instrucciones\n• Factura de pago\n• Información de la sede`,
           [{ text: 'OK' }]
         );
         
@@ -196,6 +197,11 @@ const CourseScreen = ({ navigation }) => {
         loadCourses();
       }
     } catch (error) {
+      console.log('=== ENROLLMENT ERROR ===');
+      console.log('Error:', error);
+      console.log('Error message:', error.message);
+      console.log('Error stack:', error.stack);
+      
       Alert.alert(
         'Error',
         'No se pudo procesar tu inscripción. Por favor, intenta nuevamente.',
@@ -478,7 +484,11 @@ const CourseScreen = ({ navigation }) => {
         showsVerticalScrollIndicator={false}
       >
         {filteredCourses.length > 0 ? (
-          filteredCourses.map(course => renderCourseCard({ item: course }))
+          filteredCourses.map((course, index) => (
+            <View key={`course-${course.id || course.idCurso || course.idCronograma || index}-${index}`}>
+              {renderCourseCard({ item: course })}
+            </View>
+          ))
         ) : (
           <View style={styles.emptyContainer}>
             <Icon name="book-open" size={48} color={Colors.textLight} />

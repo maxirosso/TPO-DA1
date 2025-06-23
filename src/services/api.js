@@ -119,7 +119,12 @@ class ApiService {
         } catch (textError) {
           // Usar mensaje de error predeterminado si no podemos leer la respuesta
         }
-        throw new Error(errorMessage);
+        
+        // Crear error específico con información adicional
+        const error = new Error(errorMessage);
+        error.status = response.status;
+        error.statusText = response.statusText;
+        throw error;
       }
 
       // Analizar respuesta según el tipo de contenido
@@ -340,7 +345,7 @@ export const api = {
     getByStudent: (idAlumno) => apiService.get(`/alumno/${idAlumno}`),
     create: (courseData) => apiService.post('/crearCurso', courseData),
     createSchedule: (scheduleData) => apiService.post('/crearCronograma', scheduleData),
-    enroll: (idAlumno, idCronograma) => apiService.postForm('/inscripcionCurso', { idAlumno, idCronograma }),
+    enroll: (idAlumno, idCronograma) => apiService.postForm('/inscribirseACurso', { idAlumno, idCronograma }),
     enrollAdvanced: (idAlumno, idCronograma) => apiService.postForm('/inscribirseACurso', { idAlumno, idCronograma }),
     unenroll: (idAlumno, idCronograma) => apiService.delete('/cancelarInscripcion', { idAlumno, idCronograma }),
     cancelEnrollment: (idInscripcion, reintegroEnTarjeta) => 

@@ -19,23 +19,24 @@ import Button from '../../components/common/Button';
 import Input from '../../components/common/Input';
 import Colors from '../../themes/colors';
 import Metrics from '../../themes/metrics';
-import apiService from '../../services/api';
+import { api } from '../../services/api';
+import { validarDatosRegistroEstudiante } from '../../utils/validaciones';
 
-const StudentRegistrationScreen = ({ navigation, route }) => {
-  const [cardNumber, setCardNumber] = useState('');
-  const [expiry, setExpiry] = useState('');
+const PantallaRegistroEstudiante = ({ navigation, route }) => {
+  const [numeroTarjeta, setNumeroTarjeta] = useState('');
+  const [fechaVencimiento, setFechaVencimiento] = useState('');
   const [cvv, setCvv] = useState('');
-  const [cardName, setCardName] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [dniFront, setDniFront] = useState(null);
-  const [dniBack, setDniBack] = useState(null);
-  const [currentStep, setCurrentStep] = useState(1);
+  const [nombreTarjeta, setNombreTarjeta] = useState('');
+  const [cargando, setCargando] = useState(false);
+  const [dniFrente, setDniFrente] = useState(null);
+  const [dniReverso, setDniReverso] = useState(null);
+  const [pasoActual, setPasoActual] = useState(1);
   const [tramite, setTramite] = useState('');
   
-  const email = route?.params?.email || '';
+  const correo = route?.params?.email || '';
   const [idUsuario, setIdUsuario] = useState('');
 
-  const handleSelectImage = (type) => {
+  const manejarSeleccionImagen = (tipo) => {
     ImagePicker.launchImageLibrary(
       {
         mediaType: 'photo',
@@ -43,182 +44,286 @@ const StudentRegistrationScreen = ({ navigation, route }) => {
         maxHeight: 800,
         maxWidth: 800,
       },
-      (response) => {
-        if (response.didCancel) {
+      (respuesta) => {
+        if (respuesta.didCancel) {
           return;
         }
 
-        if (response.assets && response.assets.length > 0) {
-          if (type === 'front') {
-            setDniFront(response.assets[0].uri);
+        if (respuesta.assets && respuesta.assets.length > 0) {
+          if (tipo === 'frente') {
+            setDniFrente(respuesta.assets[0].uri);
           } else {
-            setDniBack(response.assets[0].uri);
+            setDniReverso(respuesta.assets[0].uri);
           }
         }
       },
     );
   };
 
-  const fetchUserId = async (email) => {
+  const obtenerIdUsuario = async (correo) => {
     try {
-      const response = await apiService.get('/getUsuarioByEmail', { mail: email });
-      if (response && response.data && response.data.idUsuario) {
-        setIdUsuario(response.data.idUsuario);
-        return response.data.idUsuario;
+      const respuesta = await api.users.getByEmail(correo);
+      if (respuesta && respuesta.data && respuesta.data.idUsuario) {
+        setIdUsuario(respuesta.data.idUsuario);
+        return respuesta.data.idUsuario;
       }
     } catch (error) {
-      console.error('Error fetching user ID:', error);
+      console.error('Error al obtener ID de usuario:', error);
     }
     return null;
   };
 
-  const handleContinue = async () => {
-    if (currentStep === 1) {
-      if (!cardNumber || !expiry || !cvv || !cardName) {
-        Alert.alert('Error', 'Por favor, completa todos los campos de la tarjeta.');
+  const manejarContinuar = async () => {
+    if (pasoActual === 1) {
+      // Validar datos del paso 1 usando las utilidades de validación
+      const datosValidacion = {
+        correo,
+        numeroTarjeta,
+        fechaVencimiento,
+        cvv,
+        nombreTarjeta,
+        tramite: '',
+        dniFrente: 'temp',
+        dniReverso: 'temp'
+      };
+      
+      const validacion = validarDatosRegistroEstudiante(datosValidacion);
+      const erroresPaso1 = validacion.errores.filter(error => 
+        !error.includes('trámite') && 
+        !error.includes('DNI')
+      );
+      
+      if (erroresPaso1.length > 0) {
+        Alert.alert('Errores de Validación', erroresPaso1.join('\n'));
         return;
       }
-      setCurrentStep(2);
-    } else if (currentStep === 2) {
-      if (!dniFront || !dniBack || !tramite) {
-        Alert.alert('Error', 'Por favor, sube las fotos de tu DNI (frente y reverso) y completa el campo de trámite.');
+      
+      setPasoActual(2);
+    } else if (pasoActual === 2) {
+      // Validar todos los datos antes de enviar
+      const datosCompletos = {
+        correo,
+        numeroTarjeta,
+        fechaVencimiento,
+        cvv,
+        nombreTarjeta,
+        tramite,
+        dniFrente,
+        dniReverso
+      };
+      
+      const validacionCompleta = validarDatosRegistroEstudiante(datosCompletos);
+      if (!validacionCompleta.valido) {
+        Alert.alert('Errores de Validación', validacionCompleta.errores.join('\n'));
         return;
       }
-      setIsLoading(true);
+      setCargando(true);
       try {
-        // For new student registration, do NOT fetch or send idUsuario
-        // Only use idUsuario if upgrading an existing user (not handled here)
-        // Extract file names from URIs if possible
-        const getFileName = (uri) => {
-          if (!uri) return '';
-          const parts = uri.split('/');
-          return parts[parts.length - 1];
+        // Extraer nombres de archivo de URIs si es posible
+        const obtenerNombreArchivo = (uri) => {
+          if (!uri) return 'imagen_dni.jpg';
+          const partes = uri.split('/');
+          const nombreCompleto = partes[partes.length - 1];
+          // Si no tiene extensión, agregar .jpg
+          return nombreCompleto.includes('.') ? nombreCompleto : `${nombreCompleto}.jpg`;
         };
-        const dniFrente = getFileName(dniFront);
-        const dniFondo = getFileName(dniBack);
-        const mail = email;
-        const medioPago = cardNumber || '';
+        
+        const nombreArchivoDniFrente = obtenerNombreArchivo(dniFrente);
+        const nombreArchivoDniFondo = obtenerNombreArchivo(dniReverso);
+        const mail = correo;
+        const medioPago = numeroTarjeta || '';
         const tramiteStr = tramite || '';
         
-        // Log the data for debugging
-        console.log('Registering student params:', { mail, idUsuario: null, medioPago, dniFrente, dniFondo, tramite: tramiteStr });
+        // Registrar los datos para depuración
+        console.log('Parámetros de registro de estudiante:', { 
+          mail, 
+          idUsuario: null, 
+          medioPago, 
+          dniFrente: nombreArchivoDniFrente, 
+          dniFondo: nombreArchivoDniFondo, 
+          tramite: tramiteStr 
+        });
         
         if (!mail) {
-          Alert.alert('Error', 'Email es requerido para el registro.');
-          setIsLoading(false);
+          Alert.alert('Error', 'El correo electrónico es requerido para el registro.');
+          setCargando(false);
           return;
         }
         
-        const response = await apiService.auth.registerStudent(
-          mail,
-          null, // idUsuario is null for new student
-          medioPago,
-          dniFrente,
-          dniFondo,
-          tramiteStr
-        );
+        if (!medioPago) {
+          Alert.alert('Error', 'La información de la tarjeta es requerida.');
+          setCargando(false);
+          return;
+        }
         
-        setIsLoading(false);
+        if (!tramiteStr) {
+          Alert.alert('Error', 'El número de trámite del DNI es requerido.');
+          setCargando(false);
+          return;
+        }
         
-        if (response && response.success) {
-          Alert.alert(
-            'Registro exitoso',
-            'Tu registro como estudiante fue procesado exitosamente. Revisa tu correo para completar la verificación.',
-            [{ text: 'OK', onPress: () => navigation.navigate('Verification', { email }) }]
+        try {
+          const respuesta = await api.auth.registerStudent(
+            mail,
+            null, // idUsuario es null para nuevo estudiante
+            medioPago,
+            nombreArchivoDniFrente,
+            nombreArchivoDniFondo,
+            tramiteStr
           );
-        } else {
-          Alert.alert('Error', response?.data || 'No se pudo registrar como estudiante.');
+          
+          setCargando(false);
+          
+          if (respuesta && respuesta.success) {
+            Alert.alert(
+              'Registro Exitoso',
+              'Tu registro como estudiante fue procesado exitosamente. Revisa tu correo para completar la verificación.',
+              [{ text: 'ACEPTAR', onPress: () => navigation.navigate('Verification', { email: correo }) }]
+            );
+          } else {
+            // Manejar errores específicos del backend
+            const mensajeError = respuesta?.data || 'No se pudo registrar como estudiante.';
+            if (mensajeError.includes('Ya existe') || mensajeError.includes('ya sea un estudiante')) {
+              Alert.alert(
+                'Usuario ya registrado',
+                'Este correo electrónico ya está registrado como estudiante. Puedes iniciar sesión o recuperar tu contraseña.',
+                [
+                  { text: 'Cancelar', style: 'cancel' },
+                  { text: 'Iniciar Sesión', onPress: () => navigation.navigate('Login') }
+                ]
+              );
+            } else {
+              Alert.alert('Error', mensajeError);
+            }
+          }
+        } catch (error) {
+          setCargando(false);
+          console.error('Error específico de registro de estudiante:', error);
+          
+          // Manejar tipos específicos de errores
+          let mensajeError = 'No se pudo registrar como estudiante.';
+          
+          if (error.message) {
+            if (error.message.includes('403')) {
+              mensajeError = 'No tienes permisos para realizar esta acción. Verifica que el correo electrónico sea válido.';
+            } else if (error.message.includes('400')) {
+              mensajeError = 'Datos incorrectos. Verifica que todos los campos estén completos y correctos.';
+            } else if (error.message.includes('404')) {
+              mensajeError = 'Servicio no disponible. Intenta nuevamente más tarde.';
+            } else if (error.message.includes('500')) {
+              mensajeError = 'Error interno del servidor. Intenta nuevamente más tarde.';
+            } else if (error.message.includes('Sin conexión')) {
+              mensajeError = 'Sin conexión a internet. Verifica tu conexión e intenta nuevamente.';
+            } else {
+              mensajeError = error.message;
+            }
+          }
+          
+          Alert.alert(
+            'Error de Registro',
+            mensajeError,
+            [
+              { text: 'Reintentar', onPress: () => {} },
+              { text: 'Volver al Login', onPress: () => navigation.navigate('Login') }
+            ]
+          );
         }
       } catch (error) {
-        setIsLoading(false);
-        console.error('Student registration error:', error);
-        const errorMessage = error.message || 'No se pudo registrar como estudiante.';
-        Alert.alert('Error', errorMessage);
+        setCargando(false);
+        console.error('Error general de registro de estudiante:', error);
+        Alert.alert(
+          'Error Inesperado',
+          'Ocurrió un error inesperado. Por favor intenta nuevamente.',
+          [
+            { text: 'Reintentar', onPress: () => {} },
+            { text: 'Volver', onPress: () => navigation.goBack() }
+          ]
+        );
       }
     }
   };
   
-  const formatCardNumber = (text) => {
-    const cleaned = text.replace(/\D/g, '');
-    const formatted = cleaned.replace(/(\d{4})(?=\d)/g, '$1 ');
-    return formatted.slice(0, 19);
+  const formatearNumeroTarjeta = (texto) => {
+    const limpio = texto.replace(/\D/g, '');
+    const formateado = limpio.replace(/(\d{4})(?=\d)/g, '$1 ');
+    return formateado.slice(0, 19);
   };
   
-  const formatExpiry = (text) => {
-    const cleaned = text.replace(/\D/g, '');
-    if (cleaned.length > 2) {
-      return `${cleaned.slice(0, 2)}/${cleaned.slice(2, 4)}`;
+  const formatearFechaVencimiento = (texto) => {
+    const limpio = texto.replace(/\D/g, '');
+    if (limpio.length > 2) {
+      return `${limpio.slice(0, 2)}/${limpio.slice(2, 4)}`;
     }
-    return cleaned;
+    return limpio;
   };
   
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView style={estilos.contenedor} edges={['top']}>
       <KeyboardAvoidingView
-        style={styles.keyboardAvoidingView}
+        style={estilos.contenedorTeclado}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
       >
         <LinearGradient
           colors={[Colors.gradientStart, Colors.gradientEnd]}
-          style={styles.headerContainer}
+          style={estilos.contenedorEncabezado}
         >
-          <View style={styles.headerContent}>
+          <View style={estilos.contenidoEncabezado}>
             <TouchableOpacity
-              style={styles.backButton}
+              style={estilos.botonVolver}
               onPress={() => navigation.goBack()}
             >
               <Icon name="chevron-left" size={24} color={Colors.textDark} />
             </TouchableOpacity>
-            <Text style={styles.headerTitle}>Registro de Estudiante</Text>
+            <Text style={estilos.tituloEncabezado}>Registro de Estudiante</Text>
           </View>
         </LinearGradient>
         
         <ScrollView
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={estilos.contenidoScroll}
         >
-          <View style={styles.progressContainer}>
-            <View style={styles.progressBar}>
-              <View style={[styles.progressFill, { width: `${currentStep * 50}%` }]} />
+          <View style={estilos.contenedorProgreso}>
+            <View style={estilos.barraProgreso}>
+              <View style={[estilos.rellenoProgreso, { width: `${pasoActual * 50}%` }]} />
             </View>
-            <Text style={styles.progressText}>Paso {currentStep}/2</Text>
+            <Text style={estilos.textoProgreso}>Paso {pasoActual}/2</Text>
           </View>
           
-          {currentStep === 1 ? (
+          {pasoActual === 1 ? (
             <>
-              <View style={styles.infoContainer}>
-                <View style={styles.infoIcon}>
+              <View style={estilos.contenedorInfo}>
+                <View style={estilos.iconoInfo}>
                   <Icon name="info" size={20} color={Colors.primary} />
                 </View>
-                <Text style={styles.infoText}>
+                <Text style={estilos.textoInfo}>
                   El registro como estudiante es gratuito a menos que te inscribas en un curso. Necesitarás proporcionar información de pago para futuras inscripciones.
                 </Text>
               </View>
               
-              <View style={styles.sectionContainer}>
-                <Text style={styles.sectionTitle}>Método de Pago</Text>
-                <Text style={styles.sectionDescription}>
+              <View style={estilos.contenedorSeccion}>
+                <Text style={estilos.tituloSeccion}>Método de Pago</Text>
+                <Text style={estilos.descripcionSeccion}>
                   Agrega un método de pago para las inscripciones a cursos. No te cobraremos hasta que te registres en un curso.
                 </Text>
                 
                 <Input
                   label="Número de Tarjeta"
-                  value={cardNumber}
-                  onChangeText={(text) => setCardNumber(formatCardNumber(text))}
+                  value={numeroTarjeta}
+                  onChangeText={(texto) => setNumeroTarjeta(formatearNumeroTarjeta(texto))}
                   placeholder="1234 5678 9012 3456"
                   keyboardType="number-pad"
                   leftIcon="credit-card"
                 />
                 
-                <View style={styles.rowFields}>
+                <View style={estilos.camposEnFila}>
                   <Input
-                    label="Fecha de Expiración"
-                    value={expiry}
-                    onChangeText={(text) => setExpiry(formatExpiry(text))}
+                    label="Fecha de Vencimiento"
+                    value={fechaVencimiento}
+                    onChangeText={(texto) => setFechaVencimiento(formatearFechaVencimiento(texto))}
                     placeholder="MM/AA"
                     keyboardType="number-pad"
-                    style={styles.halfField}
+                    style={estilos.campoMitad}
                   />
                   
                   <Input
@@ -228,50 +333,50 @@ const StudentRegistrationScreen = ({ navigation, route }) => {
                     placeholder="CVV"
                     keyboardType="number-pad"
                     maxLength={3}
-                    style={styles.halfField}
+                    style={estilos.campoMitad}
                   />
                 </View>
                 
                 <Input
                   label="Nombre en la Tarjeta"
-                  value={cardName}
-                  onChangeText={setCardName}
+                  value={nombreTarjeta}
+                  onChangeText={setNombreTarjeta}
                   placeholder="Juan Pérez"
                 />
               </View>
             </>
           ) : (
-            <View style={styles.sectionContainer}>
-              <Text style={styles.sectionTitle}>Verificación de Identidad</Text>
-              <Text style={styles.sectionDescription}>
+            <View style={estilos.contenedorSeccion}>
+              <Text style={estilos.tituloSeccion}>Verificación de Identidad</Text>
+              <Text style={estilos.descripcionSeccion}>
                 Por favor, proporciona fotos de tu documento de identidad (frente y reverso) para la verificación.
               </Text>
               
-              <View style={styles.dniUploadContainer}>
+              <View style={estilos.contenedorSubidaDni}>
                 <TouchableOpacity
-                  style={styles.dniUploadButton}
-                  onPress={() => handleSelectImage('front')}
+                  style={estilos.botonSubidaDni}
+                  onPress={() => manejarSeleccionImagen('frente')}
                 >
-                  {dniFront ? (
-                    <Image source={{ uri: dniFront }} style={styles.dniImage} />
+                  {dniFrente ? (
+                    <Image source={{ uri: dniFrente }} style={estilos.imagenDni} />
                   ) : (
-                    <View style={styles.dniPlaceholder}>
+                    <View style={estilos.marcadorDni}>
                       <Icon name="camera" size={40} color={Colors.textMedium} />
-                      <Text style={styles.dniPlaceholderText}>Frente del DNI</Text>
+                      <Text style={estilos.textoMarcadorDni}>Frente del DNI</Text>
                     </View>
                   )}
                 </TouchableOpacity>
                 
                 <TouchableOpacity
-                  style={styles.dniUploadButton}
-                  onPress={() => handleSelectImage('back')}
+                  style={estilos.botonSubidaDni}
+                  onPress={() => manejarSeleccionImagen('reverso')}
                 >
-                  {dniBack ? (
-                    <Image source={{ uri: dniBack }} style={styles.dniImage} />
+                  {dniReverso ? (
+                    <Image source={{ uri: dniReverso }} style={estilos.imagenDni} />
                   ) : (
-                    <View style={styles.dniPlaceholder}>
+                    <View style={estilos.marcadorDni}>
                       <Icon name="camera" size={40} color={Colors.textMedium} />
-                      <Text style={styles.dniPlaceholderText}>Reverso del DNI</Text>
+                      <Text style={estilos.textoMarcadorDni}>Reverso del DNI</Text>
                     </View>
                   )}
                 </TouchableOpacity>
@@ -287,11 +392,11 @@ const StudentRegistrationScreen = ({ navigation, route }) => {
           )}
           
           <Button
-            title={currentStep === 1 ? "Continuar" : "Verificar Identidad"}
-            onPress={handleContinue}
+            title={pasoActual === 1 ? "Continuar" : "Verificar Identidad"}
+            onPress={manejarContinuar}
             fullWidth
-            style={styles.continueButton}
-            isLoading={isLoading}
+            style={estilos.botonContinuar}
+            isLoading={cargando}
           />
         </ScrollView>
       </KeyboardAvoidingView>
@@ -299,131 +404,126 @@ const StudentRegistrationScreen = ({ navigation, route }) => {
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
+const estilos = StyleSheet.create({
+  contenedor: {
     flex: 1,
     backgroundColor: Colors.card,
   },
-  keyboardAvoidingView: {
+  contenedorTeclado: {
     flex: 1,
   },
-  headerContainer: {
+  contenedorEncabezado: {
     paddingHorizontal: Metrics.mediumSpacing,
     paddingVertical: Metrics.mediumSpacing,
   },
-  headerContent: {
+  contenidoEncabezado: {
     flexDirection: 'row',
     alignItems: 'center',
   },
-  backButton: {
+  botonVolver: {
     marginRight: Metrics.baseSpacing,
   },
-  headerTitle: {
-    fontSize: Metrics.xxLargeFontSize,
+  tituloEncabezado: {
+    fontSize: Metrics.largeFontSize,
     fontWeight: '600',
     color: Colors.textDark,
   },
-  scrollContent: {
-    flexGrow: 1,
+  contenidoScroll: {
     padding: Metrics.mediumSpacing,
   },
-  progressContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: Metrics.largeSpacing,
-  },
-  progressBar: {
-    flex: 1,
-    height: 8,
-    backgroundColor: Colors.background,
-    borderRadius: Metrics.roundedFull,
-    overflow: 'hidden',
-    marginRight: Metrics.baseSpacing,
-  },
-  progressFill: {
-    height: '100%',
-    backgroundColor: Colors.primary,
-    borderRadius: Metrics.roundedFull,
-  },
-  progressText: {
-    fontSize: Metrics.smallFontSize,
-    fontWeight: '500',
-    color: Colors.textDark,
-  },
-  infoContainer: {
-    flexDirection: 'row',
-    backgroundColor: Colors.primary + '10',
-    borderRadius: Metrics.mediumBorderRadius,
-    padding: Metrics.mediumSpacing,
+  contenedorProgreso: {
     marginBottom: Metrics.mediumSpacing,
   },
-  infoIcon: {
+  barraProgreso: {
+    height: 4,
+    backgroundColor: Colors.border,
+    borderRadius: 2,
+    marginBottom: Metrics.smallSpacing,
+  },
+  rellenoProgreso: {
+    height: '100%',
+    backgroundColor: Colors.primary,
+    borderRadius: 2,
+  },
+  textoProgreso: {
+    fontSize: Metrics.smallFontSize,
+    color: Colors.textMedium,
+    textAlign: 'center',
+  },
+  contenedorInfo: {
+    backgroundColor: Colors.primary + '15',
+    borderRadius: Metrics.baseBorderRadius,
+    padding: Metrics.mediumSpacing,
+    flexDirection: 'row',
+    marginBottom: Metrics.mediumSpacing,
+  },
+  iconoInfo: {
     marginRight: Metrics.baseSpacing,
     marginTop: 2,
   },
-  infoText: {
+  textoInfo: {
     flex: 1,
-    fontSize: Metrics.smallFontSize,
+    fontSize: Metrics.baseFontSize,
     color: Colors.textDark,
-    lineHeight: Metrics.mediumLineHeight,
+    lineHeight: Metrics.baseLineHeight,
   },
-  sectionContainer: {
+  contenedorSeccion: {
     marginBottom: Metrics.mediumSpacing,
   },
-  sectionTitle: {
-    fontSize: Metrics.largeFontSize,
+  tituloSeccion: {
+    fontSize: Metrics.mediumFontSize,
     fontWeight: '600',
     color: Colors.textDark,
     marginBottom: Metrics.baseSpacing,
   },
-  sectionDescription: {
-    fontSize: Metrics.smallFontSize,
+  descripcionSeccion: {
+    fontSize: Metrics.baseFontSize,
     color: Colors.textMedium,
     marginBottom: Metrics.mediumSpacing,
+    lineHeight: Metrics.baseLineHeight,
   },
-  rowFields: {
+  camposEnFila: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    gap: Metrics.baseSpacing,
   },
-  halfField: {
-    width: '48%',
+  campoMitad: {
+    flex: 1,
   },
-  dniUploadContainer: {
+  contenedorSubidaDni: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: Metrics.baseSpacing,
+    marginBottom: Metrics.mediumSpacing,
+    gap: Metrics.baseSpacing,
   },
-  dniUploadButton: {
-    width: '48%',
-    aspectRatio: 1.5,
+  botonSubidaDni: {
+    flex: 1,
+    height: 120,
     borderRadius: Metrics.baseBorderRadius,
-    overflow: 'hidden',
-    backgroundColor: Colors.background,
-    borderWidth: 1,
+    borderWidth: 2,
     borderColor: Colors.border,
     borderStyle: 'dashed',
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: Colors.background,
   },
-  dniImage: {
+  imagenDni: {
     width: '100%',
     height: '100%',
-    resizeMode: 'cover',
+    borderRadius: Metrics.baseBorderRadius - 2,
   },
-  dniPlaceholder: {
-    flex: 1,
+  marcadorDni: {
     alignItems: 'center',
-    justifyContent: 'center',
-    padding: Metrics.baseSpacing,
   },
-  dniPlaceholderText: {
+  textoMarcadorDni: {
     fontSize: Metrics.smallFontSize,
     color: Colors.textMedium,
-    textAlign: 'center',
     marginTop: Metrics.smallSpacing,
+    textAlign: 'center',
   },
-  continueButton: {
-    marginTop: Metrics.baseSpacing,
-    marginBottom: Metrics.xxLargeSpacing,
+  botonContinuar: {
+    marginTop: Metrics.mediumSpacing,
   },
 });
 
-export default StudentRegistrationScreen;
+export default PantallaRegistroEstudiante;

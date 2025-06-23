@@ -23,12 +23,26 @@ const CourseDetailScreen = ({ navigation, route }) => {
   const [selectedLocation, setSelectedLocation] = useState(null);
   const [isLocationModalVisible, setIsLocationModalVisible] = useState(false);
   const [course, setCourse] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
+  // Get data from route params
+  const { 
+    course: courseProp, 
+    enrollment, 
+    isEnrolled, 
+    userType, 
+    onEnroll 
+  } = route.params || {};
+
   useEffect(() => {
-    loadCourse();
-  }, []);
+    if (courseProp) {
+      setCourse(courseProp);
+      setLoading(false);
+    } else {
+      loadCourse();
+    }
+  }, [courseProp]);
 
   const loadCourse = async () => {
     setLoading(true);
@@ -79,16 +93,50 @@ const CourseDetailScreen = ({ navigation, route }) => {
   };
   
   const handleEnroll = () => {
-    if (!selectedLocation) {
-      setIsLocationModalVisible(true);
+    // Check user type first
+    if (userType !== 'student') {
+      Alert.alert(
+        'Acceso Restringido',
+        userType === 'visitor' 
+          ? 'Regístrate como estudiante para inscribirte a cursos.'
+          : 'Actualiza tu perfil a estudiante para acceder a todas las funcionalidades.',
+        [
+          { text: 'Cancelar', style: 'cancel' },
+          { 
+            text: userType === 'visitor' ? 'Registrarse' : 'Actualizar Perfil', 
+            onPress: () => navigation.navigate('Profile')
+          }
+        ]
+      );
       return;
     }
-    
-    // In a real app, this would navigate to a payment screen
-    navigation.navigate('CourseEnrollment', { 
-      course,
-      location: selectedLocation
-    });
+
+    // If already enrolled, show message
+    if (isEnrolled) {
+      Alert.alert(
+        'Ya Inscrito',
+        'Ya estás inscrito en este curso. Puedes ver los detalles en "Mis Cursos".',
+        [
+          { text: 'OK' },
+          { 
+            text: 'Ver Mis Cursos', 
+            onPress: () => navigation.navigate('MyCourses')
+          }
+        ]
+      );
+      return;
+    }
+
+    // Use the enrollment function passed from CourseScreen
+    if (onEnroll && course) {
+      onEnroll(course, course.sede);
+    } else {
+      // Fallback to navigation if onEnroll is not available
+      navigation.navigate('CourseEnrollment', { 
+        course,
+        location: course.sede
+      });
+    }
   };
   
   const selectLocation = (location) => {
@@ -147,6 +195,30 @@ const CourseDetailScreen = ({ navigation, route }) => {
       )}
     </TouchableOpacity>
   );
+
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.container} edges={['top']}>
+        <View style={styles.loadingContainer}>
+          <Text>Cargando curso...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (error || !course) {
+    return (
+      <SafeAreaView style={styles.container} edges={['top']}>
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>{error || 'No se encontró el curso'}</Text>
+          <Button 
+            title="Volver" 
+            onPress={() => navigation.goBack()} 
+          />
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -310,27 +382,77 @@ const CourseDetailScreen = ({ navigation, route }) => {
               <Text style={styles.descriptionTitle}>Descripción del Curso</Text>
               <Text style={styles.descriptionText}>{course?.descripcion}</Text>
 
+              {course?.sede && (
+                <>
+                  <Text style={styles.requirementsTitle}>Información de la Sede</Text>
+                  <View style={styles.sedeContainer}>
+                    <View style={styles.sedeItem}>
+                      <Icon name="map-pin" size={16} color={Colors.primary} />
+                      <Text style={styles.sedeText}>{course.sede.nombre}</Text>
+                    </View>
+                    <View style={styles.sedeItem}>
+                      <Icon name="navigation" size={16} color={Colors.primary} />
+                      <Text style={styles.sedeText}>{course.sede.direccion}</Text>
+                    </View>
+                    <View style={styles.sedeItem}>
+                      <Icon name="phone" size={16} color={Colors.primary} />
+                      <Text style={styles.sedeText}>{course.sede.telefono}</Text>
+                    </View>
+                    <View style={styles.sedeItem}>
+                      <Icon name="mail" size={16} color={Colors.primary} />
+                      <Text style={styles.sedeText}>{course.sede.email}</Text>
+                    </View>
+                    {course.sede.whatsapp && (
+                      <View style={styles.sedeItem}>
+                        <Icon name="message-circle" size={16} color={Colors.primary} />
+                        <Text style={styles.sedeText}>{course.sede.whatsapp}</Text>
+                      </View>
+                    )}
+                  </View>
+                </>
+              )}
+
               <Text style={styles.requirementsTitle}>Requisitos</Text>
-              {course?.requerimientos.map((requirement, index) => (
-                <View key={index} style={styles.requirementItem}>
-                  <View style={styles.bulletPoint} />
-                  <Text style={styles.requirementText}>{requirement}</Text>
-                </View>
-              ))}
+              {course?.requerimientos ? (
+                typeof course.requerimientos === 'string' ? (
+                  <Text style={styles.requirementText}>{course.requerimientos}</Text>
+                ) : Array.isArray(course.requerimientos) && course.requerimientos.length > 0 ? (
+                  course.requerimientos.map((requirement, index) => (
+                    <View key={index} style={styles.requirementItem}>
+                      <View style={styles.bulletPoint} />
+                      <Text style={styles.requirementText}>{requirement}</Text>
+                    </View>
+                  ))
+                ) : (
+                  <Text style={styles.requirementText}>Sin requisitos previos</Text>
+                )
+              ) : (
+                <Text style={styles.requirementText}>Sin requisitos previos</Text>
+              )}
             </View>
           )}
 
           {activeTab === 'topics' && (
             <View style={styles.tabContent}>
               <Text style={styles.topicsTitle}>Contenido del Curso</Text>
-              {course?.contenidos.map((topic, index) => (
-                <View key={index} style={styles.topicItem}>
-                  <View style={styles.topicNumber}>
-                    <Text style={styles.topicNumberText}>{index + 1}</Text>
-                  </View>
-                  <Text style={styles.topicText}>{topic}</Text>
-                </View>
-              ))}
+              {course?.contenidos ? (
+                typeof course.contenidos === 'string' ? (
+                  <Text style={styles.topicText}>{course.contenidos}</Text>
+                ) : Array.isArray(course.contenidos) && course.contenidos.length > 0 ? (
+                  course.contenidos.map((topic, index) => (
+                    <View key={index} style={styles.topicItem}>
+                      <View style={styles.topicNumber}>
+                        <Text style={styles.topicNumberText}>{index + 1}</Text>
+                      </View>
+                      <Text style={styles.topicText}>{topic}</Text>
+                    </View>
+                  ))
+                ) : (
+                  <Text style={styles.topicText}>Contenido por definir</Text>
+                )
+              ) : (
+                <Text style={styles.topicText}>Contenido por definir</Text>
+              )}
             </View>
           )}
 
@@ -355,9 +477,17 @@ const CourseDetailScreen = ({ navigation, route }) => {
 
       <View style={styles.footer}>
         <Button
-          title={selectedLocation ? "Inscribirse al Curso" : "Seleccionar Sede"}
+          title={
+            isEnrolled 
+              ? "Ya Inscrito" 
+              : userType !== 'student'
+                ? "Iniciar Sesión para Inscribirse"
+                : "Inscribirse al Curso"
+          }
           onPress={handleEnroll}
           fullWidth
+          disabled={loading}
+          style={isEnrolled ? { backgroundColor: Colors.success } : {}}
         />
       </View>
 
@@ -388,6 +518,23 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.background,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: Metrics.mediumSpacing,
+  },
+  errorText: {
+    fontSize: Metrics.baseFontSize,
+    color: Colors.error,
+    textAlign: 'center',
+    marginBottom: Metrics.mediumSpacing,
   },
   header: {
     position: 'absolute',
@@ -600,6 +747,23 @@ const styles = StyleSheet.create({
     fontSize: Metrics.baseFontSize,
     color: Colors.textDark,
     lineHeight: Metrics.mediumLineHeight,
+  },
+  sedeContainer: {
+    backgroundColor: Colors.background,
+    borderRadius: Metrics.baseBorderRadius,
+    padding: Metrics.mediumSpacing,
+    marginBottom: Metrics.mediumSpacing,
+  },
+  sedeItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: Metrics.smallSpacing,
+  },
+  sedeText: {
+    fontSize: Metrics.baseFontSize,
+    color: Colors.textDark,
+    marginLeft: Metrics.baseSpacing,
+    flex: 1,
   },
   topicsTitle: {
     fontSize: Metrics.mediumFontSize,

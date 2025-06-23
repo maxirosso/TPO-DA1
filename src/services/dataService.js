@@ -70,6 +70,7 @@ function mapBackendCourse(curso) {
   return {
     id: curso.idCurso,
     idCurso: curso.idCurso,
+    idCronograma: curso.idCronograma,
     title: curso.descripcion || 'Sin título',
     descripcion: curso.descripcion || 'Sin descripción',
     contenidos: curso.contenidos || 'No especificado',
