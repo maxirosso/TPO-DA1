@@ -97,19 +97,28 @@ const TwoStageRegistrationScreen = ({ navigation, route }) => {
         return; // checkUsernameAvailability handles showing suggestions
       }
 
-      // Generate temporary user ID for registration
-      const tempUserId = Math.floor(Math.random() * 1000000);
-
-      // Send verification email
-      if (userType === 'alumno') {
-        await dataService.registerStudent(email, tempUserId, 'pending', 'pending', 'pending', 'pending');
+      // Send verification email according to user type
+      if (userType === 'visitante') {
+        // Visitantes: registro simple sin código
+        await dataService.registerVisitor(email, username);
+        Alert.alert(
+          'Registro Exitoso',
+          'Tu registro como visitante ha sido completado. Se ha enviado un email de confirmación.',
+          [{ text: 'Continuar', onPress: () => navigation.navigate('Login') }]
+        );
+        return;
+      } else if (userType === 'alumno') {
+        // Alumnos: mismo proceso que usuarios + datos extra
+        await dataService.registerUserStage1(email, username);
       } else {
-        await dataService.registerVisitor(email, tempUserId);
+        // Usuarios: registro en 2 etapas con código
+        await dataService.registerUserStage1(email, username);
       }
 
       setEmailSent(true);
+      setStage(2);
       Alert.alert(
-        'Verificación Enviada',
+        'Código Enviado',
         'Se ha enviado un código de verificación a tu email. El código tiene una validez de 24 horas.',
         [{ text: 'Entendido', onPress: () => {} }]
       );
@@ -235,20 +244,8 @@ const TwoStageRegistrationScreen = ({ navigation, route }) => {
         return;
       }
 
-      // Create complete user profile
-      const userData = {
-        mail: email,
-        nickname: username,
-        nombre: profileData.nombre,
-        password: profileData.password,
-        direccion: profileData.direccion,
-        telefono: profileData.telefono,
-        tipo: userType,
-        habilitado: 'Si'
-      };
-
-      // Register user
-      await dataService.register(userData);
+      // Complete user registration with basic profile
+      await dataService.completeUserRegistration(email, profileData.nombre, profileData.password);
 
       // If student, upgrade to student with additional data
       if (userType === 'alumno') {
@@ -262,7 +259,7 @@ const TwoStageRegistrationScreen = ({ navigation, route }) => {
         // Get user ID to upgrade
         const user = await dataService.getUserByEmail(email);
         if (user) {
-          await dataService.upgradeToStudent(user.id, studentRequest);
+          await dataService.upgradeToStudent(user.idUsuario, studentRequest);
         }
       }
 
@@ -280,16 +277,28 @@ const TwoStageRegistrationScreen = ({ navigation, route }) => {
     }
   };
 
-  // Simulate email verification (in real app, this would call backend)
+  // Resend verification code
+  const handleResendCode = async () => {
+    try {
+      setLoading(true);
+      await dataService.resendUserCode(email);
+      Alert.alert(
+        'Código Reenviado',
+        'Se ha enviado un nuevo código de verificación a tu email.',
+        [{ text: 'Entendido', onPress: () => {} }]
+      );
+    } catch (error) {
+      Alert.alert('Error', 'No se pudo reenviar el código. Intenta nuevamente.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Verify email code using real backend endpoint
   const verifyEmailCode = async (code) => {
     try {
-      const response = await fetch(dataService.api.baseURL + '/auth/verify-email', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, code })
-      });
-      const result = await response.json();
-      return result.success;
+      const result = await dataService.verifyUserCode(email, code);
+      return true; // Si no lanza error, es válido
     } catch (error) {
       console.log('Email verification error:', error);
       return false;
@@ -367,14 +376,20 @@ const TwoStageRegistrationScreen = ({ navigation, route }) => {
             style={styles.textInput}
             value={verificationCode}
             onChangeText={setVerificationCode}
-            placeholder="Ingresa el código de 6 dígitos"
+            placeholder="Código de 6 dígitos de tu email"
             placeholderTextColor={Colors.textLight}
             keyboardType="numeric"
             maxLength={6}
           />
-          <Text style={styles.helpText}>
-            Revisa tu email y ingresa el código de verificación. El código expira en 24 horas.
-          </Text>
+          <TouchableOpacity 
+            style={styles.resendButton}
+            onPress={handleResendCode}
+            disabled={loading}
+          >
+            <Text style={styles.resendButtonText}>
+              {loading ? 'Reenviando...' : '¿No recibiste el código? Reenviar'}
+            </Text>
+          </TouchableOpacity>
         </View>
       )}
 
@@ -419,6 +434,15 @@ const TwoStageRegistrationScreen = ({ navigation, route }) => {
           keyboardType="numeric"
           maxLength={6}
         />
+        <TouchableOpacity 
+          style={styles.resendButton}
+          onPress={handleResendCode}
+          disabled={loading}
+        >
+          <Text style={styles.resendButtonText}>
+            {loading ? 'Reenviando...' : '¿No recibiste el código? Reenviar'}
+          </Text>
+        </TouchableOpacity>
       </View>
 
       {/* Personal Information */}
@@ -698,6 +722,17 @@ const styles = StyleSheet.create({
   submitButton: {
     marginTop: Metrics.mediumSpacing,
     marginBottom: Metrics.xxLargeSpacing,
+  },
+  resendButton: {
+    padding: Metrics.baseSpacing,
+    backgroundColor: Colors.primary + '10',
+    borderRadius: Metrics.baseBorderRadius,
+    alignItems: 'center',
+  },
+  resendButtonText: {
+    fontSize: Metrics.smallFontSize,
+    fontWeight: '500',
+    color: Colors.primary,
   },
 });
 

@@ -8,6 +8,7 @@ import VerificationScreen from '../screens/auth/VerificationScreen';
 import CompleteProfileScreen from '../screens/auth/CompleteProfileScreen';
 import PantallaRegistroEstudiante from '../screens/auth/StudentRegistrationScreen';
 import ForgotPasswordScreen from '../screens/auth/ForgotPasswordScreen';
+import VisitorRegistrationScreen from '../screens/auth/VisitorRegistrationScreen';
 
 const Stack = createStackNavigator();
 
@@ -24,6 +25,7 @@ const AuthNavigator = () => {
       <Stack.Screen name="CompleteProfile" component={CompleteProfileScreen} />
       <Stack.Screen name="StudentRegistration" component={PantallaRegistroEstudiante} />
       <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
+      <Stack.Screen name="VisitorRegistration" component={VisitorRegistrationScreen} />
     </Stack.Navigator>
   );
 };

@@ -295,7 +295,16 @@ export const api = {
   auth: {
     login: (mail, password) => apiService.postForm('/login', { mail, password }),
     register: (userData) => apiService.post('/registrarUsuario', userData),
-    registerVisitor: (mail, idUsuario) => apiService.postForm('/registrarVisitante', { mail, idUsuario }),
+    // Verificación de username
+    checkUsername: (username) => apiService.get('/auth/check-username', { username }),
+    // Visitantes (sin código de verificación)
+    registerVisitor: (mail, alias) => apiService.postForm('/registrarVisitante', { mail, alias }),
+    // Usuarios (con código de verificación en 2 etapas)
+    registerUserStage1: (mail, alias) => apiService.postForm('/registrarUsuarioEtapa1', { mail, alias }),
+    verifyUserCode: (mail, codigo) => apiService.postForm('/verificarCodigoUsuario', { mail, codigo }),
+    completeUserRegistration: (mail, nombre, password) => apiService.postForm('/completarRegistroUsuario', { mail, nombre, password }),
+    resendUserCode: (mail) => apiService.postForm('/reenviarCodigoUsuario', { mail }),
+    // Alumnos (igual que usuarios + datos adicionales)
     registerStudent: (mail, idUsuario, medioPago, dniFrente, dniFondo, tramite) => 
       apiService.postForm('/registrarAlumno', { mail, idUsuario, medioPago, dniFrente, dniFondo, tramite }),
     forgotPassword: (mail) => apiService.postForm('/recuperarClave', { mail }),

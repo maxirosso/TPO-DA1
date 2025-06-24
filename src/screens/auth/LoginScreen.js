@@ -102,7 +102,7 @@ const LoginScreen = ({ navigation }) => {
   };
   
   const handleVisitorMode = () => {
-    enterVisitorMode();
+    navigation.navigate('VisitorRegistration');
   };
   
   const renderSignInTab = () => (

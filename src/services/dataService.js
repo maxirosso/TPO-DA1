@@ -964,12 +964,54 @@ class DataService {
     }
   }
 
-  async registerVisitor(email, idUsuario) {
+  // Visitantes (sin código de verificación)
+  async registerVisitor(email, alias) {
     try {
-      const result = await api.auth.registerVisitor(email, idUsuario);
+      const result = await api.auth.registerVisitor(email, alias);
       return result.data;
     } catch (error) {
       console.log('Error registering visitor:', error.message);
+      throw error;
+    }
+  }
+
+  // Usuarios (con código de verificación en 2 etapas)
+  async registerUserStage1(email, alias) {
+    try {
+      const result = await api.auth.registerUserStage1(email, alias);
+      return result.data;
+    } catch (error) {
+      console.log('Error registering user stage 1:', error.message);
+      throw error;
+    }
+  }
+
+  async verifyUserCode(email, codigo) {
+    try {
+      const result = await api.auth.verifyUserCode(email, codigo);
+      return result.data;
+    } catch (error) {
+      console.log('Error verifying user code:', error.message);
+      throw error;
+    }
+  }
+
+  async completeUserRegistration(email, nombre, password) {
+    try {
+      const result = await api.auth.completeUserRegistration(email, nombre, password);
+      return result.data;
+    } catch (error) {
+      console.log('Error completing user registration:', error.message);
+      throw error;
+    }
+  }
+
+  async resendUserCode(email) {
+    try {
+      const result = await api.auth.resendUserCode(email);
+      return result.data;
+    } catch (error) {
+      console.log('Error resending user code:', error.message);
       throw error;
     }
   }
