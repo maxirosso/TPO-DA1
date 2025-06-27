@@ -17,8 +17,6 @@ import Button from '../../components/common/Button';
 import Colors from '../../themes/colors';
 import Metrics from '../../themes/metrics';
 import dataService from '../../services/dataService';
-import api from '../../services/api';
-import apiConfig from '../../config/api.config';
 import { AuthContext } from '../../context/AuthContext';
 
 const VisitorRegistrationScreen = ({ navigation }) => {
@@ -34,8 +32,8 @@ const VisitorRegistrationScreen = ({ navigation }) => {
     return emailRegex.test(email);
   };
 
-  // Generar sugerencias de alias
-  const generateAliasSuggestions = (baseAlias) => {
+  // Generar sugerencias de alias localmente como fallback
+  const generateLocalAliasSuggestions = (baseAlias) => {
     const suggestions = [];
     const base = baseAlias.replace(/\d+$/, ''); // Remover números al final
     
@@ -54,56 +52,24 @@ const VisitorRegistrationScreen = ({ navigation }) => {
     return suggestions;
   };
 
-  // Verificar disponibilidad de username
-  const checkUsernameAvailability = async (username) => {
-    console.log('🟡 Verificando username:', username);
+  // Obtener sugerencias de alias del backend
+  const getSugerenciasAlias = async (baseAlias) => {
     try {
-      // Agregar timeout de 5 segundos para evitar que se quede colgado
-      const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('Timeout')), 5000)
-      );
-      
-      console.log('🟡 Llamando a api.auth.checkUsername...');
-      console.log('🔍 Base URL que se usará:', apiConfig.API_BASE_URL);
-      
-      const response = await Promise.race([
-        api.auth.checkUsername(username),
-        timeoutPromise
-      ]);
-      
-      console.log('🟢 Respuesta completa verificación username:', response);
-      console.log('🟢 Datos respuesta:', response.data);
-      
-      // Verificar si la respuesta tiene la estructura correcta
-      if (response && response.data) {
-        if (!response.data.available) {
-          console.log('🟡 Username no disponible, generando sugerencias...');
-          const suggestions = response.data.suggestions || generateAliasSuggestions(username);
-          setAliasSuggestions(suggestions);
-          Alert.alert(
-            'Alias No Disponible',
-            'Este alias ya está en uso. Te sugerimos algunas alternativas.',
-          );
-          return false;
-        }
-        console.log('🟢 Username disponible según respuesta');
-        return true;
-      } else {
-        console.log('🟠 Respuesta inesperada, asumiendo disponible');
-        return true;
+      const response = await dataService.getSugerenciasAlias(baseAlias);
+      if (response && response.sugerencias && response.sugerencias.length > 0) {
+        return response.sugerencias;
       }
     } catch (error) {
-      console.log('🔴 Error checking username (usando fallback local):', error);
-      console.log('🔴 Error details:', error.message, error.status);
-      // Si falla la verificación, generar sugerencias localmente
-      // pero permitir que continúe (el backend validará finalmente)
-      return true;
+      console.log('Error obteniendo sugerencias del backend:', error);
     }
+    
+    // Fallback a sugerencias locales
+    return generateLocalAliasSuggestions(baseAlias);
   };
 
-  // Manejar registro de visitante
+  // Manejar registro de visitante con verificación
   const handleVisitorRegistration = async () => {
-    console.log('🟢 Iniciando registro de visitante:', { email, alias });
+    console.log('🟢 Iniciando registro de visitante con verificación:', { email, alias });
     
     // Validaciones
     if (!email.trim() || !isValidEmail(email)) {
@@ -120,117 +86,108 @@ const VisitorRegistrationScreen = ({ navigation }) => {
     setLoading(true);
     
     try {
-      console.log('🟡 Verificando disponibilidad del alias...');
-      // Verificar disponibilidad del alias
-      const aliasAvailable = await checkUsernameAvailability(alias);
-      console.log('🟢 Resultado verificación alias:', aliasAvailable);
+      console.log('🟡 Registrando visitante en backend (Etapa 1)...');
       
-      if (!aliasAvailable) {
-        console.log('🔴 Alias no disponible, mostrando sugerencias');
-        setLoading(false);
-        return; // La función ya mostró las sugerencias - NO continuar con registro
-      }
+      // Registrar visitante etapa 1 (envía código)
+      const registrationResult = await dataService.registerVisitorStage1(email, alias);
+      
+      console.log('🟢 Resultado del backend:', registrationResult);
 
-      console.log('🟡 Registrando visitante en backend...');
-      console.log('🔍 Registrando con datos:', { email, alias });
-      
-      // Registrar visitante con timeout más corto
-      const registrationTimeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('Timeout al registrar')), 8000)
-      );
-      
-      const registrationResult = await Promise.race([
-        dataService.registerVisitor(email, alias),
-        registrationTimeoutPromise
-      ]);
-      
-      console.log('🟢 Registro exitoso!');
-      console.log('🟢 Resultado registro:', registrationResult);
-
-      Alert.alert(
-        'Registro Exitoso',
-        'Te registraste correctamente como visitante. Puedes comenzar a explorar recetas y cursos. Si tienes conectividad, recibirás un email de confirmación.',
-        [
-          { 
-            text: 'Continuar', 
-            onPress: () => {
-              // Activar modo visitante y navegar a la app principal
-              enterVisitorMode();
-            }
-          }
-        ]
-      );
-
-    } catch (error) {
-      console.log('🔴 Registration error:', error);
-      console.log('🔴 Error response:', error.response);
-      console.log('🔴 Error message:', error.message);
-      console.log('🔴 Error status:', error.status);
-      
-      if (error.message.includes('Timeout')) {
+      // Verificar si fue exitoso
+      if (registrationResult && registrationResult.success) {
+        console.log('🟢 Registro etapa 1 exitoso!');
+        
         Alert.alert(
-          'Registro Completado',
-          'El registro puede haberse completado pero el servidor está tardando en responder. Intenta iniciar sesión como visitante o verifica si recibiste un email de confirmación.',
+          'Código Enviado',
+          registrationResult.message || 'Se ha enviado un código de verificación de 4 dígitos a tu email. El código es válido por 24 horas.',
           [
-            { text: 'Intentar Login', onPress: () => navigation.navigate('Login') },
-            { text: 'Reintentar', onPress: () => {} }
+            { 
+              text: 'Continuar', 
+              onPress: () => {
+                // Navegar a la pantalla de verificación
+                navigation.navigate('Verification', { 
+                  email: email,
+                  userType: 'visitante',
+                  alias: alias 
+                });
+              }
+            }
           ]
         );
-      } else if (error.response && error.response.status === 400) {
-        // Error del backend - probablemente email o alias ya registrado
-        const errorMessage = error.response.data || error.message;
-        console.log('🔴 Backend error message:', errorMessage);
-        
-        if (errorMessage.includes('alias ya está registrado') || errorMessage.includes('El alias ya está registrado')) {
-          // Alias ya está en uso - generar sugerencias
-          const suggestions = generateAliasSuggestions(alias);
-          setAliasSuggestions(suggestions);
+      } else {
+        // Registro falló, verificar la razón
+        if (registrationResult.aliasUnavailable) {
+          // Alias no disponible con sugerencias
+          console.log('🟡 Alias no disponible, mostrando sugerencias del backend');
+          if (registrationResult.suggestions && registrationResult.suggestions.length > 0) {
+            setAliasSuggestions(registrationResult.suggestions);
+          } else {
+            // Fallback a sugerencias locales
+            const localSuggestions = generateLocalAliasSuggestions(alias);
+            setAliasSuggestions(localSuggestions);
+          }
+          
           Alert.alert(
             'Alias No Disponible',
             'Este alias ya está en uso. Te sugerimos algunas alternativas disponibles.'
           );
-        } else if (errorMessage.includes('email ya está registrado') || errorMessage.includes('El email ya está registrado')) {
-          Alert.alert(
-            'Email Ya Registrado',
-            'Este email ya está registrado. Si el proceso de registración no se completó nunca, deberás enviar un mail a la empresa para liberarlo.'
-          );
         } else {
+          // Otro tipo de error (email ya registrado, etc.)
           Alert.alert(
             'Error de Registro',
-            errorMessage || 'No se pudo completar el registro. Intenta nuevamente.'
+            registrationResult.error || 'No se pudo completar el registro. Intenta nuevamente.'
           );
         }
-      } else if (error.message.includes('ya registrado')) {
-        // Mensaje de error en español del backend
-        if (error.message.includes('alias')) {
-          const suggestions = generateAliasSuggestions(alias);
-          setAliasSuggestions(suggestions);
+      }
+
+    } catch (error) {
+      console.log('🔴 Registration error:', error);
+      console.log('🔴 Error response data:', error.response?.data);
+      console.log('🔴 Error aliasUnavailable:', error.aliasUnavailable);
+      console.log('🔴 Error suggestions:', error.suggestions);
+      
+      // Verificar si es un error estructurado del backend
+      if (error.backendResponse || error.response?.data) {
+        const backendData = error.backendResponse || error.response?.data;
+        console.log('🟡 Error estructurado del backend:', backendData);
+        
+        if (error.aliasUnavailable || backendData.aliasUnavailable) {
+          // Alias no disponible con sugerencias
+          console.log('🟡 Alias no disponible, mostrando sugerencias del error');
+          const suggestions = error.suggestions || backendData.suggestions;
+          if (suggestions && suggestions.length > 0) {
+            console.log('🟢 Sugerencias encontradas:', suggestions);
+            setAliasSuggestions(suggestions);
+          } else {
+            console.log('🟡 No hay sugerencias del backend, generando localmente');
+            // Fallback a sugerencias locales
+            const localSuggestions = generateLocalAliasSuggestions(alias);
+            setAliasSuggestions(localSuggestions);
+          }
+          
           Alert.alert(
             'Alias No Disponible',
-            'Este alias ya está en uso. Te sugerimos algunas alternativas.'
+            'Este alias ya está en uso. Te sugerimos algunas alternativas disponibles.'
           );
         } else {
+          // Otro tipo de error estructurado (email ya registrado, etc.)
+          const errorMessage = backendData.error || error.message || 'No se pudo completar el registro. Intenta nuevamente.';
           Alert.alert(
-            'Datos Ya Registrados',
-            'El email o alias ya están registrados. Si el proceso de registración no se completó nunca, deberás enviar un mail a la empresa para liberarlo.'
+            'Error de Registro',
+            errorMessage
           );
         }
       } else if (error.message.includes('Network') || error.message.includes('fetch')) {
+        // Errores de red
         Alert.alert(
           'Error de Conexión',
           'No se pudo conectar al servidor. Verifica tu conexión a internet e intenta nuevamente.',
         );
-      } else if (error.status === 500) {
-        Alert.alert(
-          'Error del Servidor',
-          'Hay un problema temporal en el servidor. El registro puede haberse completado. Intenta iniciar sesión o verifica tu email.'
-        );
       } else {
-        // Error genérico - mostrar el mensaje completo para debugging
-        console.log('🔴 Error completo para mostrar:', JSON.stringify(error, null, 2));
+        // Otros errores generales
         Alert.alert(
           'Error de Registro', 
-          `No se pudo completar el registro. Detalles: ${error.message || 'Error desconocido'}`
+          error.message || 'No se pudo completar el registro. Intenta nuevamente.'
         );
       }
     } finally {
@@ -268,7 +225,7 @@ const VisitorRegistrationScreen = ({ navigation }) => {
           <Text style={styles.welcomeTitle}>¡Bienvenido a ChefNet!</Text>
           <Text style={styles.welcomeDescription}>
             Como visitante podrás explorar recetas y ver cursos disponibles. 
-            Solo necesitamos tu email y un alias para comenzar.
+            Te enviaremos un código de verificación para completar tu registro.
           </Text>
         </View>
 
@@ -323,7 +280,7 @@ const VisitorRegistrationScreen = ({ navigation }) => {
         )}
 
         <Button
-          title={loading ? "Registrando..." : "Registrarse como Visitante"}
+          title={loading ? "Registrando..." : "Crear Usuario"}
           onPress={handleVisitorRegistration}
           style={styles.registerButton}
           disabled={loading}
@@ -449,13 +406,13 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   registerButton: {
-    marginVertical: Metrics.largeSpacing,
+    marginBottom: Metrics.largeSpacing,
   },
   infoSection: {
     backgroundColor: Colors.card,
     borderRadius: Metrics.baseBorderRadius,
     padding: Metrics.mediumSpacing,
-    marginBottom: Metrics.mediumSpacing,
+    marginBottom: Metrics.largeSpacing,
   },
   infoTitle: {
     fontSize: Metrics.baseFontSize,
@@ -476,10 +433,11 @@ const styles = StyleSheet.create({
   },
   upgradeButton: {
     padding: Metrics.mediumSpacing,
-    borderWidth: 1,
-    borderColor: Colors.primary,
+    backgroundColor: Colors.primary + '10',
     borderRadius: Metrics.baseBorderRadius,
-    marginBottom: Metrics.xxLargeSpacing,
+    borderWidth: 1,
+    borderColor: Colors.primary + '30',
+    marginBottom: Metrics.largeSpacing,
   },
   upgradeButtonText: {
     fontSize: Metrics.baseFontSize,

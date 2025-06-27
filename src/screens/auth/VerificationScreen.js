@@ -18,18 +18,19 @@ import { AuthContext } from '../../context/AuthContext';
 import Button from '../../components/common/Button';
 import Colors from '../../themes/colors';
 import Metrics from '../../themes/metrics';
+import dataService from '../../services/dataService';
 
 const { width } = Dimensions.get('window');
 
 const VerificationScreen = ({ navigation, route }) => {
-  const { email = '' } = route.params || {};
-  const [verificationCode, setVerificationCode] = useState(['1', '6', '5', '0']);
+  const { email = '', userType = 'usuario', alias = '' } = route.params || {};
+  const [verificationCode, setVerificationCode] = useState(['', '', '', '']);
   const [isLoading, setIsLoading] = useState(false);
   const [isResending, setIsResending] = useState(false);
   const [timeLeft, setTimeLeft] = useState(24 * 60 * 60); // 24 hours in seconds
   const [activeInput, setActiveInput] = useState(null);
   
-  const { verifyCode, resendVerificationCode } = useContext(AuthContext);
+  const { verifyCode, resendVerificationCode, enterVisitorMode, setUser } = useContext(AuthContext);
   const inputRefs = [useRef(), useRef(), useRef(), useRef()];
   
   useEffect(() => {
@@ -127,26 +128,78 @@ const VerificationScreen = ({ navigation, route }) => {
   };
   
   const handleVerify = async () => {
+    // Verificar que el código esté completo
+    const codigo = verificationCode.join('');
+    if (codigo.length !== 4) {
+      Alert.alert('Código Incompleto', 'Por favor ingresa el código de 4 dígitos completo.');
+      return;
+    }
+
     setIsLoading(true);
     
     try {
-      // For development: always consider verification successful
-      const isVerified = true;
+      console.log('🟢 Verificando código:', { email, codigo, userType });
       
-      if (isVerified) {
-        // For demo, just navigate to complete profile without alert
-        navigation.navigate('CompleteProfile', { email });
+      let verificationResult;
+      
+      if (userType === 'visitante') {
+        // Verificar código de visitante
+        verificationResult = await dataService.verifyVisitorCode(email, codigo);
+        
+        console.log('🟢 Resultado verificación visitante:', verificationResult);
+        
+        if (verificationResult && verificationResult.success && verificationResult.user) {
+          // Guardar datos del usuario en el contexto
+          const userData = {
+            idUsuario: verificationResult.user.idUsuario,
+            mail: verificationResult.user.mail,
+            nickname: verificationResult.user.nickname,
+            tipo: verificationResult.user.tipo,
+            habilitado: verificationResult.user.habilitado
+          };
+          
+          console.log('🟢 Guardando datos del visitante en contexto:', userData);
+          setUser(userData);
+          
+          Alert.alert(
+            'Registro Completado',
+            'Tu registro como visitante se ha completado exitosamente. ¡Ya puedes explorar ChefNet!',
+            [
+              { 
+                text: 'Continuar', 
+                onPress: () => {
+                  // Activar modo visitante y navegar a la app principal
+                  enterVisitorMode();
+                }
+              }
+            ]
+          );
+        } else {
+          Alert.alert(
+            'Código Inválido',
+            'El código ingresado es incorrecto o ha expirado. Por favor, intenta nuevamente o solicita un nuevo código.'
+          );
+        }
       } else {
-        Alert.alert(
-          'Código Inválido',
-          'El código ingresado es incorrecto o ha expirado. Por favor, intenta nuevamente o solicita un nuevo código.'
-        );
+        // Verificar código de usuario normal
+        verificationResult = await dataService.verifyUserCode(email, codigo);
+        
+        if (verificationResult) {
+          // Navegar a completar perfil para usuarios normales
+          navigation.navigate('CompleteProfile', { email });
+        } else {
+          Alert.alert(
+            'Código Inválido',
+            'El código ingresado es incorrecto o ha expirado. Por favor, intenta nuevamente o solicita un nuevo código.'
+          );
+        }
       }
+      
     } catch (error) {
       console.error('Verification error:', error);
       Alert.alert(
         'Error de Verificación',
-        'Ha ocurrido un error al verificar tu código. Por favor, intenta nuevamente.'
+        error.message || 'Ha ocurrido un error al verificar tu código. Por favor, intenta nuevamente.'
       );
     } finally {
       setIsLoading(false);
@@ -159,19 +212,39 @@ const VerificationScreen = ({ navigation, route }) => {
     setIsResending(true);
     
     try {
-      // For development: always consider resend successful
-      Alert.alert(
-        'Código Reenviado',
-        'Hemos enviado un nuevo código de verificación a tu correo electrónico.'
-      );
-      setIsResending(false);
+      console.log('🟢 Reenviando código:', { email, userType });
+      
+      let resendResult;
+      
+      if (userType === 'visitante') {
+        // Reenviar código de visitante
+        resendResult = await dataService.resendVisitorCode(email);
+      } else {
+        // Reenviar código de usuario normal
+        resendResult = await dataService.resendUserCode(email);
+      }
+      
+      if (resendResult) {
+        Alert.alert(
+          'Código Reenviado',
+          'Hemos enviado un nuevo código de verificación a tu correo electrónico.'
+        );
+        // Resetear el timer de 24 horas
+        setTimeLeft(24 * 60 * 60);
+      } else {
+        Alert.alert(
+          'Error',
+          'No se pudo reenviar el código. Verifica tu email e intenta nuevamente.'
+        );
+      }
       
     } catch (error) {
       console.error('Resend code error:', error);
       Alert.alert(
         'Error',
-        'Ha ocurrido un error al reenviar el código. Por favor, intenta nuevamente más tarde.'
+        error.message || 'Ha ocurrido un error al reenviar el código. Por favor, intenta nuevamente más tarde.'
       );
+    } finally {
       setIsResending(false);
     }
   };
@@ -215,7 +288,10 @@ const VerificationScreen = ({ navigation, route }) => {
       
       <View style={styles.content}>
         <Text style={styles.emailMessage}>
-          Ingresa el código de 4 dígitos que recibiste en tu correo ({email})
+          {userType === 'visitante' 
+            ? `Ingresa el código de 4 dígitos que recibiste en tu correo para completar tu registro como visitante (${email})`
+            : `Ingresa el código de 4 dígitos que recibiste en tu correo (${email})`
+          }
         </Text>
         
         <View style={styles.codeInputContainer}>

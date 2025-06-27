@@ -28,6 +28,7 @@ import RecipeDetailScreen from '../screens/recipe/RecipeDetailScreen';
 import RecipeSearchScreen from '../screens/recipe/RecipeSearchScreen';
 import SavedScaledRecipesScreen from '../screens/recipe/SavedScaledRecipesScreen';
 import PendingRecipesScreen from '../screens/main/PendingRecipesScreen';
+import UpgradeToStudentScreen from '../screens/main/UpgradeToStudentScreen';
 
 // Theme
 import Colors from '../themes/colors';
@@ -101,6 +102,7 @@ const ProfileStackScreen = () => (
     <Stack.Screen name="ServerConfig" component={ServerConfigScreen} />
     <Stack.Screen name="RecipeDetail" component={RecipeDetailScreen} />
     <Stack.Screen name="DatabaseTables" component={DatabaseTablesScreen} />
+    <Stack.Screen name="UpgradeToStudent" component={UpgradeToStudentScreen} />
   </Stack.Navigator>
 );
 

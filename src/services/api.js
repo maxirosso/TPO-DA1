@@ -107,14 +107,16 @@ class ApiService {
       // Manejar errores HTTP
       if (!response.ok) {
         let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+        let errorData = null;
+        
         try {
-          const errorData = await response.text();
+          const responseText = await response.text();
           // Intentar analizar como JSON primero, si falla usar texto
           try {
-            const jsonError = JSON.parse(errorData);
-            errorMessage = jsonError.message || jsonError.error || errorData;
+            errorData = JSON.parse(responseText);
+            errorMessage = errorData.error || errorData.message || responseText;
           } catch (parseError) {
-            errorMessage = errorData || errorMessage;
+            errorMessage = responseText || errorMessage;
           }
         } catch (textError) {
           // Usar mensaje de error predeterminado si no podemos leer la respuesta
@@ -124,6 +126,22 @@ class ApiService {
         const error = new Error(errorMessage);
         error.status = response.status;
         error.statusText = response.statusText;
+        
+        // Si hay información estructurada del backend, preservarla
+        if (errorData && typeof errorData === 'object') {
+          error.response = { data: errorData };
+          // Preservar campos específicos para sugerencias de alias
+          if (errorData.aliasUnavailable) {
+            error.aliasUnavailable = errorData.aliasUnavailable;
+          }
+          if (errorData.suggestions) {
+            error.suggestions = errorData.suggestions;
+          }
+          if (errorData.success !== undefined) {
+            error.success = errorData.success;
+          }
+        }
+        
         throw error;
       }
 
@@ -282,6 +300,48 @@ class ApiService {
     console.log('Parámetros de API approve:', params);
     return this.put(`/aprobarReceta/${idReceta}`, {}, { params });
   }
+
+  // Método de upgrade a alumno
+  async upgradeToStudent(idUsuario, studentData) {
+    // Crear FormData para manejar archivos e información
+    const formData = new FormData();
+    
+    // Agregar datos del formulario
+    if (studentData.numeroTramiteDNI) {
+      formData.append('tramite', studentData.numeroTramiteDNI);
+    }
+    if (studentData.numeroTarjeta) {
+      formData.append('nroTarjeta', studentData.numeroTarjeta);
+    }
+    if (studentData.password) {
+      formData.append('password', studentData.password);
+    }
+    
+    // Agregar imágenes del DNI
+    if (studentData.fotoDNIFrente && studentData.fotoDNIFrente.uri) {
+      formData.append('dniFrente', {
+        uri: studentData.fotoDNIFrente.uri,
+        type: 'image/jpeg',
+        name: 'dni_frente.jpg',
+      });
+    }
+    
+    if (studentData.fotoDNIDorso && studentData.fotoDNIDorso.uri) {
+      formData.append('dniFondo', {
+        uri: studentData.fotoDNIDorso.uri,
+        type: 'image/jpeg',
+        name: 'dni_dorso.jpg',
+      });
+    }
+    
+    return this.request(`/cambiarAAlumno/${idUsuario}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+      body: formData,
+    });
+  }
 }
 
 // Crear instancia singleton
@@ -299,6 +359,11 @@ export const api = {
     checkUsername: (username) => apiService.get('/auth/check-username', { username }),
     // Visitantes (sin código de verificación)
     registerVisitor: (mail, alias) => apiService.postForm('/registrarVisitante', { mail, alias }),
+    // Visitantes (con código de verificación en 2 etapas)
+    registerVisitorStage1: (mail, alias) => apiService.postForm('/registrarVisitanteEtapa1', { mail, alias }),
+    verifyVisitorCode: (mail, codigo) => apiService.postForm('/verificarCodigoVisitante', { mail, codigo }),
+    resendVisitorCode: (mail) => apiService.postForm('/reenviarCodigoVisitante', { mail }),
+    getSugerenciasAlias: (baseAlias) => apiService.get('/sugerenciasAlias', { baseAlias }),
     // Usuarios (con código de verificación en 2 etapas)
     registerUserStage1: (mail, alias) => apiService.postForm('/registrarUsuarioEtapa1', { mail, alias }),
     verifyUserCode: (mail, codigo) => apiService.postForm('/verificarCodigoUsuario', { mail, codigo }),
@@ -309,7 +374,7 @@ export const api = {
       apiService.postForm('/registrarAlumno', { mail, idUsuario, medioPago, dniFrente, dniFondo, tramite }),
     forgotPassword: (mail) => apiService.postForm('/recuperarClave', { mail }),
     resetPassword: (mail) => apiService.postForm('/recuperarContrasena', { mail }),
-    upgradeToStudent: (idUsuario, studentData) => apiService.put(`/cambiarAAlumno/${idUsuario}`, studentData),
+    upgradeToStudent: (idUsuario, studentData) => apiService.upgradeToStudent(idUsuario, studentData),
     createEmpresaUser: (userData) => apiService.post('/crearUsuarioEmpresa', userData),
     createAdminUser: (userData) => apiService.post('/crearUsuarioAdmin', userData),
   },

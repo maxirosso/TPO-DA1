@@ -6,6 +6,7 @@ export default {
     
     // Secondary colors
     secondary: '#7c3aed',
+    secondaryDark: '#5b21b6',
     
     // Background colors
     background: '#f5f7fa',
@@ -31,5 +32,8 @@ export default {
     tag: '#f3f4f6',
     error: '#ef4444',
     warning: '#f59e0b',
+    warningLight: '#fef3c7',
+    warningDark: '#d97706',
     info: '#3b82f6',
+    backgroundLight: '#f8fafc',
   };

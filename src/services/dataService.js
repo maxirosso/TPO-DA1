@@ -975,6 +975,64 @@ class DataService {
     }
   }
 
+  // Visitantes (con código de verificación en 2 etapas)
+  async registerVisitorStage1(email, alias) {
+    try {
+      const result = await api.auth.registerVisitorStage1(email, alias);
+      return result.data;
+    } catch (error) {
+      console.log('Error registering visitor stage 1:', error.message);
+      
+      // Si el backend devolvió un error con información estructurada, extraerla
+      if (error.response && error.response.data) {
+        // El backend devolvió un objeto JSON con información del error
+        const errorData = error.response.data;
+        console.log('Backend error data:', errorData);
+        
+        // Crear un nuevo error que incluya la información estructurada
+        const enhancedError = new Error(errorData.error || error.message);
+        enhancedError.aliasUnavailable = errorData.aliasUnavailable;
+        enhancedError.suggestions = errorData.suggestions;
+        enhancedError.success = errorData.success;
+        enhancedError.backendResponse = errorData;
+        
+        throw enhancedError;
+      }
+      
+      throw error;
+    }
+  }
+
+  async verifyVisitorCode(email, codigo) {
+    try {
+      const result = await api.auth.verifyVisitorCode(email, codigo);
+      return result.data;
+    } catch (error) {
+      console.log('Error verifying visitor code:', error.message);
+      throw error;
+    }
+  }
+
+  async resendVisitorCode(email) {
+    try {
+      const result = await api.auth.resendVisitorCode(email);
+      return result.data;
+    } catch (error) {
+      console.log('Error resending visitor code:', error.message);
+      throw error;
+    }
+  }
+
+  async getSugerenciasAlias(baseAlias) {
+    try {
+      const result = await api.auth.getSugerenciasAlias(baseAlias);
+      return result.data;
+    } catch (error) {
+      console.log('Error getting alias suggestions:', error.message);
+      throw error;
+    }
+  }
+
   // Usuarios (con código de verificación en 2 etapas)
   async registerUserStage1(email, alias) {
     try {

@@ -208,6 +208,18 @@ const ProfileScreen = ({ navigation }) => {
       }
     ];
 
+    // Add upgrade option for regular users (not students or visitors)
+    if (user.accountType === 'user') {
+      baseItems.push({
+        id: 'upgrade_to_student',
+        icon: 'graduation-cap',
+        title: 'Upgrade a Alumno',
+        description: 'Accede a cursos premium y contenido exclusivo',
+        badge: 'PREMIUM',
+        available: true
+      });
+    }
+
     // Add courses only for students
     if (user.accountType === 'student') {
       baseItems.push({
@@ -259,6 +271,22 @@ const ProfileScreen = ({ navigation }) => {
         break;
       case 'pending_recipes':
         navigation.navigate('PendingRecipes');
+        break;
+      case 'upgrade_to_student':
+        console.log('🔍 Debug - contextUser:', contextUser);
+        console.log('🔍 Debug - user:', user);
+        let userId = contextUser?.idUsuario || contextUser?.id || user?.idUsuario || user?.id;
+        
+        // Si no hay userId válido, usar el email del usuario como identificador temporal
+        if (!userId || userId === 'undefined' || userId === null) {
+          userId = contextUser?.mail || contextUser?.email || user?.email || 'temp_' + Date.now();
+        }
+        
+        console.log('🔍 Debug - final userId to send:', userId);
+        navigation.navigate('UpgradeToStudent', { 
+          userId: userId,
+          userEmail: contextUser?.mail || contextUser?.email || user?.email
+        });
         break;
       case 'my_courses':
         navigation.navigate('MyCourses');
@@ -541,6 +569,64 @@ const ProfileScreen = ({ navigation }) => {
               <Text style={styles.benefitDescription}>Inscríbete y accede al contenido detallado</Text>
             </View>
           </View>
+        </View>
+
+        {/* Sección Premium de Upgrade a Alumno */}
+        <View style={styles.premiumSection}>
+          <LinearGradient
+            colors={[Colors.secondary, Colors.secondaryDark]}
+            style={styles.premiumCard}
+          >
+            <View style={styles.premiumHeader}>
+              <Icon name="graduation-cap" size={40} color={Colors.card} />
+              <View style={styles.premiumBadge}>
+                <Text style={styles.premiumBadgeText}>PREMIUM</Text>
+              </View>
+            </View>
+            
+            <Text style={styles.premiumTitle}>¡Conviértete en Alumno!</Text>
+            <Text style={styles.premiumDescription}>
+              Accede a cursos exclusivos y contenido premium sin costo inicial. Solo pagas cuando te inscribes a un curso.
+            </Text>
+            
+            <View style={styles.premiumFeatures}>
+              <View style={styles.premiumFeature}>
+                <Icon name="check-circle" size={16} color={Colors.card} />
+                <Text style={styles.premiumFeatureText}>Cursos premium ilimitados</Text>
+              </View>
+              <View style={styles.premiumFeature}>
+                <Icon name="check-circle" size={16} color={Colors.card} />
+                <Text style={styles.premiumFeatureText}>Contenido exclusivo</Text>
+              </View>
+              <View style={styles.premiumFeature}>
+                <Icon name="check-circle" size={16} color={Colors.card} />
+                <Text style={styles.premiumFeatureText}>Sin costo hasta inscribirte</Text>
+              </View>
+            </View>
+            
+            <Button
+              title="Upgrade a Alumno"
+              onPress={() => {
+                console.log('🔍 Debug - contextUser:', contextUser);
+                console.log('🔍 Debug - user:', user);
+                let userId = contextUser?.idUsuario || contextUser?.id || user?.idUsuario || user?.id;
+                
+                // Si no hay userId válido, usar el email del usuario como identificador temporal
+                if (!userId || userId === 'undefined' || userId === null) {
+                  userId = contextUser?.mail || contextUser?.email || user?.email || 'temp_' + Date.now();
+                }
+                
+                console.log('🔍 Debug - final userId to send:', userId);
+                navigation.navigate('UpgradeToStudent', { 
+                  userId: userId,
+                  userEmail: contextUser?.mail || contextUser?.email || user?.email
+                });
+              }}
+              style={styles.premiumButton}
+              textStyle={styles.premiumButtonText}
+              fullWidth
+            />
+          </LinearGradient>
         </View>
 
         <View style={styles.visitorActions}>
@@ -1101,6 +1187,76 @@ const styles = StyleSheet.create({
     fontSize: Metrics.baseFontSize,
     fontWeight: '500',
     color: Colors.primary,
+  },
+  // Premium section styles
+  premiumSection: {
+    marginVertical: Metrics.mediumSpacing,
+  },
+  premiumCard: {
+    borderRadius: Metrics.mediumBorderRadius,
+    padding: Metrics.mediumSpacing,
+    marginBottom: Metrics.baseSpacing,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
+  premiumHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: Metrics.mediumSpacing,
+  },
+  premiumBadge: {
+    backgroundColor: Colors.card + '20',
+    paddingHorizontal: Metrics.baseSpacing,
+    paddingVertical: 4,
+    borderRadius: Metrics.baseBorderRadius,
+    borderWidth: 1,
+    borderColor: Colors.card,
+  },
+  premiumBadgeText: {
+    fontSize: Metrics.smallFontSize,
+    fontWeight: '600',
+    color: Colors.card,
+  },
+  premiumTitle: {
+    fontSize: Metrics.largeFontSize,
+    fontWeight: '600',
+    color: Colors.card,
+    marginBottom: Metrics.baseSpacing,
+    textAlign: 'center',
+  },
+  premiumDescription: {
+    fontSize: Metrics.baseFontSize,
+    color: Colors.card + 'DD',
+    textAlign: 'center',
+    lineHeight: Metrics.baseLineHeight + 2,
+    marginBottom: Metrics.mediumSpacing,
+  },
+  premiumFeatures: {
+    marginBottom: Metrics.mediumSpacing,
+  },
+  premiumFeature: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: Metrics.baseSpacing,
+  },
+  premiumFeatureText: {
+    fontSize: Metrics.baseFontSize,
+    color: Colors.card,
+    marginLeft: Metrics.baseSpacing,
+    fontWeight: '500',
+  },
+  premiumButton: {
+    backgroundColor: Colors.card,
+    elevation: 0,
+    shadowOpacity: 0,
+  },
+  premiumButtonText: {
+    color: Colors.secondary,
+    fontWeight: '600',
   },
 });
 
