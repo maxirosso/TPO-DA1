@@ -57,6 +57,7 @@ const HomeStackScreen = () => (
     <Stack.Screen name="Home" component={HomeScreen} />
     <Stack.Screen name="RecipeDetail" component={RecipeDetailScreen} />
     <Stack.Screen name="RecipeSearch" component={RecipeSearchScreen} />
+    <Stack.Screen name="UpgradeToStudent" component={UpgradeToStudentScreen} />
   </Stack.Navigator>
 );
 
@@ -155,72 +156,89 @@ const AdminNavigator = () => (
 );
 
 // Regular User Navigation
-const UserNavigator = () => (
-  <Tab.Navigator
-    screenOptions={{
-      tabBarActiveTintColor: Colors.primary,
-      tabBarInactiveTintColor: Colors.textDark,
-      tabBarStyle: {
-        paddingBottom: 5,
-        paddingTop: 5,
-        height: 60,
-        borderTopWidth: 1,
-        borderTopColor: Colors.border,
-      },
-      headerShown: false,
-    }}>
-    <Tab.Screen
-      name="HomeTab"
-      component={HomeStackScreen}
-      options={{
-        tabBarLabel: 'Home',
-        tabBarIcon: ({ color, size }) => (
-          <Icon name="home" color={color} size={size} />
-        ),
-      }}
-    />
-    <Tab.Screen
-      name="CoursesTab"
-      component={CourseStackScreen}
-      options={{
-        tabBarLabel: 'Courses',
-        tabBarIcon: ({ color, size }) => (
-          <Icon name="book" color={color} size={size} />
-        ),
-      }}
-    />
-    <Tab.Screen
-      name="AddTab"
-      component={AddRecipeScreen}
-      options={{
-        tabBarLabel: 'Add',
-        tabBarIcon: ({ color, size }) => (
-          <Icon name="plus-circle" color={color} size={size} />
-        ),
-      }}
-    />
-    <Tab.Screen
-      name="SavedTab"
-      component={SavedStackScreen}
-      options={{
-        tabBarLabel: 'Saved',
-        tabBarIcon: ({ color, size }) => (
-          <Icon name="bookmark" color={color} size={size} />
-        ),
-      }}
-    />
-    <Tab.Screen
-      name="ProfileTab"
-      component={ProfileStackScreen}
-      options={{
-        tabBarLabel: 'Profile',
-        tabBarIcon: ({ color, size }) => (
-          <Icon name="user" color={color} size={size} />
-        ),
-      }}
-    />
-  </Tab.Navigator>
-);
+const UserNavigator = () => {
+  const { user } = React.useContext(AuthContext);
+  const isRegularUser = user && (user.tipo === 'comun' || user.accountType === 'user');
+
+  return (
+    <Tab.Navigator
+      screenOptions={{
+        tabBarActiveTintColor: Colors.primary,
+        tabBarInactiveTintColor: Colors.textDark,
+        tabBarStyle: {
+          paddingBottom: 5,
+          paddingTop: 5,
+          height: 60,
+          borderTopWidth: 1,
+          borderTopColor: Colors.border,
+        },
+        headerShown: false,
+      }}>
+      <Tab.Screen
+        name="HomeTab"
+        component={HomeStackScreen}
+        options={{
+          tabBarLabel: 'Home',
+          tabBarIcon: ({ color, size }) => (
+            <Icon name="home" color={color} size={size} />
+          ),
+        }}
+      />
+      <Tab.Screen
+        name="CoursesTab"
+        component={CourseStackScreen}
+        options={{
+          tabBarLabel: 'Courses',
+          tabBarIcon: ({ color, size }) => (
+            <Icon name="book" color={color} size={size} />
+          ),
+        }}
+      />
+      <Tab.Screen
+        name="AddTab"
+        component={AddRecipeScreen}
+        options={{
+          tabBarLabel: 'Add',
+          tabBarIcon: ({ color, size }) => (
+            <Icon name="plus-circle" color={color} size={size} />
+          ),
+        }}
+      />
+      <Tab.Screen
+        name="SavedTab"
+        component={SavedStackScreen}
+        options={{
+          tabBarLabel: 'Saved',
+          tabBarIcon: ({ color, size }) => (
+            <Icon name="bookmark" color={color} size={size} />
+          ),
+        }}
+      />
+      {isRegularUser && (
+        <Tab.Screen
+          name="UpgradeTab"
+          component={UpgradeToStudentScreen}
+          options={{
+            tabBarLabel: 'Upgrade',
+            tabBarIcon: ({ color, size }) => (
+              <Icon name="graduation-cap" color={color} size={size} />
+            ),
+          }}
+        />
+      )}
+      <Tab.Screen
+        name="ProfileTab"
+        component={ProfileStackScreen}
+        options={{
+          tabBarLabel: 'Profile',
+          tabBarIcon: ({ color, size }) => (
+            <Icon name="user" color={color} size={size} />
+          ),
+        }}
+      />
+    </Tab.Navigator>
+  );
+};
 
 const AppNavigator = () => {
   const { isVisitor, user, isAdmin } = useContext(AuthContext);

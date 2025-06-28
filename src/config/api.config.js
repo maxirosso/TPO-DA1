@@ -13,7 +13,7 @@ const apiConfig = {
   get API_BASE_URL() {
     return API_BASE_URL;
   },
-  TIMEOUT: 15000, // Tiempo de espera máximo para las solicitudes en ms
+  TIMEOUT: 30000, // Tiempo de espera máximo para las solicitudes en ms (aumentado de 15000 a 30000)
   DEFAULT_HEADERS: {
     'Content-Type': 'application/json',
     'Accept': 'application/json',

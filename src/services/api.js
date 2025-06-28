@@ -3,7 +3,7 @@ import NetInfo from '@react-native-community/netinfo';
 import apiConfig from '../config/api.config';
 
 // Configuración base 
-const API_TIMEOUT = 10000; 
+const API_TIMEOUT = 30000; 
 
 class ApiService {
   constructor() {
@@ -372,8 +372,11 @@ export const api = {
     // Alumnos (igual que usuarios + datos adicionales)
     registerStudent: (mail, idUsuario, medioPago, dniFrente, dniFondo, tramite) => 
       apiService.postForm('/registrarAlumno', { mail, idUsuario, medioPago, dniFrente, dniFondo, tramite }),
+    // Recuperación de contraseña (30 minutos de validez)
     forgotPassword: (mail) => apiService.postForm('/recuperarClave', { mail }),
     resetPassword: (mail) => apiService.postForm('/recuperarContrasena', { mail }),
+    verifyRecoveryCode: (mail, codigo) => apiService.postForm('/verificarCodigoRecuperacion', { mail, codigo }),
+    changePasswordWithCode: (mail, codigo, nuevaPassword) => apiService.postForm('/cambiarContrasenaConCodigo', { mail, codigo, nuevaPassword }),
     upgradeToStudent: (idUsuario, studentData) => apiService.upgradeToStudent(idUsuario, studentData),
     createEmpresaUser: (userData) => apiService.post('/crearUsuarioEmpresa', userData),
     createAdminUser: (userData) => apiService.post('/crearUsuarioAdmin', userData),

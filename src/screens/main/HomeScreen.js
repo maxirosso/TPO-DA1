@@ -17,6 +17,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Feather';
 import LinearGradient from 'react-native-linear-gradient';
 import NetInfo from '@react-native-community/netinfo';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import RecipeCard from '../../components/recipe/RecipeCard';
 import Colors from '../../themes/colors';
@@ -35,7 +36,7 @@ const HomeScreen = ({ navigation }) => {
   const [popularRecipes, setPopularRecipes] = useState([]);
   const [filteredPopularRecipes, setFilteredPopularRecipes] = useState([]);
   const [filteredRecentRecipes, setFilteredRecentRecipes] = useState([]);
-  const { isVisitor, exitVisitorMode } = useContext(AuthContext);
+  const { isVisitor, exitVisitorMode, user: contextUser } = useContext(AuthContext);
   const [isConnected, setIsConnected] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
   const [backendAvailable, setBackendAvailable] = useState(false);
@@ -43,12 +44,56 @@ const HomeScreen = ({ navigation }) => {
   const [error, setError] = useState(null);
   const [recipeTypes, setRecipeTypes] = useState([]);
   const [categories, setCategories] = useState([DEFAULT_CATEGORY]);
+  const [currentUser, setCurrentUser] = useState(null);
 
   // Inicializar servicio de datos y cargar recetas
   useEffect(() => {
     initializeData();
     setupNetworkListener();
-  }, []);
+    loadCurrentUser();
+  }, [contextUser]);
+
+  const loadCurrentUser = async () => {
+    try {
+      // First try to get user from context (active session)
+      if (contextUser) {
+        setCurrentUser(contextUser);
+        return;
+      }
+
+      // Fallback to AsyncStorage
+      const userData = await AsyncStorage.getItem('user_data');
+      if (userData) {
+        const parsedUser = JSON.parse(userData);
+        setCurrentUser(parsedUser);
+      }
+    } catch (error) {
+      console.log('Error loading current user:', error);
+    }
+  };
+
+  // Check if user can upgrade to student
+  const canUpgradeToStudent = () => {
+    return currentUser && currentUser.tipo === 'comun';
+  };
+
+  // Handle upgrade to student
+  const handleUpgradeToStudent = () => {
+    console.log('🔍 Debug - contextUser:', contextUser);
+    console.log('🔍 Debug - currentUser:', currentUser);
+    let userId = contextUser?.idUsuario || contextUser?.id || currentUser?.idUsuario || currentUser?.id;
+    
+    // Si no hay userId válido, usar el email del usuario como identificador temporal
+    if (!userId || userId === 'undefined' || userId === null) {
+      userId = contextUser?.mail || contextUser?.email || currentUser?.mail || currentUser?.email || 'temp_' + Date.now();
+    }
+    
+    console.log('🔍 Debug - final userId to send:', userId);
+    navigation.navigate('UpgradeToStudent', { 
+      userId: userId,
+      userEmail: contextUser?.mail || contextUser?.email || currentUser?.mail || currentUser?.email
+    });
+  };
 
   const initializeData = async () => {
     setIsLoading(true);
@@ -421,6 +466,35 @@ const HomeScreen = ({ navigation }) => {
         </TouchableOpacity>
       </LinearGradient>
 
+      {/* Upgrade to Student Section */}
+      {canUpgradeToStudent() && (
+        <View style={styles.upgradeSection}>
+          <LinearGradient
+            colors={[Colors.primary + '10', Colors.primary + '05']}
+            style={styles.upgradeCard}
+          >
+            <View style={styles.upgradeContent}>
+              <View style={styles.upgradeIconContainer}>
+                <Icon name="graduation-cap" size={32} color={Colors.primary} />
+              </View>
+              <View style={styles.upgradeTextContainer}>
+                <Text style={styles.upgradeTitle}>¡Conviértete en Alumno!</Text>
+                <Text style={styles.upgradeDescription}>
+                  Accede a cursos premium y contenido exclusivo. Solo se cobra cuando te inscribas a un curso.
+                </Text>
+              </View>
+              <TouchableOpacity
+                style={styles.upgradeButton}
+                onPress={handleUpgradeToStudent}
+              >
+                <Text style={styles.upgradeButtonText}>Upgrade</Text>
+                <Icon name="arrow-right" size={16} color={Colors.card} />
+              </TouchableOpacity>
+            </View>
+          </LinearGradient>
+        </View>
+      )}
+
       <ScrollView 
         style={styles.content} 
         showsVerticalScrollIndicator={false}
@@ -704,6 +778,50 @@ const styles = StyleSheet.create({
     color: Colors.card,
     fontSize: Metrics.baseFontSize,
     fontWeight: '600',
+  },
+  upgradeSection: {
+    paddingVertical: Metrics.mediumSpacing,
+  },
+  upgradeCard: {
+    padding: Metrics.mediumSpacing,
+    borderRadius: Metrics.roundedFull,
+  },
+  upgradeContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  upgradeIconContainer: {
+    backgroundColor: Colors.card,
+    padding: Metrics.baseSpacing,
+    borderRadius: Metrics.roundedFull,
+    marginRight: Metrics.mediumSpacing,
+  },
+  upgradeTextContainer: {
+    flex: 1,
+  },
+  upgradeTitle: {
+    fontSize: Metrics.largeFontSize,
+    fontWeight: '600',
+    color: Colors.textDark,
+    marginBottom: 4,
+  },
+  upgradeDescription: {
+    fontSize: Metrics.baseFontSize,
+    color: Colors.textMedium,
+  },
+  upgradeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.primary,
+    paddingVertical: Metrics.mediumSpacing,
+    paddingHorizontal: Metrics.largeSpacing,
+    borderRadius: Metrics.baseBorderRadius,
+  },
+  upgradeButtonText: {
+    color: Colors.card,
+    fontSize: Metrics.baseFontSize,
+    fontWeight: '600',
+    marginRight: Metrics.baseSpacing,
   },
 });
 

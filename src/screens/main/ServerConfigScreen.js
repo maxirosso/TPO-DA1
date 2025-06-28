@@ -45,7 +45,7 @@ const ServerConfigScreen = ({ navigation }) => {
     
     try {
       // Intentar hacer una petición simple
-      const response = await axios.get(`${apiUrl}/getAllRecetas`, { timeout: 5000 });
+      const response = await axios.get(`${apiUrl}/getAllRecetas`, { timeout: 30000 });
       
       if (response.status === 200) {
         setTestResult({ 

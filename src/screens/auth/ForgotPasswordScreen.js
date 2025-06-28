@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,92 +9,300 @@ import {
   Platform,
   Alert,
   ActivityIndicator,
+  TextInput,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/Feather';
-import axios from 'axios';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import Input from '../../components/common/Input';
 import Button from '../../components/common/Button';
 import Colors from '../../themes/colors';
 import Metrics from '../../themes/metrics';
-import apiConfig from '../../config/api.config';
+import { api } from '../../services/api';
 
 const ForgotPasswordScreen = ({ navigation }) => {
+  const [stage, setStage] = useState(1); // 1 = email, 2 = code verification, 3 = new password
   const [email, setEmail] = useState('');
+  const [verificationCode, setVerificationCode] = useState(['', '', '', '']);
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [timeLeft, setTimeLeft] = useState(30 * 60); // 30 minutos en segundos
 
-  const handleResetPassword = async () => {
-    if (!email) {
-      Alert.alert('Campo requerido', 'Por favor, ingresa tu dirección de correo electrónico.');
+  const inputRefs = [useRef(), useRef(), useRef(), useRef()];
+
+  // Timer para código de verificación (30 minutos)
+  useEffect(() => {
+    let timer;
+    if (stage === 2 && timeLeft > 0) {
+      timer = setInterval(() => {
+        setTimeLeft((prevTime) => (prevTime > 0 ? prevTime - 1 : 0));
+      }, 1000);
+    }
+    return () => clearInterval(timer);
+  }, [stage, timeLeft]);
+
+  const formatTimeLeft = () => {
+    const minutes = Math.floor(timeLeft / 60);
+    const seconds = timeLeft % 60;
+    return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+  };
+
+  // Etapa 1: Enviar código de recuperación
+  const handleSendCode = async () => {
+    if (!email.trim() || !email.includes('@')) {
+      Alert.alert('Error', 'Por favor, ingresa un email válido');
       return;
     }
 
     setIsLoading(true);
-
     try {
-      // Try with backend first - fix the API call to properly send email parameter
-      try {
-        const formData = new URLSearchParams();
-        formData.append('mail', email);
-        
-        const response = await fetch(`${apiConfig.API_BASE_URL}/recuperarClave`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-          },
-          body: formData.toString(),
-        });
-        
-        if (response.ok) {
-          Alert.alert(
-            'Restablecimiento enviado',
-            'Si el correo está registrado, recibirás instrucciones para restablecer tu contraseña.',
-            [{ text: 'OK', onPress: () => navigation.navigate('Login') }]
-          );
-        } else {
-          // Handle server error but still show success message for security
-          Alert.alert(
-            'Restablecimiento enviado',
-            'Si el correo está registrado, recibirás instrucciones para restablecer tu contraseña.',
-            [{ text: 'OK', onPress: () => navigation.navigate('Login') }]
-          );
-        }
-      } catch (error) {
-        console.error('Error with backend forgot password:', error);
-        
-        // Fallback for local users
-        const pendingUsersStr = await AsyncStorage.getItem('pending_users');
-        const pendingUsers = pendingUsersStr ? JSON.parse(pendingUsersStr) : {};
-        
-        if (pendingUsers[email]) {
-          // For development, we'll just pretend we sent an email
-          Alert.alert(
-            'Correo enviado',
-            'Se han enviado instrucciones a tu correo para restablecer tu contraseña.',
-            [{ text: 'OK', onPress: () => navigation.navigate('Login') }]
-          );
-        } else {
-          // User not found in local storage either - still show success for security
-          Alert.alert(
-            'Correo enviado',
-            'Si el correo está registrado, recibirás instrucciones para restablecer tu contraseña.',
-            [{ text: 'OK', onPress: () => navigation.navigate('Login') }]
-          );
-        }
-      }
-    } catch (error) {
-      console.error('Error in forgot password flow:', error);
+      const response = await api.auth.resetPassword(email);
+      
       Alert.alert(
-        'Error',
-        'Ocurrió un error al procesar tu solicitud. Por favor, intenta nuevamente más tarde.'
+        'Código Enviado',
+        'Se ha enviado un código de recuperación de 4 dígitos a tu correo electrónico. El código tiene una validez de 30 minutos.',
+        [{ 
+          text: 'Continuar', 
+          onPress: () => {
+            setStage(2);
+            setTimeLeft(30 * 60); // Resetear timer a 30 minutos
+          }
+        }]
       );
+    } catch (error) {
+      console.error('Error sending recovery code:', error);
+      Alert.alert('Error', 'No se pudo enviar el código de recuperación. Verifica tu email e intenta nuevamente.');
     } finally {
       setIsLoading(false);
     }
   };
+
+  // Manejar entrada de código de verificación
+  const handleCodeInput = (value, index) => {
+    const newCode = [...verificationCode];
+    newCode[index] = value;
+    setVerificationCode(newCode);
+
+    // Auto-focus siguiente input
+    if (value && index < 3) {
+      inputRefs[index + 1].current?.focus();
+    }
+
+    // Auto-submit cuando el código esté completo
+    if (value && index === 3 && newCode.every(digit => digit !== '')) {
+      handleVerifyCode(newCode.join(''));
+    }
+  };
+
+  // Etapa 2: Verificar código
+  const handleVerifyCode = async (codeToVerify = null) => {
+    const code = codeToVerify || verificationCode.join('');
+    
+    if (code.length !== 4) {
+      Alert.alert('Error', 'Por favor ingresa el código de 4 dígitos completo');
+      return;
+    }
+
+    if (timeLeft <= 0) {
+      Alert.alert('Código Expirado', 'El código ha expirado. Por favor solicita uno nuevo.');
+      setStage(1);
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const response = await api.auth.verifyRecoveryCode(email, code);
+      
+      if (response.success) {
+        Alert.alert(
+          'Código Válido',
+          'Código verificado correctamente. Ahora puedes establecer tu nueva contraseña.',
+          [{ text: 'Continuar', onPress: () => setStage(3) }]
+        );
+      } else {
+        Alert.alert('Error', response.message || 'Código inválido o expirado');
+        // Limpiar código
+        setVerificationCode(['', '', '', '']);
+        inputRefs[0].current?.focus();
+      }
+    } catch (error) {
+      console.error('Error verifying code:', error);
+      Alert.alert('Error', 'No se pudo verificar el código. Intenta nuevamente.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Etapa 3: Cambiar contraseña
+  const handleChangePassword = async () => {
+    if (!newPassword.trim()) {
+      Alert.alert('Error', 'Por favor ingresa una nueva contraseña');
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      Alert.alert('Error', 'La contraseña debe tener al menos 6 caracteres');
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      Alert.alert('Error', 'Las contraseñas no coinciden');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const code = verificationCode.join('');
+      const response = await api.auth.changePasswordWithCode(email, code, newPassword);
+      
+      if (response.success) {
+        Alert.alert(
+          '¡Contraseña Cambiada!',
+          'Tu contraseña ha sido cambiada exitosamente. Ya puedes iniciar sesión con tu nueva contraseña.',
+          [{ 
+            text: 'Ir al Login', 
+            onPress: () => navigation.navigate('Login')
+          }]
+        );
+      } else {
+        Alert.alert('Error', response.message || 'No se pudo cambiar la contraseña');
+      }
+    } catch (error) {
+      console.error('Error changing password:', error);
+      Alert.alert('Error', 'No se pudo cambiar la contraseña. Intenta nuevamente.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Renderizar cada etapa
+  const renderStageOne = () => (
+    <View style={styles.formContainer}>
+      <Text style={styles.title}>¿Olvidaste tu contraseña?</Text>
+      <Text style={styles.subtitle}>
+        Ingresa tu dirección de correo electrónico y te enviaremos un código de recuperación de 4 dígitos.
+      </Text>
+
+      <Input
+        label="Dirección de Correo"
+        value={email}
+        onChangeText={setEmail}
+        placeholder="tu@email.com"
+        keyboardType="email-address"
+        leftIcon="mail"
+        autoCapitalize="none"
+        returnKeyType="done"
+        onSubmitEditing={handleSendCode}
+      />
+
+      <Button
+        title="Enviar Código"
+        onPress={handleSendCode}
+        fullWidth
+        style={styles.actionButton}
+        isLoading={isLoading}
+      />
+
+      <TouchableOpacity
+        style={styles.backToLoginButton}
+        onPress={() => navigation.navigate('Login')}
+      >
+        <Text style={styles.backToLoginText}>
+          Volver al inicio de sesión
+        </Text>
+      </TouchableOpacity>
+    </View>
+  );
+
+  const renderStageTwo = () => (
+    <View style={styles.formContainer}>
+      <Text style={styles.title}>Verificar Código</Text>
+      <Text style={styles.subtitle}>
+        Ingresa el código de 4 dígitos que enviamos a {email}
+      </Text>
+
+      <View style={styles.codeContainer}>
+        {verificationCode.map((digit, index) => (
+          <TextInput
+            key={index}
+            ref={inputRefs[index]}
+            style={styles.codeInput}
+            value={digit}
+            onChangeText={(value) => handleCodeInput(value, index)}
+            keyboardType="numeric"
+            maxLength={1}
+            autoFocus={index === 0}
+            selectTextOnFocus
+          />
+        ))}
+      </View>
+
+      <View style={styles.timerContainer}>
+        <Text style={styles.timerText}>
+          Tiempo restante: <Text style={styles.timerTime}>{formatTimeLeft()}</Text>
+        </Text>
+      </View>
+
+      <Button
+        title="Verificar Código"
+        onPress={handleVerifyCode}
+        fullWidth
+        style={styles.actionButton}
+        isLoading={isLoading}
+        disabled={verificationCode.join('').length !== 4 || timeLeft <= 0}
+      />
+
+      <TouchableOpacity
+        style={styles.resendButton}
+        onPress={() => setStage(1)}
+      >
+        <Text style={styles.resendText}>
+          Enviar nuevo código
+        </Text>
+      </TouchableOpacity>
+    </View>
+  );
+
+  const renderStageThree = () => (
+    <View style={styles.formContainer}>
+      <Text style={styles.title}>Nueva Contraseña</Text>
+      <Text style={styles.subtitle}>
+        Establece tu nueva contraseña. Debe tener al menos 6 caracteres.
+      </Text>
+
+      <Input
+        label="Nueva Contraseña"
+        value={newPassword}
+        onChangeText={setNewPassword}
+        placeholder="Mínimo 6 caracteres"
+        secureTextEntry
+        leftIcon="lock"
+        returnKeyType="next"
+        onSubmitEditing={() => {}}
+      />
+
+      <Input
+        label="Confirmar Contraseña"
+        value={confirmPassword}
+        onChangeText={setConfirmPassword}
+        placeholder="Confirma tu nueva contraseña"
+        secureTextEntry
+        leftIcon="lock"
+        returnKeyType="done"
+        onSubmitEditing={handleChangePassword}
+      />
+
+      <Button
+        title="Cambiar Contraseña"
+        onPress={handleChangePassword}
+        fullWidth
+        style={styles.actionButton}
+        isLoading={isLoading}
+      />
+    </View>
+  );
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -116,49 +324,27 @@ const ForgotPasswordScreen = ({ navigation }) => {
             <View style={styles.headerContent}>
               <TouchableOpacity 
                 style={styles.backButton}
-                onPress={() => navigation.goBack()}
+                onPress={() => {
+                  if (stage > 1) {
+                    setStage(stage - 1);
+                  } else {
+                    navigation.goBack();
+                  }
+                }}
               >
                 <Icon name="chevron-left" size={24} color={Colors.textDark} />
               </TouchableOpacity>
-              <Text style={styles.headerTitle}>Recuperar Contraseña</Text>
+              <Text style={styles.headerTitle}>
+                {stage === 1 && 'Recuperar Contraseña'}
+                {stage === 2 && 'Verificar Código'}
+                {stage === 3 && 'Nueva Contraseña'}
+              </Text>
             </View>
           </LinearGradient>
 
-          <View style={styles.formContainer}>
-            <Text style={styles.title}>¿Olvidaste tu contraseña?</Text>
-            <Text style={styles.subtitle}>
-              Ingresa tu dirección de correo electrónico y te enviaremos un enlace para restablecer tu contraseña.
-            </Text>
-
-            <Input
-              label="Dirección de Correo"
-              value={email}
-              onChangeText={setEmail}
-              placeholder="tu@email.com"
-              keyboardType="email-address"
-              leftIcon="mail"
-              autoCapitalize="none"
-              returnKeyType="done"
-              onSubmitEditing={handleResetPassword}
-            />
-
-            <Button
-              title="Enviar Instrucciones"
-              onPress={handleResetPassword}
-              fullWidth
-              style={styles.resetButton}
-              isLoading={isLoading}
-            />
-
-            <TouchableOpacity
-              style={styles.backToLoginButton}
-              onPress={() => navigation.navigate('Login')}
-            >
-              <Text style={styles.backToLoginText}>
-                Volver al inicio de sesión
-              </Text>
-            </TouchableOpacity>
-          </View>
+          {stage === 1 && renderStageOne()}
+          {stage === 2 && renderStageTwo()}
+          {stage === 3 && renderStageThree()}
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -212,7 +398,7 @@ const styles = StyleSheet.create({
     color: Colors.textMedium,
     marginBottom: Metrics.xLargeSpacing,
   },
-  resetButton: {
+  actionButton: {
     marginTop: Metrics.largeSpacing,
   },
   backToLoginButton: {
@@ -220,6 +406,46 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   backToLoginText: {
+    fontSize: Metrics.baseFontSize,
+    color: Colors.primary,
+    fontWeight: '500',
+  },
+  codeContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: Metrics.largeSpacing,
+  },
+  codeInput: {
+    width: 50,
+    height: 50,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: Metrics.smallBorderRadius,
+    textAlign: 'center',
+    fontSize: Metrics.largeFontSize,
+    fontWeight: '600',
+    color: Colors.textDark,
+    backgroundColor: Colors.white,
+  },
+  timerContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginBottom: Metrics.largeSpacing,
+  },
+  timerText: {
+    fontSize: Metrics.baseFontSize,
+    color: Colors.textMedium,
+  },
+  timerTime: {
+    fontSize: Metrics.baseFontSize,
+    fontWeight: '600',
+    color: Colors.primary,
+  },
+  resendButton: {
+    marginTop: Metrics.largeSpacing,
+    alignItems: 'center',
+  },
+  resendText: {
     fontSize: Metrics.baseFontSize,
     color: Colors.primary,
     fontWeight: '500',
