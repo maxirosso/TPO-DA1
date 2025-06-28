@@ -67,9 +67,9 @@ const MyCoursesScreen = ({ navigation }) => {
   };
 
   const calculateAttendancePercentage = (course) => {
+    if (!Array.isArray(course.attendance)) return 0;
     const totalSessions = course.attendance.length;
     if (totalSessions === 0) return 0;
-    
     const attendedSessions = course.attendance.filter(session => session.attended).length;
     return (attendedSessions / totalSessions) * 100;
   };
@@ -461,7 +461,7 @@ const MyCoursesScreen = ({ navigation }) => {
       <FlatList
         data={getFilteredCourses()}
         renderItem={renderCourseItem}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item, index) => (item.id ? item.id.toString() : `course_${index}`)}
         contentContainerStyle={styles.coursesList}
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={
