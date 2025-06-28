@@ -12,6 +12,185 @@ class ApiService {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
     };
+
+    this.utils = {
+      checkConnection: this.isConnected.bind(this),
+    };
+
+    this.auth = {
+      login: (email, password) => this.postForm('/login', { mail: email, password }),
+      registerUserStage1: (email, alias) => this.postForm('/registrarUsuarioEtapa1', { mail: email, alias }),
+      verifyUserCode: (email, codigo) => this.postForm('/verificarCodigoUsuario', { mail: email, codigo }),
+      resendUserCode: (email) => this.postForm('/reenviarCodigoUsuario', { mail: email }),
+      registerVisitorStage1: (email, alias) => this.postForm('/registrarVisitanteEtapa1', { mail: email, alias }),
+      verifyVisitorCode: (email, codigo) => this.postForm('/verificarCodigoVisitante', { mail: email, codigo }),
+      resendVisitorCode: (email) => this.postForm('/reenviarCodigoVisitante', { mail: email }),
+      getSugerenciasAlias: (baseAlias) => this.get('/sugerenciasAlias', { baseAlias }),
+      completeUserRegistration: (email, nombre, password) => this.postForm('/completarRegistroUsuario', { mail: email, nombre, password }),
+      resetPassword: (email) => this.postForm('/recuperarContrasena', { mail: email }),
+    };
+
+    // Objeto para métodos relacionados con recetas
+    this.recipes = {
+      getAll: () => this.get('/getAllRecetas'),
+      getLatest: () => this.get('/ultimasRecetas', { timestamp: new Date().getTime() }), // Las 3 últimas recetas
+      getById: (id) => this.get(`/getRecetaById/${id}`),
+      getByUser: (idUsuario) => this.get('/getRecetasUsuario', { idUsuario }),
+      getByName: (nombrePlato, orden = 'alfabetico') => this.get('/getNombrereceta', { nombrePlato, orden }),
+      getByType: (tipoPlato, orden = 'alfabetico') => this.get('/getTiporeceta', { tipoPlato, orden }),
+      getByIngredient: (ingrediente, orden = 'alfabetico') => this.get('/getIngredienteReceta', { ingrediente, orden }),
+      getWithoutIngredient: (ingrediente, orden = 'alfabetico') => this.get('/getSinIngredienteReceta', { ingrediente, orden }),
+      getByUserProfile: (usuario, orden = 'alfabetico') => this.get('/getUsuarioReceta', { usuario, orden }),
+      search: (nombre) => this.get('/buscarRecetas', { nombre }),
+      create: (recipeData) => this.post('/crearRecetaConIngredientes', recipeData),
+      createAlternative: (recipeData) => this.post('/CargarNuevasRecetas', recipeData), // Endpoint alternativo
+      createWithFiles: (receta, files) => this.uploadFile('/cargarReceta', files[0], receta),
+      publish: (recipeData) => this.post('/publicarRecetas', recipeData),
+      update: (idReceta, recipeData) => this.put(`/recetas/${idReceta}`, recipeData),
+      delete: (idReceta, idUsuario) => {
+        const endpoint = idUsuario ? 
+          `/eliminarRecetaCompleta/${idReceta}?idUsuario=${idUsuario}` : 
+          `/eliminarRecetaCompleta/${idReceta}`;
+        return this.delete(endpoint);
+      },
+      scale: (idReceta, tipo, porciones) => this.scale(idReceta, tipo, porciones),
+      scaleByIngredient: (idReceta, nombreIngrediente, nuevaCantidad) => 
+        this.postForm(`/ajustarPorIngrediente/${idReceta}`, { nombreIngrediente, nuevaCantidad }),
+      getSuggestions: (idTipo) => this.get('/sugerenciasRecetas', { idTipo }),
+      approve: (idReceta, aprobar = true) => this.approve(idReceta, aprobar),
+      approveRecipe: (idReceta, aprobar = true) => this.putForm(`/aprobarRecipe/${idReceta}`, { aprobar }),
+      getPendingRecipes: () => this.get('/getRecetasPendientes'),
+      getTypes: () => this.get('/getTiposReceta'),
+    };
+
+    // Endpoints de cursos 
+    this.courses = {
+      getAll: (idUsuario) => this.get('/getCursosDisponibles', { idUsuario }),
+      getAvailable: (idUsuario) => this.get('/getCursosDisponibles', { idUsuario }),
+      getByStudent: (idAlumno) => this.get(`/alumno/${idAlumno}`),
+      create: (courseData) => this.post('/crearCurso', courseData),
+      createSchedule: (scheduleData) => this.post('/crearCronograma', scheduleData),
+      enroll: (idAlumno, idCronograma) => this.postForm('/inscribirseACurso', { idAlumno, idCronograma }),
+      enrollAdvanced: (idAlumno, idCronograma) => this.postForm('/inscribirseACurso', { idAlumno, idCronograma }),
+      unenroll: (idAlumno, idCronograma) => this.delete('/cancelarInscripcion', { idAlumno, idCronograma }),
+      cancelEnrollment: (idInscripcion, reintegroEnTarjeta) => 
+        this.postForm(`/baja/${idInscripcion}`, { reintegroEnTarjeta }),
+    };
+
+    // Endpoints de estudiantes
+    this.students = {
+      register: (mail, idUsuario, medioPago, dniFrente, dniFondo, tramite) => 
+        this.postForm('/registrarAlumno', { mail, idUsuario, medioPago, dniFrente, dniFondo, tramite }),
+      // todavia no esta implementado del todo. 
+    };
+
+    // Endpoints de calificaciones
+    this.ratings = {
+      add: (idReceta, calificacion) => this.post(`/valorarReceta/${idReceta}`, calificacion),
+      authorize: (idCalificacion) => this.put(`/autorizarComentario/${idCalificacion}`),
+      getByRecipe: (idReceta) => this.get(`/getValoracionReceta/${idReceta}`),
+    };
+
+    // Endpoints de usuarios
+    this.users = {
+      getByEmail: (mail) => this.get('/getUsuarioByEmail', { mail }),
+      updateProfile: (userData) => this.put('/usuarios/perfil', userData),
+    };
+
+    // Endpoints de reseñas 
+    this.reviews = {
+      getByRecipe: (idReceta) => this.get(`/getValoracionReceta/${idReceta}`),
+      create: (idReceta, reviewData, idUsuario) => {
+        const endpoint = `/valorarReceta/${idReceta}`;
+        
+        console.log('Llamada a API de reseñas:', {
+          endpoint,
+          idUsuario,
+          reviewData
+        });
+        
+        if (idUsuario) {
+          // Si tenemos ID de usuario, agregarlo como parámetro de consulta
+          return this.request(`${endpoint}?idUsuario=${idUsuario}`, {
+            method: 'POST',
+            body: reviewData
+          });
+        } else {
+          // Sin ID de usuario, envío normal
+          return this.post(endpoint, reviewData);
+        }
+      },
+      authorize: (idCalificacion) => this.put(`/autorizarComentario/${idCalificacion}`),
+    };
+
+    // Endpoints de lista de recetas (Lista de recetas a intentar)
+    this.recipeList = {
+      add: (idUsuario, receta) => this.post(`/lista/${idUsuario}`, receta),
+      addById: (idReceta) => this.post(`/agregarReceta/${idReceta}`),
+      addByIdWithUser: (idReceta, idUsuario) => {
+        const endpoint = idUsuario ? 
+          `/agregarReceta/${idReceta}?idUsuario=${idUsuario}` : 
+          `/agregarReceta/${idReceta}`;
+        return this.post(endpoint);
+      },
+      remove: (idReceta) => this.delete(`/eliminarReceta/${idReceta}`),
+      removeWithUser: (idReceta, idUsuario) => {
+        const endpoint = idUsuario ? 
+          `/eliminarReceta/${idReceta}?idUsuario=${idUsuario}` : 
+          `/eliminarReceta/${idReceta}`;
+        return this.delete(endpoint);
+      },
+      get: () => this.get('/getMiListaRecetas'),
+      getWithUser: (idUsuario) => {
+        const endpoint = idUsuario ? 
+          `/getMiListaRecetas?idUsuario=${idUsuario}` : 
+          `/getMiListaRecetas`;
+        return this.get(endpoint);
+      },
+      markAsCompleted: (idReceta, completada, idUsuario) => {
+        const endpoint = idUsuario ? 
+          `/marcarRecetaCompletada/${idReceta}?completada=${completada}&idUsuario=${idUsuario}` : 
+          `/marcarRecetaCompletada/${idReceta}?completada=${completada}`;
+        return this.put(endpoint);
+      },
+    };
+
+    // Endpoints de recetas guardadas
+    this.savedRecipes = {
+      save: (idReceta) => {
+        console.log(`[API] Guardando receta ${idReceta}`);
+        return this.post(`/guardarReceta/${idReceta}`);
+      },
+      saveWithUser: (idReceta, idUsuario) => {
+        const endpoint = idUsuario ? 
+          `/guardarReceta/${idReceta}?idUsuario=${idUsuario}` : 
+          `/guardarReceta/${idReceta}`;
+        console.log(`[API] Guardando receta ${idReceta} con usuario ${idUsuario}, endpoint: ${endpoint}`);
+        return this.post(endpoint);
+      },
+      get: () => {
+        console.log('[API] Obteniendo recetas guardadas');
+        return this.get('/recetasGuardadas');
+      },
+      getWithUser: (idUsuario) => {
+        const endpoint = idUsuario ? 
+          `/recetasGuardadas?idUsuario=${idUsuario}` : 
+          `/recetasGuardadas`;
+        console.log(`[API] Obteniendo recetas guardadas para usuario ${idUsuario}, endpoint: ${endpoint}`);
+        return this.get(endpoint);
+      },
+      remove: (idReceta) => {
+        console.log(`[API] Eliminando receta guardada ${idReceta}`);
+        return this.delete(`/eliminarRecetaGuardada/${idReceta}`);
+      },
+      removeWithUser: (idReceta, idUsuario) => {
+        const endpoint = idUsuario ? 
+          `/eliminarRecetaGuardada/${idReceta}?idUsuario=${idUsuario}` : 
+          `/eliminarRecetaGuardada/${idReceta}`;
+        console.log(`[API] Eliminando receta guardada ${idReceta} con usuario ${idUsuario}, endpoint: ${endpoint}`);
+        return this.delete(endpoint);
+      },
+    };
   }
 
   get baseURL() {

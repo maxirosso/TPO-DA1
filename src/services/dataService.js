@@ -1024,30 +1024,29 @@ class DataService {
   }
 
   async getSugerenciasAlias(baseAlias) {
-    try {
-      const result = await api.auth.getSugerenciasAlias(baseAlias);
-      return result.data;
-    } catch (error) {
-      console.log('Error getting alias suggestions:', error.message);
-      throw error;
-    }
+    return api.auth.getSugerenciasAlias(baseAlias);
   }
 
-  // Usuarios (con código de verificación en 2 etapas)
+  // Llama al endpoint de registro de usuario (etapa 1)
   async registerUserStage1(email, alias) {
     try {
-      const result = await api.auth.registerUserStage1(email, alias);
-      return result.data;
+      const response = await api.auth.registerUserStage1(email, alias);
+      return response.data; // Devuelve los datos de la respuesta (incluye success, message, suggestions)
     } catch (error) {
-      console.log('Error registering user stage 1:', error.message);
-      throw error;
+      // Si el backend devuelve un error (ej. 400 Bad Request), el objeto de error de axios
+      // contendrá la respuesta del servidor en error.response.data
+      if (error.response && error.response.data) {
+        return error.response.data;
+      }
+      // Si es otro tipo de error (ej. de red), lanzar una excepción genérica
+      throw new Error('Error de comunicación con el servidor.');
     }
   }
 
   async verifyUserCode(email, codigo) {
     try {
-      const result = await api.auth.verifyUserCode(email, codigo);
-      return result.data;
+      const response = await api.auth.verifyUserCode(email, codigo);
+      return response.data;
     } catch (error) {
       console.log('Error verifying user code:', error.message);
       throw error;

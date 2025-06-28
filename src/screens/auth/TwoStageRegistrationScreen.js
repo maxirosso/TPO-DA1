@@ -98,30 +98,28 @@ const TwoStageRegistrationScreen = ({ navigation, route }) => {
       }
 
       // Send verification email according to user type
-      if (userType === 'visitante') {
-        // Visitantes: registro simple sin código
-        await dataService.registerVisitor(email, username);
-        Alert.alert(
-          'Registro Exitoso',
-          'Tu registro como visitante ha sido completado. Se ha enviado un email de confirmación.',
-          [{ text: 'Continuar', onPress: () => navigation.navigate('Login') }]
-        );
-        return;
-      } else if (userType === 'alumno') {
-        // Alumnos: mismo proceso que usuarios + datos extra
-        await dataService.registerUserStage1(email, username);
-      } else {
-        // Usuarios: registro en 2 etapas con código
-        await dataService.registerUserStage1(email, username);
+      let registrationResult;
+      if (userType === 'comun' || userType === 'alumno') {
+        registrationResult = await dataService.registerUserStage1(email, username);
+      } else if (userType === 'visitante') {
+        // Fallback for visitor registration if it's handled here
+        registrationResult = await dataService.registerVisitorStage1(email, username);
       }
 
-      setEmailSent(true);
-      setStage(2);
-      Alert.alert(
-        'Código Enviado',
-        'Se ha enviado un código de verificación a tu email. El código tiene una validez de 24 horas.',
-        [{ text: 'Entendido', onPress: () => {} }]
-      );
+      if (registrationResult && registrationResult.success) {
+        Alert.alert(
+            'Revisa tu Correo',
+            registrationResult.message || `Se ha enviado un código de verificación a ${email}.`
+        );
+        navigation.navigate('Verification', { email, userType: userType, alias: username });
+      } else {
+        if (registrationResult && registrationResult.aliasUnavailable) {
+            setUsernameSuggestions(registrationResult.suggestions || []);
+            Alert.alert('Alias no disponible', registrationResult.error || 'Este alias ya está en uso. Por favor, elige otro.');
+        } else {
+            Alert.alert('Error de Registro', registrationResult ? registrationResult.error : 'Ocurrió un error inesperado.');
+        }
+      }
 
     } catch (error) {
       console.log('Registration error:', error);

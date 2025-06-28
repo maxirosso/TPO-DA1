@@ -184,13 +184,13 @@ const VerificationScreen = ({ navigation, route }) => {
         // Verificar código de usuario normal
         verificationResult = await dataService.verifyUserCode(email, codigo);
         
-        if (verificationResult) {
+        if (verificationResult && verificationResult.success) {
           // Navegar a completar perfil para usuarios normales
           navigation.navigate('CompleteProfile', { email });
         } else {
           Alert.alert(
             'Código Inválido',
-            'El código ingresado es incorrecto o ha expirado. Por favor, intenta nuevamente o solicita un nuevo código.'
+            (verificationResult && verificationResult.message) || 'El código ingresado es incorrecto o ha expirado. Por favor, intenta nuevamente o solicita un nuevo código.'
           );
         }
       }
