@@ -299,10 +299,14 @@ const SavedScreen = ({ navigation }) => {
         data={filteredRecipes}
         renderItem={({ item }) => (
           <RecipeCard
+            id={item.id}
             title={item.title}
             imageUrl={item.imageUrl}
-    
+            category={item.category}
+            rating={item.rating}
+            author={item.author}
             tags={item.tags}
+            ingredients={item.ingredients}
             type="list"
             onPress={() => handleRecipePress(item)}
           />

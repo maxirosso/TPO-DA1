@@ -455,7 +455,9 @@ const RecipeSearchScreen = ({ navigation }) => {
             id={item.id}
             title={item.title}
             imageUrl={item.imageUrl}
-    
+            author={item.author || (item.user && item.user.name) || 'Autor desconocido'}
+            category={item.category}
+            rating={item.rating}
             tags={item.tags}
             ingredients={item.ingredients}
             type="list"

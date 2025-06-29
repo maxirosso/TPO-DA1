@@ -341,6 +341,7 @@ const HomeScreen = ({ navigation }) => {
       id={item.idReceta || item.id}
       title={item.nombreReceta || item.title}
       imageUrl={item.fotoPrincipal || item.imageUrl}
+      author={item.user?.name || item.usuario?.nombre || 'Autor desconocido'}
       category={item.tipoReceta?.descripcion || item.category}
       rating={item.calificacionPromedio || item.rating}
       type="grid"
@@ -353,7 +354,8 @@ const HomeScreen = ({ navigation }) => {
       id={item.idReceta || item.id}
       title={item.nombreReceta || item.title}
       imageUrl={item.fotoPrincipal || item.imageUrl}
-      tags={item.tags || [item.tipoReceta?.descripcion || item.category]}
+      author={item.user?.name || item.usuario?.nombre || 'Autor desconocido'}
+      category={item.tipoReceta?.descripcion || item.category}
       rating={item.calificacionPromedio || item.rating}
       type="list"
       onPress={() => handleRecipePress(item)}

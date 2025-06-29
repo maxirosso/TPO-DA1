@@ -41,6 +41,8 @@ const RecipeDetailScreen = ({ navigation, route }) => {
   const [scaleFactor, setScaleFactor] = useState(1);
   const [scaleModalVisible, setScaleModalVisible] = useState(false);
   const [scaleByIngredient, setScaleByIngredient] = useState(false);
+  const [originalServings, setOriginalServings] = useState(initialServings);
+  const [originalIngredients, setOriginalIngredients] = useState(initialIngredients);
   const [selectedIngredient, setSelectedIngredient] = useState(null);
   const [customAmount, setCustomAmount] = useState('');
   const [loading, setLoading] = useState(true);
@@ -55,11 +57,15 @@ const RecipeDetailScreen = ({ navigation, route }) => {
   
   // Obtener el ID o datos iniciales de la receta de los parámetros de navegación
   const recipeFromParams = route.params?.recipe || {};
+  const fromScaledRecipes = route.params?.fromScaledRecipes || false;
+  const scaledRecipeData = route.params?.scaledRecipe || null;
   
   // Get favorite status from Redux store
   const isFavorite = useSelector(state => selectIsFavorite(state, recipeFromParams.id));
   
   // Estado para almacenar los datos completos de la receta
+  const initialServings = recipeFromParams.servings || 2;
+  const initialIngredients = recipeFromParams.ingredients || [];
   const [recipe, setRecipe] = useState({
     id: recipeFromParams.id || '0',
     title: recipeFromParams.title || 'Receta sin título',
@@ -67,7 +73,7 @@ const RecipeDetailScreen = ({ navigation, route }) => {
     rating: recipeFromParams.rating || 4.5,
     reviews: recipeFromParams.reviews || 0,
 
-    servings: recipeFromParams.servings || 2,
+    servings: initialServings,
     calories: recipeFromParams.calories || 300,
     protein: recipeFromParams.protein || 10,
     carbs: recipeFromParams.carbs || 30,
@@ -77,7 +83,7 @@ const RecipeDetailScreen = ({ navigation, route }) => {
       avatar: 'https://randomuser.me/api/portraits/men/41.jpg',
     },
     description: recipeFromParams.description || 'Una deliciosa receta casera.',
-    ingredients: recipeFromParams.ingredients || [],
+    ingredients: initialIngredients,
     instructions: recipeFromParams.instructions || [],
     comments: recipeFromParams.comments || [],
     tags: recipeFromParams.tags || []
@@ -89,6 +95,84 @@ const RecipeDetailScreen = ({ navigation, route }) => {
       try {
         setLoading(true);
         setError(''); // Reset error state
+        
+        // Si venimos de recetas escaladas, usar esos datos directamente
+        if (fromScaledRecipes && scaledRecipeData) {
+          console.log('Loading scaled recipe data:', scaledRecipeData.title);
+          
+          // Usar los datos escalados directamente
+          const scaledServings = scaledRecipeData.servings;
+          const scaledIngredients = scaledRecipeData.ingredients || [];
+          
+          setOriginalServings(scaledServings); // Las porciones escaladas son nuestro "original" aquí
+          setOriginalIngredients([...scaledIngredients.map(ing => ({
+            name: ing.name,
+            amount: ing.scaledAmount,
+            preparation: ''
+          }))]); // Ingredientes escalados como "originales"
+          
+          // Cargar instrucciones y reseñas de la receta original
+          try {
+            const { api } = await import('../../services/api');
+            const response = await api.recipes.getById(scaledRecipeData.originalId);
+            const originalRecipe = response?.data || response;
+            
+            if (originalRecipe) {
+              // Mapear instrucciones de la receta original
+              const originalInstructions = originalRecipe.instrucciones ? 
+                originalRecipe.instrucciones.split('\n').filter(step => step.trim()).map((step, index) => ({
+                  step: index + 1,
+                  text: step.trim(),
+                  hasImage: false
+                })) : (originalRecipe.instructions || []);
+              
+              setRecipe(prevRecipe => ({
+                ...prevRecipe,
+                ...recipeFromParams, // Usar datos de parámetros que ya incluyen servings e ingredients escalados
+                rating: safeNumber(originalRecipe.rating || originalRecipe.calificacionPromedio, 4.5),
+                reviews: safeNumber(originalRecipe.reviews || originalRecipe.totalCalificaciones, 0),
+                author: originalRecipe.autor ? {
+                  name: originalRecipe.autor.nombre || 'Chef Anónimo',
+                  avatar: originalRecipe.autor.avatar || 'https://randomuser.me/api/portraits/men/41.jpg',
+                } : (prevRecipe.author || {
+                  name: 'Chef Anónimo',
+                  avatar: 'https://randomuser.me/api/portraits/men/41.jpg',
+                }),
+                description: originalRecipe.descripcion || originalRecipe.description || 'Una deliciosa receta escalada.',
+                instructions: originalInstructions,
+                comments: prevRecipe.comments || [],
+                tags: originalRecipe.tags || prevRecipe.tags || []
+              }));
+              
+              // Cargar reseñas de la receta original
+              await loadRecipeReviews();
+            } else {
+              // Usar datos básicos si no se puede cargar la receta original
+              setRecipe(prevRecipe => ({
+                ...prevRecipe,
+                ...recipeFromParams,
+                description: prevRecipe.description || 'Una deliciosa receta escalada.',
+                instructions: prevRecipe.instructions || [],
+                comments: prevRecipe.comments || [],
+                tags: prevRecipe.tags || []
+              }));
+            }
+          } catch (error) {
+            console.error('Error loading original recipe data:', error);
+            // Usar datos básicos en caso de error
+            setRecipe(prevRecipe => ({
+              ...prevRecipe,
+              ...recipeFromParams,
+              description: prevRecipe.description || 'Una deliciosa receta escalada.',
+              instructions: prevRecipe.instructions || [],
+              comments: prevRecipe.comments || [],
+              tags: prevRecipe.tags || []
+            }));
+          }
+          
+          setLoading(false);
+          return;
+        }
         
         // Verificar el ID recibido y normalizarlo si es necesario
         const recipeId = recipeFromParams.id ? String(recipeFromParams.id) : '';
@@ -112,33 +196,42 @@ const RecipeDetailScreen = ({ navigation, route }) => {
           throw new Error('La receta cargada tiene un formato inválido');
         }
         
-        console.log('Loaded full recipe:', fullRecipe.title, 'ID:', fullRecipe.id);
+        console.log('Loaded full recipe:', fullRecipe.nombreReceta || fullRecipe.title, 'ID:', fullRecipe.idReceta || fullRecipe.id);
+        console.log('Author data from backend:', fullRecipe.usuario);
+        
+        // Usar mapBackendRecipe para normalizar los datos
+        const mappedRecipe = mapBackendRecipe(fullRecipe);
   
-        // Actualizar el estado con los datos completos
+        // Actualizar el estado con los datos completos usando la receta mapeada
+        const servings = safeNumber(mappedRecipe.servings, 2);
+        setOriginalServings(servings); // Guardar porciones originales
+        
+        // Los ingredientes ya están mapeados en mappedRecipe
+        const ingredients = mappedRecipe.ingredients || [];
+        setOriginalIngredients([...ingredients]); // Guardar ingredientes originales
+        
         setRecipe(prevRecipe => ({
           ...prevRecipe,
-          ...fullRecipe,
+          ...mappedRecipe,
           // Asegurar valores numéricos válidos
-
-          servings: safeNumber(fullRecipe.servings || fullRecipe.porciones, 2),
-          calories: safeNumber(fullRecipe.calories, 300),
-          protein: safeNumber(fullRecipe.protein, 10),
-          carbs: safeNumber(fullRecipe.carbs, 30),
-          fat: safeNumber(fullRecipe.fat, 15),
-          rating: safeNumber(fullRecipe.rating || fullRecipe.calificacionPromedio, 4.5),
-          reviews: safeNumber(fullRecipe.reviews || fullRecipe.totalCalificaciones, 0),
-          // Mapear correctamente ingredientes e instrucciones del backend
-          ingredients: fullRecipe.ingredientes ? fullRecipe.ingredientes.map(ing => ({
-            name: ing.nombre,
-            amount: ing.cantidad ? `${ing.cantidad} ${ing.unidadMedida || ''}`.trim() : '',
-            preparation: ''
-          })) : (fullRecipe.ingredients || []),
-          instructions: fullRecipe.instrucciones ? 
-            fullRecipe.instrucciones.split('\n').filter(step => step.trim()).map((step, index) => ({
-              step: index + 1,
-              text: step.trim(),
-              hasImage: false
-            })) : (fullRecipe.instructions || [])
+          servings: servings,
+          calories: safeNumber(mappedRecipe.calories, 300),
+          protein: safeNumber(mappedRecipe.protein, 10),
+          carbs: safeNumber(mappedRecipe.carbs, 30),
+          fat: safeNumber(mappedRecipe.fat, 15),
+          rating: safeNumber(mappedRecipe.rating, 4.5),
+          reviews: safeNumber(mappedRecipe.reviews, 0),
+          // El autor ya está mapeado correctamente en mappedRecipe
+          author: mappedRecipe.user ? {
+            name: mappedRecipe.user.name || 'Chef Anónimo',
+            avatar: mappedRecipe.user.avatar || 'https://randomuser.me/api/portraits/men/41.jpg',
+          } : {
+            name: mappedRecipe.author || 'Chef Anónimo',
+            avatar: 'https://randomuser.me/api/portraits/men/41.jpg',
+          },
+          // Los ingredientes e instrucciones ya están mapeados
+          ingredients: ingredients,
+          instructions: mappedRecipe.instructions || []
         }));
 
         // Cargar reseñas y comentarios después de cargar la receta
@@ -156,11 +249,13 @@ const RecipeDetailScreen = ({ navigation, route }) => {
   
   // Cargar valoración del usuario cuando cambie la información del usuario o la receta
   useEffect(() => {
-    if (!isVisitor && user && user.idUsuario && recipe.id) {
+    if (!isVisitor && user && user.idUsuario && (recipe.id || (fromScaledRecipes && scaledRecipeData?.originalId))) {
       loadRecipeReviews();
-      checkIfSaved();
+      if (!fromScaledRecipes) {
+        checkIfSaved();
+      }
     }
-  }, [user?.idUsuario, recipe.id]);
+  }, [user?.idUsuario, recipe.id, fromScaledRecipes, scaledRecipeData?.originalId]);
   
   const handleFavoriteToggle = async () => {
     if (isVisitor) {
@@ -271,6 +366,10 @@ const RecipeDetailScreen = ({ navigation, route }) => {
   };
 
   const openReviewModal = () => {
+    if (fromScaledRecipes) {
+      Alert.alert('Información', 'Para valorar esta receta, ve a la receta original.');
+      return;
+    }
     setIsModalVisible(true);
   };
 
@@ -375,6 +474,12 @@ const RecipeDetailScreen = ({ navigation, route }) => {
       Alert.alert('Funcionalidad Limitada', 'Debes registrarte para usar la función de escalar recetas.');
       return;
     }
+    
+    if (fromScaledRecipes) {
+      Alert.alert('Información', 'Esta es una receta ya escalada. Para escalar nuevamente, regresa a la receta original.');
+      return;
+    }
+    
     setScaleModalVisible(true);
   };
 
@@ -387,18 +492,41 @@ const RecipeDetailScreen = ({ navigation, route }) => {
     try {
       console.log('Applying local scaling with factor:', scaleFactor);
       
+      const newServings = Math.round((recipe.servings || 2) * scaleFactor);
+      let scaledIngredients = [];
+      
       // Escalado local sin llamar al backend
       setRecipe(prevRecipe => {
         const scaledRecipe = { ...prevRecipe };
         
         // Escalar porciones
-        scaledRecipe.servings = Math.round((prevRecipe.servings || 2) * scaleFactor);
+        scaledRecipe.servings = newServings;
+        
+        // Escalar ingredientes también
+        if (scaledRecipe.ingredients && Array.isArray(scaledRecipe.ingredients) && scaledRecipe.ingredients.length > 0) {
+          scaledRecipe.ingredients = scaledRecipe.ingredients.map(ingredient => ({
+            ...ingredient,
+            amount: ingredient && ingredient.amount ? scaleAmount(ingredient.amount, scaleFactor) : (ingredient?.amount || '')
+          }));
+          
+          // Guardar ingredientes escalados para la receta guardada
+          scaledIngredients = scaledRecipe.ingredients.map(ingredient => ({
+            name: ingredient.name || 'Ingrediente',
+            scaledAmount: ingredient.amount || ''
+          }));
+        }
         
         return scaledRecipe;
       });
       
+      // Guardar la receta escalada automáticamente
+      await saveScaledRecipe(newServings, scaledIngredients);
+      
+      // Resetear el factor de escala a 1 para evitar doble aplicación
+      setScaleFactor(1);
+      
       setScaleModalVisible(false);
-      Alert.alert('Éxito', `Receta escalada para ${Math.round((recipe.servings || 2) * scaleFactor)} porciones`);
+      Alert.alert('Éxito', `Receta escalada para ${newServings} porciones y guardada en tu colección`);
     } catch (error) {
       console.error('Error scaling recipe:', error);
       Alert.alert('Error', 'No se pudo escalar la receta. Intenta nuevamente.');
@@ -428,12 +556,16 @@ const RecipeDetailScreen = ({ navigation, route }) => {
       
       console.log('Local scale factor:', localScaleFactor);
       
+      let newServings = 0;
+      let scaledIngredients = [];
+      
       // Aplicar escalado local
       setRecipe(prevRecipe => {
         const scaledRecipe = { ...prevRecipe };
         
         // Escalar porciones
-        scaledRecipe.servings = Math.round((prevRecipe.servings || 2) * localScaleFactor);
+        newServings = Math.round((prevRecipe.servings || 2) * localScaleFactor);
+        scaledRecipe.servings = newServings;
         
         // Escalar ingredientes
         if (scaledRecipe.ingredients) {
@@ -441,32 +573,100 @@ const RecipeDetailScreen = ({ navigation, route }) => {
             ...ingredient,
             amount: ingredient.amount ? scaleAmount(ingredient.amount, localScaleFactor) : ingredient.amount
           }));
+          
+          // Guardar ingredientes escalados para la receta guardada
+          scaledIngredients = scaledRecipe.ingredients.map(ingredient => ({
+            name: ingredient.name || 'Ingrediente',
+            scaledAmount: ingredient.amount || ''
+          }));
         }
         
         return scaledRecipe;
       });
+      
+      // Guardar la receta escalada automáticamente
+      await saveScaledRecipe(
+        newServings, 
+        scaledIngredients, 
+        'ingredient', 
+        selectedIngredient.name, 
+        customAmount
+      );
       
       setScaleModalVisible(false);
       setScaleByIngredient(false);
       setSelectedIngredient(null);
       setCustomAmount('');
       
-      Alert.alert('Éxito', `Receta escalada basada en ${selectedIngredient.name}`);
+      Alert.alert('Éxito', `Receta escalada basada en ${selectedIngredient.name} y guardada en tu colección`);
     } catch (error) {
       console.error('Error scaling recipe by ingredient:', error);
       Alert.alert('Error', 'No se pudo escalar la receta por ingrediente. Intenta nuevamente.');
     }
   };
 
+  const saveScaledRecipe = async (newServings, scaledIngredients, scalingType = 'portion', baseIngredient = null, baseAmount = null) => {
+    try {
+      // Crear objeto de receta escalada
+      const scaledRecipe = {
+        id: `${recipe.id}_${Date.now()}`, // ID único
+        originalId: recipe.id,
+        title: `${recipe.title} (${newServings} porciones)`,
+        imageUrl: recipe.imageUrl,
+        servings: newServings,
+        savedDate: new Date().toISOString(),
+        scalingType: scalingType, // 'portion' o 'ingredient'
+        scaleFactor: scalingType === 'portion' ? scaleFactor : null,
+        baseIngredient: baseIngredient,
+        baseIngredientAmount: baseAmount,
+        ingredients: scaledIngredients || []
+      };
+      
+      // Cargar recetas escaladas existentes
+      const savedScaledRecipesStr = await AsyncStorage.getItem('saved_scaled_recipes');
+      let savedScaledRecipes = savedScaledRecipesStr ? JSON.parse(savedScaledRecipesStr) : [];
+      
+      // Limitar a máximo 10 recetas
+      if (savedScaledRecipes.length >= 10) {
+        // Remover la más antigua
+        savedScaledRecipes.shift();
+      }
+      
+      // Agregar la nueva receta escalada
+      savedScaledRecipes.push(scaledRecipe);
+      
+      // Guardar en AsyncStorage
+      await AsyncStorage.setItem('saved_scaled_recipes', JSON.stringify(savedScaledRecipes));
+      
+      console.log('Receta escalada guardada:', scaledRecipe.title);
+    } catch (error) {
+      console.error('Error saving scaled recipe:', error);
+    }
+  };
+
   const resetScaling = () => {
     setScaleFactor(1);
+    
+    // Restablecer las porciones e ingredientes originales
+    setRecipe(prevRecipe => ({
+      ...prevRecipe,
+      servings: originalServings,
+      ingredients: originalIngredients && originalIngredients.length > 0 
+        ? [...originalIngredients] 
+        : prevRecipe.ingredients || []
+    }));
+    
     Alert.alert('Éxito', 'Escalado restablecido a la receta original');
   };
 
   // Función para cargar reseñas y comentarios de la receta
   const loadRecipeReviews = async () => {
     try {
-      const recipeId = recipe.id || recipe.idReceta;
+      // Si venimos de recetas escaladas, usar el ID original
+      const recipeId = fromScaledRecipes && scaledRecipeData 
+        ? scaledRecipeData.originalId 
+        : (recipe.id || recipe.idReceta);
+      
       if (!recipeId) return;
 
       const response = await api.reviews.getByRecipe(recipeId);
@@ -594,24 +794,25 @@ const RecipeDetailScreen = ({ navigation, route }) => {
   // Función mejorada para renderizar cada ingrediente con su cantidad escalada
   const renderIngredient = (item, index) => {
     // Validar que el ingrediente sea un objeto válido
-    if (typeof item !== 'object' || item === null) {
-      item = { name: String(item), amount: '', preparation: '' };
+    if (!item || typeof item !== 'object') {
+      item = { name: String(item || 'Ingrediente'), amount: '', preparation: '' };
     }
     
-    // Escalar la cantidad según el factor
+    // Los ingredientes ya están escalados en el estado de la receta
+    // Solo escalar en tiempo real si estamos en modo de escalado por ingrediente
     const scaledAmount = scaleByIngredient 
-      ? item.amount 
-      : scaleAmount(item.amount, scaleFactor);
+      ? (item.amount || '') 
+      : (item.amount || ''); // Ya escalado en el estado
     
     return (
       <View key={index} style={styles.ingredientItem}>
         <View style={styles.bulletPoint} />
         <View style={styles.ingredientTextContainer}>
-          {scaledAmount && scaledAmount.trim() !== '' && (
+          {scaledAmount && typeof scaledAmount === 'string' && scaledAmount.trim() !== '' && (
           <Text style={styles.ingredientAmount}>{scaledAmount} </Text>
           )}
-          <Text style={styles.ingredientName}>{item.name}</Text>
-          {item.preparation && item.preparation.trim() !== '' && (
+          <Text style={styles.ingredientName}>{item.name || 'Ingrediente'}</Text>
+          {item.preparation && typeof item.preparation === 'string' && item.preparation.trim() !== '' && (
             <Text style={styles.ingredientPrep}>, {item.preparation}</Text>
           )}
         </View>
@@ -822,26 +1023,39 @@ const RecipeDetailScreen = ({ navigation, route }) => {
         
         <View style={styles.content}>
           <View style={{flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center'}}>
-            <Text style={styles.title}>{recipe.title}</Text>
+            <View style={{flex: 1}}>
+              <Text style={styles.title}>{recipe.title}</Text>
+              {fromScaledRecipes && (
+                <View style={styles.scaledBadge}>
+                  <Icon name="refresh-cw" size={12} color={Colors.primary} />
+                  <Text style={styles.scaledBadgeText}>Receta Escalada</Text>
+                </View>
+              )}
+            </View>
             
-            <TouchableOpacity onPress={openReviewModal}>
+            {!fromScaledRecipes ? (
+              <TouchableOpacity onPress={openReviewModal}>
+                <View style={styles.ratingContainer}>
+                  <Icon name="star" size={16} color={Colors.warning} />
+                  <Text style={styles.ratingText}>
+                    {recipe.rating} ({recipe.reviews})
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            ) : (
               <View style={styles.ratingContainer}>
                 <Icon name="star" size={16} color={Colors.warning} />
                 <Text style={styles.ratingText}>
                   {recipe.rating} ({recipe.reviews})
                 </Text>
               </View>
-            </TouchableOpacity>
+            )}
           </View>
           
-          <View style={styles.authorRow}>
-            <View style={styles.authorInfo}>
-              <Image
-                source={{ uri: recipe.author?.avatar }}
-                style={styles.authorAvatar}
-              />
-              <Text style={styles.authorName}>{recipe.author?.name}</Text>
-            </View>
+          {/* Nombre del creador */}
+          <View style={styles.creatorContainer}>
+            <Text style={styles.creatorLabel}>Por: </Text>
+            <Text style={styles.creatorName}>{recipe.author?.name}</Text>
           </View>
           
           <Text style={styles.description}>{recipe.description}</Text>
@@ -857,48 +1071,50 @@ const RecipeDetailScreen = ({ navigation, route }) => {
           </View>
           
           <View style={styles.actionButtons}>
-            <TouchableOpacity style={styles.actionButton} onPress={openScaleModal}>
-              <Icon name="refresh-cw" size={20} color={Colors.primary} />
-              <Text style={styles.actionButtonText}>Escalar</Text>
-            </TouchableOpacity>
+            {!fromScaledRecipes && (
+              <TouchableOpacity style={styles.actionButton} onPress={openScaleModal}>
+                <Icon name="refresh-cw" size={20} color={Colors.primary} />
+                <Text style={styles.actionButtonText}>Escalar</Text>
+              </TouchableOpacity>
+            )}
             
-            {scaleFactor !== 1 && (
+            {!fromScaledRecipes && scaleFactor !== 1 && (
               <TouchableOpacity style={styles.actionButton} onPress={resetScaling}>
                 <Icon name="rotate-ccw" size={20} color={Colors.secondary} />
                 <Text style={[styles.actionButtonText, { color: Colors.secondary }]}>Reset</Text>
               </TouchableOpacity>
             )}
             
-            <TouchableOpacity 
-              style={[styles.actionButton, addingToPendingList && styles.disabledButton]} 
-              onPress={addToPendingList}
-              disabled={addingToPendingList}
-            >
-              <Icon 
-                name={addingToPendingList ? "loader" : "clock"} 
-                size={20} 
-                color={addingToPendingList ? Colors.textLight : Colors.primary} 
-              />
-              <Text style={[styles.actionButtonText, addingToPendingList && styles.disabledText]}>
-                {addingToPendingList ? 'Agregando...' : 'A Intentar'}
-              </Text>
-            </TouchableOpacity>
+                         <TouchableOpacity 
+                style={[styles.actionButton, (addingToPendingList || fromScaledRecipes) && styles.disabledButton]} 
+                onPress={fromScaledRecipes ? () => Alert.alert('Información', 'Para agregar a la lista de pendientes, ve a la receta original.') : addToPendingList}
+                disabled={addingToPendingList || fromScaledRecipes}
+              >
+                <Icon 
+                  name={addingToPendingList ? "loader" : "clock"} 
+                  size={20} 
+                  color={(addingToPendingList || fromScaledRecipes) ? Colors.textLight : Colors.primary} 
+                />
+                <Text style={[styles.actionButtonText, (addingToPendingList || fromScaledRecipes) && styles.disabledText]}>
+                  {addingToPendingList ? 'Agregando...' : 'A Intentar'}
+                </Text>
+              </TouchableOpacity>
 
              <TouchableOpacity 
-                style={[styles.actionButton, savingRecipe && styles.disabledButton]} 
-                onPress={saveRecipe}
-                disabled={savingRecipe}
+                style={[styles.actionButton, (savingRecipe || fromScaledRecipes) && styles.disabledButton]} 
+                onPress={fromScaledRecipes ? () => Alert.alert('Información', 'Para guardar la receta, ve a la receta original.') : saveRecipe}
+                disabled={savingRecipe || fromScaledRecipes}
               >
                 <Icon 
                   name={savingRecipe ? "loader" : (isSaved ? "check" : "bookmark")} 
                   size={20} 
-                  color={savingRecipe ? Colors.textLight : (isSaved ? Colors.success : Colors.primary)} 
+                  color={(savingRecipe || fromScaledRecipes) ? Colors.textLight : (isSaved ? Colors.success : Colors.primary)} 
                 />
                 <Text 
                   style={[
                     styles.actionButtonText, 
-                    savingRecipe && styles.disabledText,
-                    isSaved && { color: Colors.success }
+                    (savingRecipe || fromScaledRecipes) && styles.disabledText,
+                    isSaved && !fromScaledRecipes && { color: Colors.success }
                   ]}
                 >
                   {savingRecipe ? 'Guardando...' : (isSaved ? 'Guardada' : 'Guardar')}
@@ -991,13 +1207,23 @@ const RecipeDetailScreen = ({ navigation, route }) => {
           
           {activeTab === 'reviews' && (
             <View style={styles.reviewsContainer}>
-              <TouchableOpacity 
-                style={styles.addReviewButton}
-                onPress={openReviewModal}
-              >
-                <Icon name="edit-2" size={16} color={Colors.primary} />
-                <Text style={styles.addReviewText}>Añadir reseña</Text>
-              </TouchableOpacity>
+              {!fromScaledRecipes && (
+                <TouchableOpacity 
+                  style={styles.addReviewButton}
+                  onPress={openReviewModal}
+                >
+                  <Icon name="edit-2" size={16} color={Colors.primary} />
+                  <Text style={styles.addReviewText}>Añadir reseña</Text>
+                </TouchableOpacity>
+              )}
+              
+              {fromScaledRecipes && (
+                <View style={styles.scaledRecipeInfo}>
+                  <Text style={styles.scaledRecipeInfoText}>
+                    Esta es una vista de receta escalada. Para añadir reseñas, ve a la receta original.
+                  </Text>
+                </View>
+              )}
               
               <View style={styles.ratingSummary}>
                 <View style={styles.ratingDisplay}>
@@ -1045,25 +1271,34 @@ const RecipeDetailScreen = ({ navigation, route }) => {
                   ))
               ) : (
                 <Text style={styles.emptyMessage}>
-                  No hay reseñas disponibles para esta receta. ¡Sé el primero en comentar!
+                  {fromScaledRecipes 
+                    ? 'No hay reseñas disponibles para esta receta.' 
+                    : 'No hay reseñas disponibles para esta receta. ¡Sé el primero en comentar!'}
                 </Text>
               )}
             </View>
           )}
           
           <View style={styles.ratingSection}>
-            <Text style={styles.sectionTitle}>Valorar Receta</Text>
+            <Text style={styles.sectionTitle}>
+              {fromScaledRecipes ? 'Valoración de la Receta Original' : 'Valorar Receta'}
+            </Text>
             <Rating
               key={`rating-${userRating}`}
               showRating
-              onFinishRating={handleRating}
+              onFinishRating={fromScaledRecipes ? null : handleRating}
               style={styles.rating}
               startingValue={userRating}
-              readonly={isSubmitting || isVisitor}
+              readonly={isSubmitting || isVisitor || fromScaledRecipes}
             />
-            {isVisitor && (
+            {(isVisitor && !fromScaledRecipes) && (
               <Text style={styles.visitorMessage}>
                 Regístrate para valorar esta receta
+              </Text>
+            )}
+            {fromScaledRecipes && (
+              <Text style={styles.visitorMessage}>
+                Para valorar esta receta, ve a la receta original
               </Text>
             )}
           </View>
@@ -1325,26 +1560,49 @@ const styles = StyleSheet.create({
     color: Colors.textDark,
     marginBottom: 0,
   },
-  authorRow: {
+  scaledBadge: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    backgroundColor: Colors.primary + '20',
+    alignSelf: 'flex-start',
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: Metrics.roundedFull,
+    marginTop: 8,
+  },
+  scaledBadgeText: {
+    fontSize: Metrics.xSmallFontSize,
+    color: Colors.primary,
+    fontWeight: '500',
+    marginLeft: 4,
+  },
+  scaledRecipeInfo: {
+    backgroundColor: Colors.background,
+    borderRadius: Metrics.baseBorderRadius,
+    padding: Metrics.mediumSpacing,
     marginBottom: Metrics.mediumSpacing,
-    marginTop: Metrics.baseSpacing,
   },
-  authorInfo: {
+  scaledRecipeInfoText: {
+    fontSize: Metrics.baseFontSize,
+    color: Colors.textMedium,
+    textAlign: 'center',
+    lineHeight: Metrics.mediumLineHeight,
+  },
+  creatorContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+    marginTop: Metrics.baseSpacing,
+    marginBottom: Metrics.mediumSpacing,
   },
-  authorAvatar: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    marginRight: Metrics.baseSpacing,
-  },
-  authorName: {
-    fontSize: Metrics.smallFontSize,
+  creatorLabel: {
+    fontSize: Metrics.baseFontSize,
     color: Colors.textMedium,
+    fontStyle: 'italic',
+  },
+  creatorName: {
+    fontSize: Metrics.baseFontSize,
+    color: Colors.primary,
+    fontWeight: '600',
   },
   ratingContainer: {
     flexDirection: 'row',

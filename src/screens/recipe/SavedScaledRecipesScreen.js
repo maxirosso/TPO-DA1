@@ -9,6 +9,7 @@ import {
   Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/Feather';
 import LinearGradient from 'react-native-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -21,9 +22,11 @@ const SavedScaledRecipesScreen = ({ navigation }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  useEffect(() => {
-    loadSavedRecipes();
-  }, []);
+  useFocusEffect(
+    React.useCallback(() => {
+      loadSavedRecipes();
+    }, [])
+  );
 
   const loadSavedRecipes = async () => {
     setLoading(true);
@@ -50,8 +53,14 @@ const SavedScaledRecipesScreen = ({ navigation }) => {
         id: recipe.originalId,
         title: recipe.title.split(' (')[0], // Remove scaling info from title
         imageUrl: recipe.imageUrl,
-        // Other properties would be here in a real app
+        servings: recipe.servings,
+        ingredients: recipe.ingredients.map(ing => ({
+          name: ing.name,
+          amount: ing.scaledAmount,
+          preparation: ''
+        }))
       },
+      fromScaledRecipes: true,
       scaledRecipe: recipe,
     });
   };
@@ -68,9 +77,22 @@ const SavedScaledRecipesScreen = ({ navigation }) => {
         {
           text: 'Eliminar',
           style: 'destructive',
-          onPress: () => {
-            // Remove the recipe from state
-            setSavedRecipes(savedRecipes.filter(recipe => recipe.id !== recipeId));
+          onPress: async () => {
+            try {
+              // Actualizar estado local
+              const updatedRecipes = savedRecipes.filter(recipe => recipe.id !== recipeId);
+              setSavedRecipes(updatedRecipes);
+              
+              // Actualizar AsyncStorage
+              await AsyncStorage.setItem('saved_scaled_recipes', JSON.stringify(updatedRecipes));
+              
+              Alert.alert('Éxito', 'Receta escalada eliminada');
+            } catch (error) {
+              console.error('Error deleting scaled recipe:', error);
+              Alert.alert('Error', 'No se pudo eliminar la receta escalada');
+              // Recargar las recetas en caso de error
+              loadSavedRecipes();
+            }
           },
         },
       ]

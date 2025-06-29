@@ -17,6 +17,7 @@ const RecipeCard = ({
   imageUrl,
   category,
   rating,
+  author,
   tags = [],
   ingredients = [],
   onPress,
@@ -102,6 +103,13 @@ const RecipeCard = ({
             {title}
           </Text>
           
+          {/* Mostrar autor si está disponible */}
+          {author && (
+            <Text style={styles.authorText} numberOfLines={1}>
+              Por: {author}
+            </Text>
+          )}
+          
           {/* Mostrar categoría si está disponible */}
           {category && (
             <Text style={styles.categoryText} numberOfLines={1}>
@@ -147,6 +155,13 @@ const RecipeCard = ({
           {title}
         </Text>
         
+        {/* Mostrar autor si está disponible */}
+        {author && (
+          <Text style={styles.authorText} numberOfLines={1}>
+            Por: {author}
+          </Text>
+        )}
+        
         {/* Mostrar categoría si está disponible */}
         {category && (
           <Text style={styles.categoryText} numberOfLines={1}>
@@ -165,16 +180,6 @@ const RecipeCard = ({
             </View>
           )}
         </View>
-        
-        {tags.length > 0 && (
-          <View style={styles.tagsContainer}>
-            {tags.map((tag, index) => (
-              <View key={index} style={styles.tag}>
-                <Text style={styles.tagText}>{tag}</Text>
-              </View>
-            ))}
-          </View>
-        )}
       </View>
       <TouchableOpacity style={styles.moreButton}>
         <Icon name="more-vertical" size={18} color={Colors.textDark} />
@@ -228,6 +233,12 @@ const styles = StyleSheet.create({
     fontSize: Metrics.baseFontSize,
     fontWeight: '600',
     color: Colors.textDark,
+    marginBottom: Metrics.smallSpacing,
+  },
+  authorText: {
+    fontSize: Metrics.xSmallFontSize,
+    color: Colors.textMedium,
+    fontStyle: 'italic',
     marginBottom: Metrics.smallSpacing,
   },
   categoryText: {
