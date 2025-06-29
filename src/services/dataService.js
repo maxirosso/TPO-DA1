@@ -67,7 +67,32 @@ export function mapBackendRecipe(receta) {
 
 // Mapea un curso del backend al formato del frontend
 function mapBackendCourse(curso) {
-  return {
+  console.log('=== MAPPING BACKEND COURSE ===');
+  console.log('Curso recibido:', curso);
+  
+  // Determinar el status basado en las fechas y estado de inscripción
+  let status = 'active';
+  const today = new Date();
+  const startDate = new Date(curso.fechaInicio);
+  const endDate = new Date(curso.fechaFin);
+  
+  // Si hay estado de inscripción, usarlo
+  if (curso.estadoInscripcion) {
+    if (curso.estadoInscripcion === 'cancelado') {
+      status = 'cancelled'; // No debería llegar aquí si el backend filtra correctamente
+    } else if (today < startDate) {
+      status = 'upcoming';
+    } else if (today > endDate) {
+      status = 'completed';
+    } else {
+      status = 'active';
+    }
+  } else {
+    // Si no hay estado de inscripción, es un curso disponible
+    status = 'available';
+  }
+  
+  const mappedCourse = {
     id: curso.idCurso,
     idCurso: curso.idCurso,
     idCronograma: curso.idCronograma,
@@ -83,17 +108,25 @@ function mapBackendCourse(curso) {
     availableSeats: curso.vacantesDisponibles || 0,
     startDate: curso.fechaInicio || '',
     endDate: curso.fechaFin || '',
-    location: curso.sede ? curso.sede.nombreSede : '',
+    location: curso.sede ? curso.sede.nombre || curso.sede.nombreSede : '',
     instructor: 'Chef Profesional',
-    status: 'active',
+    status: status, // Estado calculado
     nextSession: curso.fechaInicio || '',
     totalHours: curso.duracion && curso.duracion > 0 ? curso.duracion : '-',
     topics: curso.contenidos ? curso.contenidos.split(',') : [],
     sede: curso.sede || null,
     // Campos de progreso y asistencia por defecto
     progress: curso.progress || 0,
-    attendance: curso.attendance || [] // Array vacío por defecto para evitar errores
+    attendance: curso.attendance || [], // Array vacío por defecto para evitar errores
+    // Campos adicionales del backend
+    estadoInscripcion: curso.estadoInscripcion,
+    estadoPago: curso.estadoPago,
+    fechaInscripcion: curso.fechaInscripcion,
+    monto: curso.monto
   };
+  
+  console.log('Curso mapeado:', mappedCourse);
+  return mappedCourse;
 }
 
 // Mapea un usuario del backend al formato del frontend
@@ -550,9 +583,19 @@ class DataService {
 
   async enrollInCourse(idAlumno, idCronograma) {
     try {
+      console.log('=== INSCRIBIRSE CURSO DEBUG DATASERVICE ===');
+      console.log('idAlumno:', idAlumno);
+      console.log('idCronograma:', idCronograma);
+      console.log('API Base URL:', api.baseURL);
+      
       const result = await api.courses.enroll(idAlumno, idCronograma);
+      console.log('✅ Inscripción exitosa:', result);
       return result.data;
     } catch (error) {
+      console.error('❌ Error completo inscripción:', error);
+      console.error('❌ Error response:', error.response);
+      console.error('❌ Error status:', error.response?.status);
+      console.error('❌ Error data:', error.response?.data);
       console.log('Error al inscribirse en el curso:', error.message);
       throw error;
     }
@@ -560,9 +603,19 @@ class DataService {
 
   async cancelEnrollment(idInscripcion, reintegroEnTarjeta) {
     try {
+      console.log('=== CANCELAR INSCRIPCION DEBUG DATASERVICE ===');
+      console.log('idInscripcion:', idInscripcion);
+      console.log('reintegroEnTarjeta:', reintegroEnTarjeta);
+      console.log('API Base URL:', api.baseURL);
+      
       const result = await api.courses.cancelEnrollment(idInscripcion, reintegroEnTarjeta);
+      console.log('✅ Resultado exitoso:', result);
       return result.data;
     } catch (error) {
+      console.error('❌ Error completo:', error);
+      console.error('❌ Error response:', error.response);
+      console.error('❌ Error status:', error.response?.status);
+      console.error('❌ Error data:', error.response?.data);
       console.log('Error al cancelar inscripción:', error.message);
       throw error;
     }

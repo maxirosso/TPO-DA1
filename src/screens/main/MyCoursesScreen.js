@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -10,6 +10,7 @@ import {
   Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/Feather';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -26,12 +27,19 @@ const MyCoursesScreen = ({ navigation }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  useEffect(() => {
-    loadCourses();
-  }, []);
+  // 🔄 Se ejecuta cada vez que la pantalla gana el foco (cuando entras a la vista)
+  useFocusEffect(
+    useCallback(() => {
+      console.log('🔄 MyCoursesScreen focused - Recargando cursos...');
+      loadCourses(false); // false = no mostrar loading screen
+    }, [])
+  );
 
-  const loadCourses = async () => {
-    setLoading(true);
+  const loadCourses = async (showLoading = true) => {
+    console.log('📚 Iniciando carga de mis cursos...');
+    if (showLoading) {
+      setLoading(true);
+    }
     setError(null);
     try {
       let userId = null;
@@ -40,30 +48,61 @@ const MyCoursesScreen = ({ navigation }) => {
         const parsed = JSON.parse(userData);
         userId = parsed.id || parsed.idUsuario;
       }
+      
+      console.log('👤 Usuario ID para cargar mis cursos:', userId);
+      
       if (!userId) throw new Error('Usuario no autenticado');
+      
+      console.log('🎓 Cargando cursos del usuario...');
       const userCourses = await dataService.getUserCourses(userId);
-      setEnrolledCourses(userCourses.filter(c => c.status === 'active'));
-      setUpcomingCourses(userCourses.filter(c => c.status === 'upcoming'));
+      console.log('✅ Cursos del usuario recibidos:', userCourses.length);
+      
+      // Filtrar cursos por estado (solo inscripciones activas deberían venir del backend)
+      const activeCourses = userCourses.filter(c => c.status === 'active' || c.status === 'upcoming' || c.status === 'completed');
+      const upcomingCourses = userCourses.filter(c => c.status === 'upcoming');
+      
+      console.log('📋 Cursos activos filtrados:', activeCourses.length);
+      console.log('📅 Cursos próximos filtrados:', upcomingCourses.length);
+      
+      setEnrolledCourses(activeCourses);
+      setUpcomingCourses(upcomingCourses);
+      
+      console.log('🎉 Carga de mis cursos completada exitosamente');
     } catch (err) {
+      console.error('❌ Error al cargar mis cursos:', err);
       setError('No se pudieron cargar tus cursos.');
       setEnrolledCourses([]);
       setUpcomingCourses([]);
     } finally {
-      setLoading(false);
+      if (showLoading) {
+        setLoading(false);
+      }
     }
   };
 
   const getFilteredCourses = () => {
+    console.log('=== FILTRANDO CURSOS ===');
+    console.log('Tab activo:', activeTab);
+    console.log('Cursos inscritos:', enrolledCourses);
+    console.log('Cursos próximos:', upcomingCourses);
+    
+    let filtered = [];
     switch (activeTab) {
       case 'active':
-        return enrolledCourses.filter(course => course.status === 'active');
+        filtered = enrolledCourses.filter(course => course.status === 'active');
+        break;
       case 'completed':
-        return enrolledCourses.filter(course => course.status === 'completed');
+        filtered = enrolledCourses.filter(course => course.status === 'completed');
+        break;
       case 'upcoming':
-        return upcomingCourses;
+        filtered = enrolledCourses.filter(course => course.status === 'upcoming');
+        break;
       default:
-        return [];
+        filtered = [];
     }
+    
+    console.log('Cursos filtrados para mostrar:', filtered);
+    return filtered;
   };
 
   const calculateAttendancePercentage = (course) => {
@@ -99,8 +138,13 @@ const MyCoursesScreen = ({ navigation }) => {
   };
 
   const handleCancelCourse = (course) => {
+    console.log('=== CANCELAR CURSO DEBUG ===');
+    console.log('Course data:', course);
+    console.log('idInscripcion:', course.idInscripcion);
+    
     // Verificar que el curso tenga un ID de inscripción válido
     if (!course.idInscripcion) {
+      console.error('❌ No se encontró idInscripcion en el curso');
       Alert.alert('Error', 'No se puede cancelar la inscripción porque no se encontró el ID de inscripción.');
       return;
     }
@@ -110,17 +154,33 @@ const MyCoursesScreen = ({ navigation }) => {
     const daysDifference = Math.floor((startDate - today) / (1000 * 60 * 60 * 24));
     
     let refundPercentage = 0;
+    let refundMessage = '';
+    let warningMessage = '';
+    
     if (daysDifference >= 10) {
       refundPercentage = 100;
+      refundMessage = 'Reembolso completo (100%)';
     } else if (daysDifference >= 1 && daysDifference < 10) {
       refundPercentage = 70;
+      refundMessage = 'Reembolso del 70%';
     } else if (daysDifference === 0) {
       refundPercentage = 50;
+      refundMessage = 'Reembolso del 50% (mismo día de inicio)';
+    } else {
+      refundPercentage = 0;
+      refundMessage = 'Sin reembolso';
+      warningMessage = '\n⚠️ ATENCIÓN: El curso ya ha iniciado. No recibirás reembolso, pero podrás darte de baja si es necesario.';
     }
+    
+    console.log('Días hasta inicio:', daysDifference);
+    console.log('Porcentaje de reembolso:', refundPercentage);
+    console.log('Mensaje de reembolso:', refundMessage);
+    
+    const alertMessage = `¿Estás seguro de que deseas cancelar tu inscripción al curso "${course.title}"?\n\n${refundMessage}${warningMessage}`;
     
     Alert.alert(
       'Cancelar Inscripción',
-      `¿Estás seguro de que deseas cancelar tu inscripción al curso "${course.title}"?\n\nReembolso estimado: ${refundPercentage}%`,
+      alertMessage,
       [
         {
           text: 'No',
@@ -130,16 +190,40 @@ const MyCoursesScreen = ({ navigation }) => {
           text: 'Sí, Cancelar',
           style: 'destructive',
           onPress: async () => {
+            console.log('✅ Iniciando cancelación...');
             try {
-              await dataService.cancelEnrollment(course.idInscripcion, true);
+              setLoading(true);
+              const result = await dataService.cancelEnrollment(course.idInscripcion, true);
+              console.log('✅ Resultado de cancelación:', result);
+              
+              // Mensaje de confirmación personalizado según el escenario
+              let confirmationMessage = '';
+              if (daysDifference < 0) {
+                confirmationMessage = `Has cancelado tu inscripción al curso "${course.title}".\n\nAunque el curso ya había iniciado, tu cancelación ha sido procesada sin reembolso. Esperamos que encuentres otro curso que se ajuste mejor a tus necesidades.`;
+              } else if (refundPercentage === 0) {
+                confirmationMessage = `Has cancelado tu inscripción al curso "${course.title}".\n\nNo se procesará reembolso debido a la proximidad de la fecha de inicio.`;
+              } else {
+                confirmationMessage = `Has cancelado tu inscripción al curso "${course.title}".\n\nSe ha iniciado el proceso de reembolso del ${refundPercentage}% del valor del curso.`;
+              }
+              
               Alert.alert(
                 'Inscripción Cancelada',
-                `Has cancelado tu inscripción al curso "${course.title}". Se ha iniciado el proceso de reembolso del ${refundPercentage}% del valor del curso.`
+                confirmationMessage,
+                [
+                  {
+                    text: 'OK',
+                    onPress: () => {
+                      // Recargar la lista de cursos después de cerrar el alert
+                      loadCourses(false); // Recarga silenciosa después de cancelar
+                    }
+                  }
+                ]
               );
-              // Recargar la lista de cursos
-              loadCourses();
             } catch (error) {
-              Alert.alert('Error', 'No se pudo cancelar la inscripción. Por favor, intenta nuevamente.');
+              console.error('❌ Error al cancelar inscripción:', error);
+              Alert.alert('Error', `No se pudo cancelar la inscripción: ${error.message || 'Error desconocido'}`);
+            } finally {
+              setLoading(false);
             }
           },
         },
@@ -377,7 +461,17 @@ const MyCoursesScreen = ({ navigation }) => {
           <View style={styles.actionsContainer}>
             <Button
               title="Ver Detalles"
-              onPress={() => navigation.navigate('CourseDetail', { courseId: item.id })}
+              onPress={() => navigation.navigate('CourseDetail', { 
+                course: item,
+                courseId: item.id || item.idCurso,
+                isEnrolled: true, // Ya está inscrito porque viene de "Mis Cursos"
+                userType: 'student', // Usuario debe ser estudiante para estar en mis cursos
+                enrollment: {
+                  id: item.idInscripcion,
+                  status: item.status,
+                  enrollmentDate: item.fechaInscripcion
+                }
+              })}
               type="primary"
               size="small"
               iconName="info"
@@ -477,7 +571,11 @@ const MyCoursesScreen = ({ navigation }) => {
       <FlatList
         data={getFilteredCourses()}
         renderItem={renderCourseItem}
-        keyExtractor={(item, index) => (item.id ? item.id.toString() : `course_${index}`)}
+        keyExtractor={(item, index) => {
+          // Crear una key única combinando múltiples campos
+          const id = item.id || item.idCurso || item.idCronograma || item.idInscripcion;
+          return `course_${id}_${item.title}_${index}`;
+        }}
         contentContainerStyle={styles.coursesList}
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={
