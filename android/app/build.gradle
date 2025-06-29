@@ -89,6 +89,8 @@ android {
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
         versionName "1.0"
+        // Configurar variante para react-native-camera
+        missingDimensionStrategy 'react-native-camera', 'general'
     }
     signingConfigs {
         debug {
@@ -110,6 +112,8 @@ android {
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
         }
     }
+    
+
 }
 
 dependencies {
@@ -121,6 +125,7 @@ dependencies {
     } else {
         implementation jscFlavor
     }
+    
 }
 
 // Apply Vector Icons Gradle file
