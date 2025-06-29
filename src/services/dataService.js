@@ -71,6 +71,7 @@ function mapBackendCourse(curso) {
     id: curso.idCurso,
     idCurso: curso.idCurso,
     idCronograma: curso.idCronograma,
+    idInscripcion: curso.idInscripcion, // ID de la inscripción
     title: curso.descripcion || 'Sin título',
     descripcion: curso.descripcion || 'Sin descripción',
     contenidos: curso.contenidos || 'No especificado',
@@ -88,7 +89,10 @@ function mapBackendCourse(curso) {
     nextSession: curso.fechaInicio || '',
     totalHours: curso.duracion && curso.duracion > 0 ? curso.duracion : '-',
     topics: curso.contenidos ? curso.contenidos.split(',') : [],
-    sede: curso.sede || null
+    sede: curso.sede || null,
+    // Campos de progreso y asistencia por defecto
+    progress: curso.progress || 0,
+    attendance: curso.attendance || [] // Array vacío por defecto para evitar errores
   };
 }
 

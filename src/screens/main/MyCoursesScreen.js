@@ -90,12 +90,21 @@ const MyCoursesScreen = ({ navigation }) => {
   };
 
   const handleAttendanceQR = (course) => {
-    // Navigate to QR scanner screen for course attendance
+    // Navegar solo si el id del curso es válido
+    if (!course.id) {
+      Alert.alert('Error', 'No se puede registrar asistencia porque el curso no tiene un identificador válido.');
+      return;
+    }
     navigation.navigate('QRScannerScreen', { courseId: course.id });
   };
 
   const handleCancelCourse = (course) => {
-    // In a real app, this would show a confirmation dialog and calculate refund amount
+    // Verificar que el curso tenga un ID de inscripción válido
+    if (!course.idInscripcion) {
+      Alert.alert('Error', 'No se puede cancelar la inscripción porque no se encontró el ID de inscripción.');
+      return;
+    }
+
     const today = new Date();
     const startDate = new Date(course.startDate);
     const daysDifference = Math.floor((startDate - today) / (1000 * 60 * 60 * 24));
@@ -120,11 +129,18 @@ const MyCoursesScreen = ({ navigation }) => {
         {
           text: 'Sí, Cancelar',
           style: 'destructive',
-          onPress: () => {
-            Alert.alert(
-              'Inscripción Cancelada',
-              `Has cancelado tu inscripción al curso "${course.title}". Se ha iniciado el proceso de reembolso del ${refundPercentage}% del valor del curso.`
-            );
+          onPress: async () => {
+            try {
+              await dataService.cancelEnrollment(course.idInscripcion, true);
+              Alert.alert(
+                'Inscripción Cancelada',
+                `Has cancelado tu inscripción al curso "${course.title}". Se ha iniciado el proceso de reembolso del ${refundPercentage}% del valor del curso.`
+              );
+              // Recargar la lista de cursos
+              loadCourses();
+            } catch (error) {
+              Alert.alert('Error', 'No se pudo cancelar la inscripción. Por favor, intenta nuevamente.');
+            }
           },
         },
       ]
