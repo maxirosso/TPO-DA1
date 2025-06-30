@@ -58,22 +58,48 @@ const ForgotPasswordScreen = ({ navigation }) => {
 
     setIsLoading(true);
     try {
+      console.log('Enviando código de recuperación a:', email);
       const response = await api.auth.resetPassword(email);
       
-      Alert.alert(
-        'Código Enviado',
-        'Se ha enviado un código de recuperación de 4 dígitos a tu correo electrónico. El código tiene una validez de 30 minutos.',
-        [{ 
-          text: 'Continuar', 
-          onPress: () => {
-            setStage(2);
-            setTimeLeft(30 * 60); // Resetear timer a 30 minutos
-          }
-        }]
-      );
+      console.log('Respuesta del servidor:', response);
+      
+      // El backend retorna un string directamente si es exitoso
+      if (response && (typeof response === 'string' || response.success !== false)) {
+        Alert.alert(
+          'Código Enviado',
+          'Se ha enviado un código de recuperación de 4 dígitos a tu correo electrónico. El código tiene una validez de 30 minutos.',
+          [{ 
+            text: 'Continuar', 
+            onPress: () => {
+              setStage(2);
+              setTimeLeft(30 * 60); // Resetear timer a 30 minutos
+            }
+          }]
+        );
+      } else {
+        Alert.alert('Error', response.message || 'No se pudo enviar el código de recuperación. Verifica que tu email esté registrado en el sistema.');
+      }
     } catch (error) {
       console.error('Error sending recovery code:', error);
-      Alert.alert('Error', 'No se pudo enviar el código de recuperación. Verifica tu email e intenta nuevamente.');
+      
+      // Manejar diferentes tipos de errores
+      let errorMessage = 'No se pudo enviar el código de recuperación.';
+      
+      if (error.response) {
+        // Error del servidor
+        if (error.response.status === 400) {
+          errorMessage = 'Email no encontrado en el sistema o usuario no habilitado.';
+        } else if (error.response.status >= 500) {
+          errorMessage = 'Error del servidor. Intenta nuevamente más tarde.';
+        } else {
+          errorMessage = error.response.data || 'Error desconocido del servidor.';
+        }
+      } else if (error.request) {
+        // Error de red
+        errorMessage = 'Error de conexión. Verifica tu internet e intenta nuevamente.';
+      }
+      
+      Alert.alert('Error', errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -108,28 +134,54 @@ const ForgotPasswordScreen = ({ navigation }) => {
     if (timeLeft <= 0) {
       Alert.alert('Código Expirado', 'El código ha expirado. Por favor solicita uno nuevo.');
       setStage(1);
+      setVerificationCode(['', '', '', '']);
       return;
     }
 
     setIsLoading(true);
     try {
+      console.log('🟡 Verificando código de recuperación:', { email, code });
       const response = await api.auth.verifyRecoveryCode(email, code);
       
-      if (response.success) {
+      console.log('🟢 Respuesta de verificación:', response);
+      
+      // El backend retorna un Map<String, Object> con success y message
+      if (response && response.success === true) {
         Alert.alert(
           'Código Válido',
           'Código verificado correctamente. Ahora puedes establecer tu nueva contraseña.',
           [{ text: 'Continuar', onPress: () => setStage(3) }]
         );
       } else {
-        Alert.alert('Error', response.message || 'Código inválido o expirado');
-        // Limpiar código
+        const errorMessage = response?.message || 'Código inválido o expirado. Verifica que hayas ingresado el código correcto y que no hayan pasado 30 minutos.';
+        Alert.alert('Error', errorMessage);
+        
+        // Limpiar código para permitir reintento
         setVerificationCode(['', '', '', '']);
         inputRefs[0].current?.focus();
       }
     } catch (error) {
-      console.error('Error verifying code:', error);
-      Alert.alert('Error', 'No se pudo verificar el código. Intenta nuevamente.');
+      console.error('🔴 Error verifying code:', error);
+      
+      let errorMessage = 'No se pudo verificar el código.';
+      
+      if (error.response) {
+        if (error.response.status === 400) {
+          errorMessage = 'Código inválido o expirado. Los códigos tienen una validez de 30 minutos.';
+        } else if (error.response.data && error.response.data.message) {
+          errorMessage = error.response.data.message;
+        } else {
+          errorMessage = 'Error del servidor al verificar el código.';
+        }
+      } else if (error.request) {
+        errorMessage = 'Error de conexión. Verifica tu internet e intenta nuevamente.';
+      }
+      
+      Alert.alert('Error', errorMessage);
+      
+      // Limpiar código en caso de error
+      setVerificationCode(['', '', '', '']);
+      inputRefs[0].current?.focus();
     } finally {
       setIsLoading(false);
     }
@@ -155,9 +207,14 @@ const ForgotPasswordScreen = ({ navigation }) => {
     setIsLoading(true);
     try {
       const code = verificationCode.join('');
+      console.log('🟡 Cambiando contraseña para:', email);
+      
       const response = await api.auth.changePasswordWithCode(email, code, newPassword);
       
-      if (response.success) {
+      console.log('🟢 Respuesta de cambio de contraseña:', response);
+      
+      // El backend retorna un Map<String, Object> con success y message
+      if (response && response.success === true) {
         Alert.alert(
           '¡Contraseña Cambiada!',
           'Tu contraseña ha sido cambiada exitosamente. Ya puedes iniciar sesión con tu nueva contraseña.',
@@ -167,11 +224,27 @@ const ForgotPasswordScreen = ({ navigation }) => {
           }]
         );
       } else {
-        Alert.alert('Error', response.message || 'No se pudo cambiar la contraseña');
+        const errorMessage = response?.message || 'No se pudo cambiar la contraseña. Es posible que el código haya expirado.';
+        Alert.alert('Error', errorMessage);
       }
     } catch (error) {
-      console.error('Error changing password:', error);
-      Alert.alert('Error', 'No se pudo cambiar la contraseña. Intenta nuevamente.');
+      console.error('🔴 Error changing password:', error);
+      
+      let errorMessage = 'No se pudo cambiar la contraseña.';
+      
+      if (error.response) {
+        if (error.response.status === 400) {
+          errorMessage = 'Código inválido o expirado. Los códigos tienen una validez de 30 minutos.';
+        } else if (error.response.data && error.response.data.message) {
+          errorMessage = error.response.data.message;
+        } else {
+          errorMessage = 'Error del servidor al cambiar la contraseña.';
+        }
+      } else if (error.request) {
+        errorMessage = 'Error de conexión. Verifica tu internet e intenta nuevamente.';
+      }
+      
+      Alert.alert('Error', errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -182,7 +255,7 @@ const ForgotPasswordScreen = ({ navigation }) => {
     <View style={styles.formContainer}>
       <Text style={styles.title}>¿Olvidaste tu contraseña?</Text>
       <Text style={styles.subtitle}>
-        Ingresa tu dirección de correo electrónico y te enviaremos un código de recuperación de 4 dígitos.
+        Ingresa tu dirección de correo electrónico y te enviaremos un código de recuperación de 4 dígitos válido por 30 minutos.
       </Text>
 
       <Input
@@ -220,7 +293,7 @@ const ForgotPasswordScreen = ({ navigation }) => {
     <View style={styles.formContainer}>
       <Text style={styles.title}>Verificar Código</Text>
       <Text style={styles.subtitle}>
-        Ingresa el código de 4 dígitos que enviamos a {email}
+        Ingresa el código de 4 dígitos que enviamos a {email}. El código tiene una validez de 30 minutos.
       </Text>
 
       <View style={styles.codeContainer}>
@@ -243,6 +316,11 @@ const ForgotPasswordScreen = ({ navigation }) => {
         <Text style={styles.timerText}>
           Tiempo restante: <Text style={styles.timerTime}>{formatTimeLeft()}</Text>
         </Text>
+        {timeLeft <= 300 && ( // Mostrar advertencia cuando quedan menos de 5 minutos
+          <Text style={styles.warningText}>
+            ⚠️ El código expirará pronto
+          </Text>
+        )}
       </View>
 
       <Button
@@ -256,7 +334,11 @@ const ForgotPasswordScreen = ({ navigation }) => {
 
       <TouchableOpacity
         style={styles.resendButton}
-        onPress={() => setStage(1)}
+        onPress={() => {
+          setStage(1);
+          setVerificationCode(['', '', '', '']);
+          setTimeLeft(30 * 60);
+        }}
       >
         <Text style={styles.resendText}>
           Enviar nuevo código
@@ -440,6 +522,13 @@ const styles = StyleSheet.create({
     fontSize: Metrics.baseFontSize,
     fontWeight: '600',
     color: Colors.primary,
+  },
+  warningText: {
+    fontSize: Metrics.smallFontSize,
+    color: '#FF6B35', // Color naranjo para advertencia
+    fontWeight: '500',
+    textAlign: 'center',
+    marginTop: Metrics.baseSpacing,
   },
   resendButton: {
     marginTop: Metrics.largeSpacing,

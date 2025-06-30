@@ -1,4 +1,4 @@
-import React, { useState, useContext, useRef } from 'react';
+import React, { useState, useContext, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -14,6 +14,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/Feather';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { AuthContext } from '../../context/AuthContext';
 import Input from '../../components/common/Input';
@@ -26,11 +27,51 @@ const LoginScreen = ({ navigation }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
   
   const emailInputRef = useRef(null);
   const passwordInputRef = useRef(null);
   
   const { signIn, resendVerificationCode, enterVisitorMode } = useContext(AuthContext);
+  
+  // Cargar credenciales guardadas al montar el componente
+  useEffect(() => {
+    loadSavedCredentials();
+  }, []);
+  
+  // Función para cargar credenciales guardadas
+  const loadSavedCredentials = async () => {
+    try {
+      const savedEmail = await AsyncStorage.getItem('savedEmail');
+      const savedPassword = await AsyncStorage.getItem('savedPassword');
+      const wasRememberMeEnabled = await AsyncStorage.getItem('rememberMe');
+      
+      if (savedEmail && savedPassword && wasRememberMeEnabled === 'true') {
+        setEmail(savedEmail);
+        setPassword(savedPassword);
+        setRememberMe(true);
+      }
+    } catch (error) {
+      console.log('Error al cargar credenciales guardadas:', error);
+    }
+  };
+  
+  // Función para guardar credenciales
+  const saveCredentials = async (email, password) => {
+    try {
+      if (rememberMe) {
+        await AsyncStorage.setItem('savedEmail', email);
+        await AsyncStorage.setItem('savedPassword', password);
+        await AsyncStorage.setItem('rememberMe', 'true');
+      } else {
+        await AsyncStorage.removeItem('savedEmail');
+        await AsyncStorage.removeItem('savedPassword');
+        await AsyncStorage.removeItem('rememberMe');
+      }
+    } catch (error) {
+      console.log('Error al guardar credenciales:', error);
+    }
+  };
   
   const handleSignIn = async () => {
     Keyboard.dismiss();
@@ -44,6 +85,8 @@ const LoginScreen = ({ navigation }) => {
     
     try {
       await signIn(email, password);
+      // Guardar credenciales si el login fue exitoso
+      await saveCredentials(email, password);
     } catch (error) {
       console.log('Error al iniciar sesión:', error);
       
@@ -141,6 +184,18 @@ const LoginScreen = ({ navigation }) => {
           </TouchableOpacity>
         }
       />
+      
+      <TouchableOpacity 
+        style={styles.rememberMeContainer}
+        onPress={() => setRememberMe(!rememberMe)}
+      >
+        <View style={[styles.checkbox, rememberMe && styles.checkboxChecked]}>
+          {rememberMe && (
+            <Icon name="check" size={14} color={Colors.card} />
+          )}
+        </View>
+        <Text style={styles.rememberMeText}>Recordar mis credenciales</Text>
+      </TouchableOpacity>
       
       <Button
         title="Iniciar Sesión"
@@ -456,6 +511,32 @@ const styles = StyleSheet.create({
   visitorButtonText: {
     color: Colors.primary,
     fontSize: Metrics.baseFontSize,
+    fontWeight: '500',
+  },
+  rememberMeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: Metrics.baseSpacing,
+    marginBottom: Metrics.baseSpacing,
+  },
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderWidth: 2,
+    borderColor: Colors.border,
+    borderRadius: 4,
+    marginRight: Metrics.baseSpacing,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.card,
+  },
+  checkboxChecked: {
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
+  },
+  rememberMeText: {
+    fontSize: Metrics.baseFontSize,
+    color: Colors.textDark,
     fontWeight: '500',
   },
 });

@@ -28,6 +28,8 @@ class ApiService {
       getSugerenciasAlias: (baseAlias) => this.get('/sugerenciasAlias', { baseAlias }),
       completeUserRegistration: (email, nombre, password) => this.postForm('/completarRegistroUsuario', { mail: email, nombre, password }),
       resetPassword: (email) => this.postForm('/recuperarContrasena', { mail: email }),
+      verifyRecoveryCode: (email, codigo) => this.postForm('/verificarCodigoRecuperacion', { mail: email, codigo }),
+      changePasswordWithCode: (email, codigo, nuevaPassword) => this.postForm('/cambiarContrasenaConCodigo', { mail: email, codigo, nuevaPassword }),
     };
 
     // Objeto para métodos relacionados con recetas
@@ -548,14 +550,14 @@ export const api = {
     verifyUserCode: (mail, codigo) => apiService.postForm('/verificarCodigoUsuario', { mail, codigo }),
     completeUserRegistration: (mail, nombre, password) => apiService.postForm('/completarRegistroUsuario', { mail, nombre, password }),
     resendUserCode: (mail) => apiService.postForm('/reenviarCodigoUsuario', { mail }),
-    // Alumnos (igual que usuarios + datos adicionales)
-    registerStudent: (mail, idUsuario, medioPago, dniFrente, dniFondo, tramite) => 
-      apiService.postForm('/registrarAlumno', { mail, idUsuario, medioPago, dniFrente, dniFondo, tramite }),
     // Recuperación de contraseña (30 minutos de validez)
-    forgotPassword: (mail) => apiService.postForm('/recuperarClave', { mail }),
     resetPassword: (mail) => apiService.postForm('/recuperarContrasena', { mail }),
     verifyRecoveryCode: (mail, codigo) => apiService.postForm('/verificarCodigoRecuperacion', { mail, codigo }),
     changePasswordWithCode: (mail, codigo, nuevaPassword) => apiService.postForm('/cambiarContrasenaConCodigo', { mail, codigo, nuevaPassword }),
+    // Alumnos (igual que usuarios + datos adicionales)
+    registerStudent: (mail, idUsuario, medioPago, dniFrente, dniFondo, tramite) => 
+      apiService.postForm('/registrarAlumno', { mail, idUsuario, medioPago, dniFrente, dniFondo, tramite }),
+    // Métodos para upgrade a estudiante
     upgradeToStudent: (idUsuario, studentData) => apiService.upgradeToStudent(idUsuario, studentData),
     createEmpresaUser: (userData) => apiService.post('/crearUsuarioEmpresa', userData),
     createAdminUser: (userData) => apiService.post('/crearUsuarioAdmin', userData),
