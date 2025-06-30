@@ -75,7 +75,6 @@ const PantallaRegistroEstudiante = ({ navigation, route }) => {
 
   const manejarContinuar = async () => {
     if (pasoActual === 1) {
-      // Validar datos del paso 1 usando las utilidades de validación
       const datosValidacion = {
         correo,
         numeroTarjeta,
@@ -100,7 +99,6 @@ const PantallaRegistroEstudiante = ({ navigation, route }) => {
       
       setPasoActual(2);
     } else if (pasoActual === 2) {
-      // Validar todos los datos antes de enviar
       const datosCompletos = {
         correo,
         numeroTarjeta,
@@ -119,12 +117,10 @@ const PantallaRegistroEstudiante = ({ navigation, route }) => {
       }
       setCargando(true);
       try {
-        // Extraer nombres de archivo de URIs si es posible
         const obtenerNombreArchivo = (uri) => {
           if (!uri) return 'imagen_dni.jpg';
           const partes = uri.split('/');
           const nombreCompleto = partes[partes.length - 1];
-          // Si no tiene extensión, agregar .jpg
           return nombreCompleto.includes('.') ? nombreCompleto : `${nombreCompleto}.jpg`;
         };
         
@@ -134,8 +130,7 @@ const PantallaRegistroEstudiante = ({ navigation, route }) => {
         const medioPago = numeroTarjeta || '';
         const tramiteStr = tramite || '';
         
-        // Registrar los datos para depuración
-        console.log('Parámetros de registro de estudiante:', { 
+        console.log('Parámetros de registro de alumno:', { 
           mail, 
           idUsuario: null, 
           medioPago, 
@@ -165,7 +160,7 @@ const PantallaRegistroEstudiante = ({ navigation, route }) => {
         try {
           const respuesta = await api.auth.registerStudent(
             mail,
-            null, // idUsuario es null para nuevo estudiante
+            null, 
             medioPago,
             nombreArchivoDniFrente,
             nombreArchivoDniFondo,
@@ -177,16 +172,15 @@ const PantallaRegistroEstudiante = ({ navigation, route }) => {
           if (respuesta && respuesta.success) {
             Alert.alert(
               'Registro Exitoso',
-              'Tu registro como estudiante fue procesado exitosamente. Revisa tu correo para completar la verificación.',
+              'Tu registro como alumno fue procesado exitosamente. Revisa tu correo para completar la verificación.',
               [{ text: 'ACEPTAR', onPress: () => navigation.navigate('Verification', { email: correo }) }]
             );
           } else {
-            // Manejar errores específicos del backend
-            const mensajeError = respuesta?.data || 'No se pudo registrar como estudiante.';
-            if (mensajeError.includes('Ya existe') || mensajeError.includes('ya sea un estudiante')) {
+            const mensajeError = respuesta?.data || 'No se pudo registrar como alumno.';
+            if (mensajeError.includes('Ya existe') || mensajeError.includes('ya sea un alumno')) {
               Alert.alert(
                 'Usuario ya registrado',
-                'Este correo electrónico ya está registrado como estudiante. Puedes iniciar sesión o recuperar tu contraseña.',
+                'Este correo electrónico ya está registrado como alumno. Puedes iniciar sesión o recuperar tu contraseña.',
                 [
                   { text: 'Cancelar', style: 'cancel' },
                   { text: 'Iniciar Sesión', onPress: () => navigation.navigate('Login') }
@@ -198,10 +192,9 @@ const PantallaRegistroEstudiante = ({ navigation, route }) => {
           }
         } catch (error) {
           setCargando(false);
-          console.error('Error específico de registro de estudiante:', error);
+          console.error('Error específico de registro de alumno:', error);
           
-          // Manejar tipos específicos de errores
-          let mensajeError = 'No se pudo registrar como estudiante.';
+          let mensajeError = 'No se pudo registrar como alumno.';
           
           if (error.message) {
             if (error.message.includes('403')) {
@@ -230,7 +223,7 @@ const PantallaRegistroEstudiante = ({ navigation, route }) => {
         }
       } catch (error) {
         setCargando(false);
-        console.error('Error general de registro de estudiante:', error);
+        console.error('Error general de registro de alumno:', error);
         Alert.alert(
           'Error Inesperado',
           'Ocurrió un error inesperado. Por favor intenta nuevamente.',
@@ -275,7 +268,7 @@ const PantallaRegistroEstudiante = ({ navigation, route }) => {
             >
               <Icon name="chevron-left" size={24} color={Colors.textDark} />
             </TouchableOpacity>
-            <Text style={estilos.tituloEncabezado}>Registro de Estudiante</Text>
+            <Text style={estilos.tituloEncabezado}>Registro de Alumno</Text>
           </View>
         </LinearGradient>
         
@@ -297,7 +290,7 @@ const PantallaRegistroEstudiante = ({ navigation, route }) => {
                   <Icon name="info" size={20} color={Colors.primary} />
                 </View>
                 <Text style={estilos.textoInfo}>
-                  El registro como estudiante es gratuito a menos que te inscribas en un curso. Necesitarás proporcionar información de pago para futuras inscripciones.
+                  El registro como alumno es gratuito a menos que te inscribas en un curso. Necesitarás proporcionar información de pago para futuras inscripciones.
                 </Text>
               </View>
               
@@ -349,7 +342,7 @@ const PantallaRegistroEstudiante = ({ navigation, route }) => {
             <View style={estilos.contenedorSeccion}>
               <Text style={estilos.tituloSeccion}>Verificación de Identidad</Text>
               <Text style={estilos.descripcionSeccion}>
-                Por favor, proporciona fotos de tu documento de identidad (frente y reverso) para la verificación.
+                Por favor, proporciona fotos de tu documento de identidad (frente y dorso) para la verificación.
               </Text>
               
               <View style={estilos.contenedorSubidaDni}>

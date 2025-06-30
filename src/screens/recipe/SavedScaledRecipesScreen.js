@@ -32,7 +32,6 @@ const SavedScaledRecipesScreen = ({ navigation }) => {
     setLoading(true);
     setError(null);
     try {
-      // Si tienes endpoint real, úsalo aquí
       const saved = await AsyncStorage.getItem('saved_scaled_recipes');
       if (saved) {
         setSavedRecipes(JSON.parse(saved));
@@ -51,7 +50,7 @@ const SavedScaledRecipesScreen = ({ navigation }) => {
     navigation.navigate('RecipeDetail', { 
       recipe: {
         id: recipe.originalId,
-        title: recipe.title.split(' (')[0], // Remove scaling info from title
+        title: recipe.title.split(' (')[0], 
         imageUrl: recipe.imageUrl,
         servings: recipe.servings,
         ingredients: recipe.ingredients.map(ing => ({
@@ -79,18 +78,15 @@ const SavedScaledRecipesScreen = ({ navigation }) => {
           style: 'destructive',
           onPress: async () => {
             try {
-              // Actualizar estado local
               const updatedRecipes = savedRecipes.filter(recipe => recipe.id !== recipeId);
               setSavedRecipes(updatedRecipes);
               
-              // Actualizar AsyncStorage
               await AsyncStorage.setItem('saved_scaled_recipes', JSON.stringify(updatedRecipes));
               
               Alert.alert('Éxito', 'Receta escalada eliminada');
             } catch (error) {
               console.error('Error deleting scaled recipe:', error);
               Alert.alert('Error', 'No se pudo eliminar la receta escalada');
-              // Recargar las recetas en caso de error
               loadSavedRecipes();
             }
           },
@@ -318,7 +314,7 @@ const styles = StyleSheet.create({
     marginBottom: Metrics.baseSpacing,
   },
   scalingBadge: {
-    backgroundColor: Colors.primary + '20', // 20% opacity
+    backgroundColor: Colors.primary + '20', 
     alignSelf: 'flex-start',
     paddingVertical: 4,
     paddingHorizontal: 8,

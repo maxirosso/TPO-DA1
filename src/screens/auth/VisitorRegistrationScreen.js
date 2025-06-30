@@ -32,27 +32,22 @@ const VisitorRegistrationScreen = ({ navigation }) => {
     return emailRegex.test(email);
   };
 
-  // Generar sugerencias de alias localmente como fallback
   const generateLocalAliasSuggestions = (baseAlias) => {
     const suggestions = [];
     const base = baseAlias.replace(/\d+$/, ''); // Remover números al final
     
-    // Agregar números aleatorios
     for (let i = 0; i < 3; i++) {
       suggestions.push(base + Math.floor(Math.random() * 1000));
     }
     
-    // Agregar año actual
     suggestions.push(base + new Date().getFullYear());
     
-    // Agregar variaciones
     suggestions.push(base + '_chef');
     suggestions.push('chef_' + base);
     
     return suggestions;
   };
 
-  // Obtener sugerencias de alias del backend
   const getSugerenciasAlias = async (baseAlias) => {
     try {
       const response = await dataService.getSugerenciasAlias(baseAlias);
@@ -63,15 +58,12 @@ const VisitorRegistrationScreen = ({ navigation }) => {
       console.log('Error obteniendo sugerencias del backend:', error);
     }
     
-    // Fallback a sugerencias locales
     return generateLocalAliasSuggestions(baseAlias);
   };
 
-  // Manejar registro de visitante con verificación
   const handleVisitorRegistration = async () => {
-    console.log('🟢 Iniciando registro de visitante con verificación:', { email, alias });
+    console.log('Iniciando registro de visitante con verificación:', { email, alias });
     
-    // Validaciones
     if (!email.trim() || !isValidEmail(email)) {
       Alert.alert('Error', 'Por favor ingresa un email válido');
       return;
@@ -82,20 +74,18 @@ const VisitorRegistrationScreen = ({ navigation }) => {
       return;
     }
 
-    console.log('🟢 Validaciones pasadas, iniciando loading...');
+    console.log('Validaciones pasadas, iniciando loading...');
     setLoading(true);
     
     try {
-      console.log('🟡 Registrando visitante en backend (Etapa 1)...');
+      console.log('Registrando visitante en backend (Etapa 1)...');
       
-      // Registrar visitante etapa 1 (envía código)
       const registrationResult = await dataService.registerVisitorStage1(email, alias);
       
-      console.log('🟢 Resultado del backend:', registrationResult);
+      console.log('Resultado del backend:', registrationResult);
 
-      // Verificar si fue exitoso
       if (registrationResult && registrationResult.success) {
-        console.log('🟢 Registro etapa 1 exitoso!');
+        console.log('Registro etapa 1 exitoso!');
         
         Alert.alert(
           'Código Enviado',
@@ -104,7 +94,6 @@ const VisitorRegistrationScreen = ({ navigation }) => {
             { 
               text: 'Continuar', 
               onPress: () => {
-                // Navegar a la pantalla de verificación
                 navigation.navigate('Verification', { 
                   email: email,
                   userType: 'visitante',
@@ -115,14 +104,11 @@ const VisitorRegistrationScreen = ({ navigation }) => {
           ]
         );
       } else {
-        // Registro falló, verificar la razón
         if (registrationResult.aliasUnavailable) {
-          // Alias no disponible con sugerencias
-          console.log('🟡 Alias no disponible, mostrando sugerencias del backend');
+          console.log('Alias no disponible, mostrando sugerencias del backend');
           if (registrationResult.suggestions && registrationResult.suggestions.length > 0) {
             setAliasSuggestions(registrationResult.suggestions);
           } else {
-            // Fallback a sugerencias locales
             const localSuggestions = generateLocalAliasSuggestions(alias);
             setAliasSuggestions(localSuggestions);
           }
@@ -132,7 +118,6 @@ const VisitorRegistrationScreen = ({ navigation }) => {
             'Este alias ya está en uso. Te sugerimos algunas alternativas disponibles.'
           );
         } else {
-          // Otro tipo de error (email ya registrado, etc.)
           Alert.alert(
             'Error de Registro',
             registrationResult.error || 'No se pudo completar el registro. Intenta nuevamente.'
@@ -141,26 +126,23 @@ const VisitorRegistrationScreen = ({ navigation }) => {
       }
 
     } catch (error) {
-      console.log('🔴 Registration error:', error);
-      console.log('🔴 Error response data:', error.response?.data);
-      console.log('🔴 Error aliasUnavailable:', error.aliasUnavailable);
-      console.log('🔴 Error suggestions:', error.suggestions);
+      console.log('Registration error:', error);
+      console.log('Error response data:', error.response?.data);
+      console.log('Error aliasUnavailable:', error.aliasUnavailable);
+      console.log('Error suggestions:', error.suggestions);
       
-      // Verificar si es un error estructurado del backend
       if (error.backendResponse || error.response?.data) {
         const backendData = error.backendResponse || error.response?.data;
-        console.log('🟡 Error estructurado del backend:', backendData);
+        console.log('Error estructurado del backend:', backendData);
         
         if (error.aliasUnavailable || backendData.aliasUnavailable) {
-          // Alias no disponible con sugerencias
-          console.log('🟡 Alias no disponible, mostrando sugerencias del error');
+          console.log('Alias no disponible, mostrando sugerencias del error');
           const suggestions = error.suggestions || backendData.suggestions;
           if (suggestions && suggestions.length > 0) {
-            console.log('🟢 Sugerencias encontradas:', suggestions);
+            console.log('Sugerencias encontradas:', suggestions);
             setAliasSuggestions(suggestions);
           } else {
-            console.log('🟡 No hay sugerencias del backend, generando localmente');
-            // Fallback a sugerencias locales
+            console.log('No hay sugerencias del backend, generando localmente');
             const localSuggestions = generateLocalAliasSuggestions(alias);
             setAliasSuggestions(localSuggestions);
           }
@@ -170,7 +152,6 @@ const VisitorRegistrationScreen = ({ navigation }) => {
             'Este alias ya está en uso. Te sugerimos algunas alternativas disponibles.'
           );
         } else {
-          // Otro tipo de error estructurado (email ya registrado, etc.)
           const errorMessage = backendData.error || error.message || 'No se pudo completar el registro. Intenta nuevamente.';
           Alert.alert(
             'Error de Registro',
@@ -178,13 +159,11 @@ const VisitorRegistrationScreen = ({ navigation }) => {
           );
         }
       } else if (error.message.includes('Network') || error.message.includes('fetch')) {
-        // Errores de red
         Alert.alert(
           'Error de Conexión',
           'No se pudo conectar al servidor. Verifica tu conexión a internet e intenta nuevamente.',
         );
       } else {
-        // Otros errores generales
         Alert.alert(
           'Error de Registro', 
           error.message || 'No se pudo completar el registro. Intenta nuevamente.'
@@ -195,7 +174,6 @@ const VisitorRegistrationScreen = ({ navigation }) => {
     }
   };
 
-  // Seleccionar sugerencia de alias
   const selectAliasSuggestion = (suggestion) => {
     setAlias(suggestion);
     setAliasSuggestions([]);
@@ -247,7 +225,6 @@ const VisitorRegistrationScreen = ({ navigation }) => {
             value={alias}
             onChangeText={(text) => {
               setAlias(text);
-              // Limpiar sugerencias cuando el usuario modifica el alias
               if (aliasSuggestions.length > 0) {
                 setAliasSuggestions([]);
               }
@@ -261,7 +238,6 @@ const VisitorRegistrationScreen = ({ navigation }) => {
           </Text>
         </View>
 
-        {/* Sugerencias de alias */}
         {aliasSuggestions.length > 0 && (
           <View style={styles.suggestionsContainer}>
             <Text style={styles.suggestionsTitle}>Sugerencias de alias disponibles:</Text>

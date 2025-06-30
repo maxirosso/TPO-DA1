@@ -5,7 +5,7 @@ import { StatusBar } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Provider, useDispatch } from 'react-redux';
 import store from './store/store';
-import 'react-native-gesture-handler'; // Agregar esta importación para React Navigation
+import 'react-native-gesture-handler'; 
 import { View, ActivityIndicator } from 'react-native';
 
 // Navegadores

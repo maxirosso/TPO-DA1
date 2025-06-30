@@ -26,7 +26,6 @@ import { AuthContext } from '../../context/AuthContext';
 import dataService from '../../services/dataService';
 import { api } from '../../services/api';
 
-// Categoría por defecto
 const DEFAULT_CATEGORY = 'Todas las Recetas';
 
 const HomeScreen = ({ navigation }) => {
@@ -46,7 +45,6 @@ const HomeScreen = ({ navigation }) => {
   const [categories, setCategories] = useState([DEFAULT_CATEGORY]);
   const [currentUser, setCurrentUser] = useState(null);
 
-  // Inicializar servicio de datos y cargar recetas
   useEffect(() => {
     initializeData();
     setupNetworkListener();
@@ -55,13 +53,11 @@ const HomeScreen = ({ navigation }) => {
 
   const loadCurrentUser = async () => {
     try {
-      // First try to get user from context (active session)
       if (contextUser) {
         setCurrentUser(contextUser);
         return;
       }
 
-      // Fallback to AsyncStorage
       const userData = await AsyncStorage.getItem('user_data');
       if (userData) {
         const parsedUser = JSON.parse(userData);
@@ -72,18 +68,15 @@ const HomeScreen = ({ navigation }) => {
     }
   };
 
-  // Check if user can upgrade to student
   const canUpgradeToStudent = () => {
     return currentUser && currentUser.tipo === 'comun';
   };
 
-  // Handle upgrade to student
   const handleUpgradeToStudent = () => {
     console.log('🔍 Debug - contextUser:', contextUser);
     console.log('🔍 Debug - currentUser:', currentUser);
     let userId = contextUser?.idUsuario || contextUser?.id || currentUser?.idUsuario || currentUser?.id;
     
-    // Si no hay userId válido, usar el email del usuario como identificador temporal
     if (!userId || userId === 'undefined' || userId === null) {
       userId = contextUser?.mail || contextUser?.email || currentUser?.mail || currentUser?.email || 'temp_' + Date.now();
     }
@@ -102,36 +95,30 @@ const HomeScreen = ({ navigation }) => {
     try {
       console.log('Inicializando conexión con backend...');
       
-      // Inicializar servicio de datos
       await dataService.initialize();
       setBackendAvailable(dataService.useBackend);
       
       console.log(`Backend disponible: ${dataService.useBackend}`);
 
-      // Cargar tipos de recetas
       console.log('Cargando tipos de recetas...');
       await loadRecipeTypes();
 
-      // Cargar últimas recetas (3 más recientes)
       console.log('Cargando últimas recetas...');
       const latest = await dataService.getLatestRecipes();
       console.log(`Últimas recetas cargadas: ${latest?.length || 0}`);
       setLatestRecipes(latest || []);
 
-      // Cargar todas las recetas para la sección popular
       console.log('Cargando todas las recetas...');
       const allRecipes = await dataService.getAllRecipes();
       console.log(`Todas las recetas cargadas: ${allRecipes?.length || 0}`);
       setPopularRecipes(allRecipes || []);
 
-      // Aplicar filtro inicial
       filterRecipesByCategory(selectedCategory, latest || [], allRecipes || []);
 
     } catch (error) {
       console.error('Error loading data:', error);
       setError(error.message);
       
-      // Mostrar mensaje de error amigable para el usuario
       Alert.alert(
         'Error de Conexión',
         'No se pudieron cargar las recetas desde el servidor. Usando datos locales.',
@@ -153,16 +140,13 @@ const HomeScreen = ({ navigation }) => {
 
   const loadRecipeTypes = async () => {
     try {
-      // Usar la API para obtener los tipos de recetas
       const response = await api.recipes.getTypes();
       if (response && response.data) {
         const types = response.data;
         console.log(`Tipos de recetas cargados: ${types.length}`);
         
-        // Guardar los tipos de recetas
         setRecipeTypes(types);
         
-        // Crear la lista de categorías con "Todas las Recetas" al inicio
         const categoryList = [DEFAULT_CATEGORY];
         types.forEach(type => {
           if (type.descripcion) {
@@ -173,7 +157,6 @@ const HomeScreen = ({ navigation }) => {
         setCategories(categoryList);
       } else {
         console.log('No se pudieron cargar los tipos de recetas');
-        // Fallback a categorías predefinidas
         setCategories([
           DEFAULT_CATEGORY,
           'Postres',
@@ -186,7 +169,6 @@ const HomeScreen = ({ navigation }) => {
       }
     } catch (error) {
       console.error('Error loading recipe types:', error);
-      // Fallback a categorías predefinidas
       setCategories([
         DEFAULT_CATEGORY,
         'Postres',
@@ -204,7 +186,6 @@ const HomeScreen = ({ navigation }) => {
       console.log(`Estado de conexión: ${state.isConnected}`);
       setIsConnected(state.isConnected);
       
-      // Si la conexión se restaura, intentar sincronizar datos
       if (state.isConnected && !backendAvailable) {
         console.log('Conexión restaurada, verificando backend...');
         dataService.checkBackendAvailability().then(available => {
@@ -225,7 +206,6 @@ const HomeScreen = ({ navigation }) => {
     try {
       console.log('Recargando recetas...');
       
-      // Recargar tipos de recetas
       await loadRecipeTypes();
       
       const latest = await dataService.getLatestRecipes();
@@ -234,7 +214,6 @@ const HomeScreen = ({ navigation }) => {
       setLatestRecipes(latest || []);
       setPopularRecipes(allRecipes || []);
       
-      // Aplicar filtros actuales
       filterRecipesByCategory(selectedCategory, latest || [], allRecipes || []);
       
       console.log('Recetas recargadas exitosamente');
@@ -249,12 +228,10 @@ const HomeScreen = ({ navigation }) => {
     setRefreshing(false);
   };
 
-  // Aplicar filtro cuando cambia la categoría seleccionada
   useEffect(() => {
     filterRecipesByCategory(selectedCategory, latestRecipes, popularRecipes);
   }, [selectedCategory, popularRecipes, latestRecipes]);
 
-  // Filtrar recetas por categoría
   const filterRecipesByCategory = (category, latest = latestRecipes, popular = popularRecipes) => {
     console.log(`Filtrando por categoría: ${category}`);
     
@@ -263,7 +240,6 @@ const HomeScreen = ({ navigation }) => {
       setFilteredRecentRecipes(latest);
     } else {
       const categoryFilter = (recipe) => {
-        // Manejar diferentes estructuras de datos del backend vs mock
         const recipeCategory = recipe.tipoReceta?.descripcion || 
                               recipe.idTipo?.descripcion || 
                               recipe.tipo?.descripcion || 
@@ -286,7 +262,6 @@ const HomeScreen = ({ navigation }) => {
   const handleRecipePress = (recipe) => {
     console.log('Navegando a receta:', recipe.nombreReceta || recipe.title);
     
-    // Normalizar datos de receta para navegación
     const normalizedRecipe = {
       id: recipe.idReceta || recipe.id,
       title: recipe.nombreReceta || recipe.title,
@@ -421,7 +396,6 @@ const HomeScreen = ({ navigation }) => {
     </View>
   );
 
-  // Mostrar mensaje sin conexión si no hay conexión y no hay datos en caché
   if (!isConnected && latestRecipes.length === 0 && !isLoading) {
     return (
       <SafeAreaView style={styles.container} edges={['top']}>
@@ -435,7 +409,6 @@ const HomeScreen = ({ navigation }) => {
     <SafeAreaView style={styles.container} edges={['top']}>
       <StatusBar backgroundColor={Colors.gradientStart} barStyle="dark-content" />
       
-      {/* {renderConnectionStatus()} */}
 
       <LinearGradient
         colors={[Colors.gradientStart, Colors.gradientEnd]}
@@ -468,7 +441,6 @@ const HomeScreen = ({ navigation }) => {
         </TouchableOpacity>
       </LinearGradient>
 
-      {/* Upgrade to Student Section */}
       {canUpgradeToStudent() && (
         <View style={styles.upgradeSection}>
           <LinearGradient
@@ -509,7 +481,6 @@ const HomeScreen = ({ navigation }) => {
           />
         }
       >
-        {/* Categorías */}
         <View style={styles.categoriesSection}>
           <FlatList
             data={categories}
@@ -539,7 +510,6 @@ const HomeScreen = ({ navigation }) => {
           </View>
         ) : (
           <>
-            {/* Últimas Recetas */}
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
                 <Text style={styles.sectionTitle}>Últimas Recetas</Text>
@@ -563,7 +533,6 @@ const HomeScreen = ({ navigation }) => {
               )}
             </View>
 
-            {/* Recetas Populares */}
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
                 <Text style={styles.sectionTitle}>Recetas Populares</Text>

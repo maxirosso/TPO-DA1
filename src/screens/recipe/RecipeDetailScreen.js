@@ -55,15 +55,12 @@ const RecipeDetailScreen = ({ navigation, route }) => {
   const [savingRecipe, setSavingRecipe] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
   
-  // Obtener el ID o datos iniciales de la receta de los parámetros de navegación
   const recipeFromParams = route.params?.recipe || {};
   const fromScaledRecipes = route.params?.fromScaledRecipes || false;
   const scaledRecipeData = route.params?.scaledRecipe || null;
   
-  // Get favorite status from Redux store
   const isFavorite = useSelector(state => selectIsFavorite(state, recipeFromParams.id));
   
-  // Estado para almacenar los datos completos de la receta
   const initialServings = recipeFromParams.servings || 2;
   const initialIngredients = recipeFromParams.ingredients || [];
   const [recipe, setRecipe] = useState({
@@ -89,36 +86,31 @@ const RecipeDetailScreen = ({ navigation, route }) => {
     tags: recipeFromParams.tags || []
   });
   
-  // Cargar los datos completos de la receta al montar el componente
   useEffect(() => {
     const loadRecipeDetails = async () => {
       try {
         setLoading(true);
-        setError(''); // Reset error state
+        setError(''); 
         
-        // Si venimos de recetas escaladas, usar esos datos directamente
         if (fromScaledRecipes && scaledRecipeData) {
-          console.log('Loading scaled recipe data:', scaledRecipeData.title);
+          console.log('Cargando la informacion de la receta escalada:', scaledRecipeData.title);
           
-          // Usar los datos escalados directamente
           const scaledServings = scaledRecipeData.servings;
           const scaledIngredients = scaledRecipeData.ingredients || [];
           
-          setOriginalServings(scaledServings); // Las porciones escaladas son nuestro "original" aquí
+          setOriginalServings(scaledServings); 
           setOriginalIngredients([...scaledIngredients.map(ing => ({
             name: ing.name,
             amount: ing.scaledAmount,
             preparation: ''
-          }))]); // Ingredientes escalados como "originales"
+          }))]); 
           
-          // Cargar instrucciones y reseñas de la receta original
           try {
             const { api } = await import('../../services/api');
             const response = await api.recipes.getById(scaledRecipeData.originalId);
             const originalRecipe = response?.data || response;
             
             if (originalRecipe) {
-              // Mapear instrucciones de la receta original
               const originalInstructions = originalRecipe.instrucciones ? 
                 originalRecipe.instrucciones.split('\n').filter(step => step.trim()).map((step, index) => ({
                   step: index + 1,
@@ -128,7 +120,7 @@ const RecipeDetailScreen = ({ navigation, route }) => {
               
               setRecipe(prevRecipe => ({
                 ...prevRecipe,
-                ...recipeFromParams, // Usar datos de parámetros que ya incluyen servings e ingredients escalados
+                ...recipeFromParams, 
                 rating: safeNumber(originalRecipe.rating || originalRecipe.calificacionPromedio, 4.5),
                 reviews: safeNumber(originalRecipe.reviews || originalRecipe.totalCalificaciones, 0),
                 author: originalRecipe.autor ? {
@@ -144,10 +136,8 @@ const RecipeDetailScreen = ({ navigation, route }) => {
                 tags: originalRecipe.tags || prevRecipe.tags || []
               }));
               
-              // Cargar reseñas de la receta original
               await loadRecipeReviews();
             } else {
-              // Usar datos básicos si no se puede cargar la receta original
               setRecipe(prevRecipe => ({
                 ...prevRecipe,
                 ...recipeFromParams,
@@ -158,8 +148,7 @@ const RecipeDetailScreen = ({ navigation, route }) => {
               }));
             }
           } catch (error) {
-            console.error('Error loading original recipe data:', error);
-            // Usar datos básicos en caso de error
+            console.error('Error al cargar la informacion de la receta original:', error);
             setRecipe(prevRecipe => ({
               ...prevRecipe,
               ...recipeFromParams,
@@ -174,46 +163,37 @@ const RecipeDetailScreen = ({ navigation, route }) => {
           return;
         }
         
-        // Verificar el ID recibido y normalizarlo si es necesario
         const recipeId = recipeFromParams.id ? String(recipeFromParams.id) : '';
-        console.log('Loading recipe with ID:', recipeId, 'Full params:', JSON.stringify(recipeFromParams));
+        console.log('Cargando la receta con ID:', recipeId, 'Todos los parametros:', JSON.stringify(recipeFromParams));
         
-        // Si no hay ID, usar los datos que ya tenemos
         if (!recipeId) {
           console.log('No recipe ID provided, using default data');
           setLoading(false);
           return;
         }
         
-        // Importar el objeto api correctamente
         const { api } = await import('../../services/api');
-        // Obtener la receta completa usando el método correcto
         const response = await api.recipes.getById(recipeId);
         const fullRecipe = response?.data || response;
         
-        // Verificar que la receta tiene todos los campos necesarios
         if (!fullRecipe || typeof fullRecipe !== 'object') {
           throw new Error('La receta cargada tiene un formato inválido');
         }
         
-        console.log('Loaded full recipe:', fullRecipe.nombreReceta || fullRecipe.title, 'ID:', fullRecipe.idReceta || fullRecipe.id);
+        console.log('Cargando la receta completa:', fullRecipe.nombreReceta || fullRecipe.title, 'ID:', fullRecipe.idReceta || fullRecipe.id);
         console.log('Author data from backend:', fullRecipe.usuario);
         
-        // Usar mapBackendRecipe para normalizar los datos
         const mappedRecipe = mapBackendRecipe(fullRecipe);
   
-        // Actualizar el estado con los datos completos usando la receta mapeada
         const servings = safeNumber(mappedRecipe.servings, 2);
-        setOriginalServings(servings); // Guardar porciones originales
+        setOriginalServings(servings); 
         
-        // Los ingredientes ya están mapeados en mappedRecipe
         const ingredients = mappedRecipe.ingredients || [];
-        setOriginalIngredients([...ingredients]); // Guardar ingredientes originales
+        setOriginalIngredients([...ingredients]); 
         
         setRecipe(prevRecipe => ({
           ...prevRecipe,
           ...mappedRecipe,
-          // Asegurar valores numéricos válidos
           servings: servings,
           calories: safeNumber(mappedRecipe.calories, 300),
           protein: safeNumber(mappedRecipe.protein, 10),
@@ -221,7 +201,6 @@ const RecipeDetailScreen = ({ navigation, route }) => {
           fat: safeNumber(mappedRecipe.fat, 15),
           rating: safeNumber(mappedRecipe.rating, 4.5),
           reviews: safeNumber(mappedRecipe.reviews, 0),
-          // El autor ya está mapeado correctamente en mappedRecipe
           author: mappedRecipe.user ? {
             name: mappedRecipe.user.name || 'Chef Anónimo',
             avatar: mappedRecipe.user.avatar || 'https://randomuser.me/api/portraits/men/41.jpg',
@@ -229,12 +208,10 @@ const RecipeDetailScreen = ({ navigation, route }) => {
             name: mappedRecipe.author || 'Chef Anónimo',
             avatar: 'https://randomuser.me/api/portraits/men/41.jpg',
           },
-          // Los ingredientes e instrucciones ya están mapeados
           ingredients: ingredients,
           instructions: mappedRecipe.instructions || []
         }));
 
-        // Cargar reseñas y comentarios después de cargar la receta
         await loadRecipeReviews();
       } catch (error) {
         console.error('Error al cargar los detalles de la receta:', error);
@@ -247,7 +224,6 @@ const RecipeDetailScreen = ({ navigation, route }) => {
     loadRecipeDetails();
   }, [recipeFromParams.id]);
   
-  // Cargar valoración del usuario cuando cambie la información del usuario o la receta
   useEffect(() => {
     if (!isVisitor && user && user.idUsuario && (recipe.id || (fromScaledRecipes && scaledRecipeData?.originalId))) {
       loadRecipeReviews();
@@ -281,13 +257,11 @@ const RecipeDetailScreen = ({ navigation, route }) => {
     
     try {
       console.log(`Verificando si la receta ${recipe.id} está guardada para el usuario ${user.idUsuario}`);
-      // Obtener recetas guardadas del usuario
       const response = await api.savedRecipes.get();
       console.log('Respuesta de recetas guardadas:', response);
       
       const { data } = response;
       
-      // Verificar si la receta actual está en la lista de guardadas
       if (data && Array.isArray(data)) {
         console.log(`Receta actual ID: ${recipe.id}`);
         console.log('IDs de recetas guardadas:', data.map(r => r.idReceta));
@@ -315,7 +289,6 @@ const RecipeDetailScreen = ({ navigation, route }) => {
       setSavingRecipe(true);
       
       if (isSaved) {
-        // Si ya está guardada, eliminarla
         console.log(`Eliminando receta ${recipe.id} de guardadas`);
         const removeResponse = await api.savedRecipes.remove(recipe.id);
         console.log('Respuesta al eliminar receta:', removeResponse);
@@ -323,7 +296,6 @@ const RecipeDetailScreen = ({ navigation, route }) => {
         setIsSaved(false);
         Alert.alert('Receta eliminada', 'La receta ha sido eliminada de tu colección');
       } else {
-        // Si no está guardada, guardarla
         console.log(`Guardando receta ${recipe.id} para el usuario ${user?.idUsuario}`);
         const saveResponse = await api.savedRecipes.save(recipe.id);
         console.log('Respuesta al guardar receta:', saveResponse);
@@ -331,7 +303,6 @@ const RecipeDetailScreen = ({ navigation, route }) => {
         setIsSaved(true);
         Alert.alert('Receta guardada', 'La receta ha sido guardada en tu colección');
         
-        // Actualizar las recetas guardadas localmente (para fallback)
         try {
           console.log('Actualizando recetas guardadas localmente');
           const savedStr = await AsyncStorage.getItem('saved_recipes');
@@ -354,11 +325,11 @@ const RecipeDetailScreen = ({ navigation, route }) => {
             console.log('La receta ya está en el almacenamiento local');
           }
         } catch (storageError) {
-          console.error('Error updating local saved recipes:', storageError);
+          console.error('Error al actualizar las recetas guardadas localmente:', storageError);
         }
       }
     } catch (error) {
-      console.error('Error saving recipe:', error);
+      console.error('Error al guardar la receta:', error);
       Alert.alert('Error', 'No se pudo guardar la receta. Intenta nuevamente.');
     } finally {
       setSavingRecipe(false);
@@ -392,7 +363,6 @@ const RecipeDetailScreen = ({ navigation, route }) => {
     try {
       setIsSubmitting(true);
       
-      // Crear objeto de calificación con información del usuario
       const calificacionData = {
         calificacion: reviewRating,
         comentarios: reviewText.trim(),
@@ -405,7 +375,6 @@ const RecipeDetailScreen = ({ navigation, route }) => {
       
       console.log('Sending review data:', calificacionData);
       
-      // Enviar reseña completa (rating + comentario) al backend
       await api.reviews.create(recipe.id || recipe.idReceta, calificacionData, user.idUsuario);
       
       Alert.alert(
@@ -416,9 +385,8 @@ const RecipeDetailScreen = ({ navigation, route }) => {
       setIsModalVisible(false);
       setReviewText('');
       setReviewRating(5);
-      setUserRating(reviewRating); // Actualizar rating del usuario
+      setUserRating(reviewRating);
       
-      // Recargar reseñas para mostrar cambios
       await loadRecipeReviews();
       
     } catch (error) {
@@ -443,18 +411,17 @@ const RecipeDetailScreen = ({ navigation, route }) => {
       return;
     }
     
-    // Prevenir múltiples clics
     if (addingToPendingList) {
       return;
     }
     
     try {
       setAddingToPendingList(true);
-      console.log('Frontend: Adding recipe to pending list:', recipe.id || recipe.idReceta);
+      console.log('Frontend: Agregando la receta a la lista de pendientes:', recipe.id || recipe.idReceta);
       
       const result = await dataService.addRecipeToPendingList(recipe.id || recipe.idReceta);
       
-      console.log('Frontend: Result from dataService:', result);
+      console.log('Frontend: Resultado de dataService:', result);
       
       if (result.success) {
         Alert.alert('Éxito', result.message);
@@ -462,7 +429,7 @@ const RecipeDetailScreen = ({ navigation, route }) => {
         Alert.alert('Error', result.message);
       }
     } catch (error) {
-      console.error('Frontend: Error adding to pending list:', error);
+      console.error('Frontend: Error al agregar la receta a la lista de pendientes:', error);
       Alert.alert('Error', 'No se pudo agregar a la lista de pendientes. Intenta nuevamente.');
     } finally {
       setAddingToPendingList(false);
@@ -495,21 +462,17 @@ const RecipeDetailScreen = ({ navigation, route }) => {
       const newServings = Math.round((recipe.servings || 2) * scaleFactor);
       let scaledIngredients = [];
       
-      // Escalado local sin llamar al backend
       setRecipe(prevRecipe => {
         const scaledRecipe = { ...prevRecipe };
         
-        // Escalar porciones
         scaledRecipe.servings = newServings;
         
-        // Escalar ingredientes también
         if (scaledRecipe.ingredients && Array.isArray(scaledRecipe.ingredients) && scaledRecipe.ingredients.length > 0) {
           scaledRecipe.ingredients = scaledRecipe.ingredients.map(ingredient => ({
             ...ingredient,
             amount: ingredient && ingredient.amount ? scaleAmount(ingredient.amount, scaleFactor) : (ingredient?.amount || '')
           }));
           
-          // Guardar ingredientes escalados para la receta guardada
           scaledIngredients = scaledRecipe.ingredients.map(ingredient => ({
             name: ingredient.name || 'Ingrediente',
             scaledAmount: ingredient.amount || ''
@@ -519,16 +482,14 @@ const RecipeDetailScreen = ({ navigation, route }) => {
         return scaledRecipe;
       });
       
-      // Guardar la receta escalada automáticamente
       await saveScaledRecipe(newServings, scaledIngredients);
       
-      // Resetear el factor de escala a 1 para evitar doble aplicación
       setScaleFactor(1);
       
       setScaleModalVisible(false);
       Alert.alert('Éxito', `Receta escalada para ${newServings} porciones y guardada en tu colección`);
     } catch (error) {
-      console.error('Error scaling recipe:', error);
+      console.error('Error al escalar la receta:', error);
       Alert.alert('Error', 'No se pudo escalar la receta. Intenta nuevamente.');
     }
   };
@@ -549,7 +510,6 @@ const RecipeDetailScreen = ({ navigation, route }) => {
     try {
       console.log('Scaling by ingredient locally');
       
-      // Encontrar el factor de escalado basado en el ingrediente seleccionado
       const originalAmount = parseFloat(selectedIngredient.amount) || 1;
       const newAmount = parseFloat(customAmount);
       const localScaleFactor = newAmount / originalAmount;
@@ -559,22 +519,18 @@ const RecipeDetailScreen = ({ navigation, route }) => {
       let newServings = 0;
       let scaledIngredients = [];
       
-      // Aplicar escalado local
       setRecipe(prevRecipe => {
         const scaledRecipe = { ...prevRecipe };
         
-        // Escalar porciones
         newServings = Math.round((prevRecipe.servings || 2) * localScaleFactor);
         scaledRecipe.servings = newServings;
         
-        // Escalar ingredientes
         if (scaledRecipe.ingredients) {
           scaledRecipe.ingredients = scaledRecipe.ingredients.map(ingredient => ({
             ...ingredient,
             amount: ingredient.amount ? scaleAmount(ingredient.amount, localScaleFactor) : ingredient.amount
           }));
           
-          // Guardar ingredientes escalados para la receta guardada
           scaledIngredients = scaledRecipe.ingredients.map(ingredient => ({
             name: ingredient.name || 'Ingrediente',
             scaledAmount: ingredient.amount || ''
@@ -584,7 +540,6 @@ const RecipeDetailScreen = ({ navigation, route }) => {
         return scaledRecipe;
       });
       
-      // Guardar la receta escalada automáticamente
       await saveScaledRecipe(
         newServings, 
         scaledIngredients, 
@@ -600,54 +555,47 @@ const RecipeDetailScreen = ({ navigation, route }) => {
       
       Alert.alert('Éxito', `Receta escalada basada en ${selectedIngredient.name} y guardada en tu colección`);
     } catch (error) {
-      console.error('Error scaling recipe by ingredient:', error);
+      console.error('Error al escalar la receta por el ingrediente:', error);
       Alert.alert('Error', 'No se pudo escalar la receta por ingrediente. Intenta nuevamente.');
     }
   };
 
   const saveScaledRecipe = async (newServings, scaledIngredients, scalingType = 'portion', baseIngredient = null, baseAmount = null) => {
     try {
-      // Crear objeto de receta escalada
       const scaledRecipe = {
-        id: `${recipe.id}_${Date.now()}`, // ID único
+        id: `${recipe.id}_${Date.now()}`, 
         originalId: recipe.id,
         title: `${recipe.title} (${newServings} porciones)`,
         imageUrl: recipe.imageUrl,
         servings: newServings,
         savedDate: new Date().toISOString(),
-        scalingType: scalingType, // 'portion' o 'ingredient'
+        scalingType: scalingType, 
         scaleFactor: scalingType === 'portion' ? scaleFactor : null,
         baseIngredient: baseIngredient,
         baseIngredientAmount: baseAmount,
         ingredients: scaledIngredients || []
       };
       
-      // Cargar recetas escaladas existentes
       const savedScaledRecipesStr = await AsyncStorage.getItem('saved_scaled_recipes');
       let savedScaledRecipes = savedScaledRecipesStr ? JSON.parse(savedScaledRecipesStr) : [];
       
-      // Limitar a máximo 10 recetas
       if (savedScaledRecipes.length >= 10) {
-        // Remover la más antigua
         savedScaledRecipes.shift();
       }
       
-      // Agregar la nueva receta escalada
       savedScaledRecipes.push(scaledRecipe);
       
-      // Guardar en AsyncStorage
       await AsyncStorage.setItem('saved_scaled_recipes', JSON.stringify(savedScaledRecipes));
       
       console.log('Receta escalada guardada:', scaledRecipe.title);
     } catch (error) {
-      console.error('Error saving scaled recipe:', error);
+      console.error('Error al guardar la receta escalada: ', error);
     }
   };
 
   const resetScaling = () => {
     setScaleFactor(1);
     
-    // Restablecer las porciones e ingredientes originales
     setRecipe(prevRecipe => ({
       ...prevRecipe,
       servings: originalServings,
@@ -659,10 +607,8 @@ const RecipeDetailScreen = ({ navigation, route }) => {
     Alert.alert('Éxito', 'Escalado restablecido a la receta original');
   };
 
-  // Función para cargar reseñas y comentarios de la receta
   const loadRecipeReviews = async () => {
     try {
-      // Si venimos de recetas escaladas, usar el ID original
       const recipeId = fromScaledRecipes && scaledRecipeData 
         ? scaledRecipeData.originalId 
         : (recipe.id || recipe.idReceta);
@@ -673,45 +619,40 @@ const RecipeDetailScreen = ({ navigation, route }) => {
       
       if (response.success && response.data) {
         const reviews = Array.isArray(response.data) ? response.data : [];
-        console.log('All reviews loaded:', reviews.length);
+        console.log('Todas las reseñas fueron cargadas: ', reviews.length);
         
-        // Buscar la valoración del usuario actual
         if (!isVisitor && user && user.idUsuario) {
-          console.log('Looking for rating for user ID:', user.idUsuario);
+          console.log('Buscando calificación para el ID de usuario:', user.idUsuario);
           const userReview = reviews.find(review => 
             review.idusuario && review.idusuario.idUsuario === user.idUsuario
           );
           
           if (userReview) {
-            console.log('Found user rating:', userReview.calificacion, 'Review:', userReview);
+            console.log('Calificacion del usuario encontrada:', userReview.calificacion, 'Reseña:', userReview);
             setUserRating(userReview.calificacion);
-            setReviewRating(userReview.calificacion); // También para el modal
+            setReviewRating(userReview.calificacion); 
           } else {
-            console.log('No rating found for current user. Reviews:', reviews.map(r => ({
+            console.log('No se encontró ninguna calificación para el usuario actual. Reseñas:', reviews.map(r => ({
               userId: r.idusuario?.idUsuario,
               rating: r.calificacion
             })));
             setUserRating(0);
-            setReviewRating(5); // Valor por defecto para el modal
+            setReviewRating(5); 
           }
         } else {
-          console.log('User not available for rating lookup:', { isVisitor, user: user?.idUsuario });
+          console.log('Usuario no disponible para búsqueda de calificación:', { isVisitor, user: user?.idUsuario });
         }
         
-        // Calcular rating promedio usando TODAS las valoraciones
         if (reviews.length > 0) {
           const totalRating = reviews.reduce((sum, review) => sum + (review.calificacion || 0), 0);
           const averageRating = totalRating / reviews.length;
           
-          // Para los comentarios públicos, solo mostrar los autorizados
-          // Pero usar todas las valoraciones para el promedio
           const authorizedComments = reviews.filter(review => 
             review.autorizado === true && 
             review.comentarios && 
             review.comentarios.trim() !== ''
           );
           
-          // Actualizar el estado de la receta con las reseñas
           setRecipe(prevRecipe => ({
             ...prevRecipe,
             rating: Math.round(averageRating * 10) / 10, // Redondear a 1 decimal
@@ -729,11 +670,10 @@ const RecipeDetailScreen = ({ navigation, route }) => {
         }
       }
     } catch (error) {
-      console.error('Error loading reviews:', error);
+      console.error('Error al cargar las reseñas:', error);
     }
   };
 
-  // Funciones auxiliares para cálculos seguros
   const safeNumber = (value, defaultValue = 0) => {
     const num = Number(value);
     return isNaN(num) ? defaultValue : num;
@@ -744,22 +684,18 @@ const RecipeDetailScreen = ({ navigation, route }) => {
     return Math.round(servings * scaleFactor);
   };
 
-  // Función auxiliar mejorada para escalar cantidades por persona
   const scaleAmount = (amount, factor) => {
     if (typeof amount !== 'string') return amount;
     
-    // Si el campo amount está vacío (como para secciones de título), retornarlo tal cual
     if (amount === '' || !amount.trim()) return amount;
     
-    // Detectar números en el string
     const match = amount.match(/^(\d+\/\d+|\d+\.\d+|\d+)(\s+)(.*)$/);
     if (!match) return amount;
     
     let num = match[1];
-    const separator = match[2]; // Espacio entre número y unidad
-    const rest = match[3];      // Unidad y resto del texto
+    const separator = match[2]; 
+    const rest = match[3];     
     
-    // Manejar fracciones
     if (num.includes('/')) {
       const [numerator, denominator] = num.split('/');
       num = parseInt(numerator) / parseInt(denominator);
@@ -767,23 +703,18 @@ const RecipeDetailScreen = ({ navigation, route }) => {
       num = parseFloat(num);
     }
     
-    // Validar que num sea un número válido
     if (isNaN(num)) return amount;
     
-    // Escalar el número
     let scaledNum = (num * factor).toFixed(2);
     
-    // Eliminar ceros decimales innecesarios
     scaledNum = parseFloat(scaledNum);
     
-    // Si es una fracción simple, intentamos representarla como fracción
     if (Math.abs(scaledNum - 0.5) < 0.01) return `1/2${separator}${rest}`;
     if (Math.abs(scaledNum - 0.25) < 0.01) return `1/4${separator}${rest}`;
     if (Math.abs(scaledNum - 0.75) < 0.01) return `3/4${separator}${rest}`;
     if (Math.abs(scaledNum - 0.33) < 0.01) return `1/3${separator}${rest}`;
     if (Math.abs(scaledNum - 0.67) < 0.01) return `2/3${separator}${rest}`;
     
-    // Si es un número entero, eliminar el decimal
     if (Math.round(scaledNum) === scaledNum) {
       scaledNum = Math.round(scaledNum);
     }
@@ -791,18 +722,15 @@ const RecipeDetailScreen = ({ navigation, route }) => {
     return `${scaledNum}${separator}${rest}`;
   };
 
-  // Función mejorada para renderizar cada ingrediente con su cantidad escalada
   const renderIngredient = (item, index) => {
-    // Validar que el ingrediente sea un objeto válido
     if (!item || typeof item !== 'object') {
       item = { name: String(item || 'Ingrediente'), amount: '', preparation: '' };
     }
     
-    // Los ingredientes ya están escalados en el estado de la receta
-    // Solo escalar en tiempo real si estamos en modo de escalado por ingrediente
+
     const scaledAmount = scaleByIngredient 
       ? (item.amount || '') 
-      : (item.amount || ''); // Ya escalado en el estado
+      : (item.amount || ''); 
     
     return (
       <View key={index} style={styles.ingredientItem}>
@@ -852,7 +780,6 @@ const RecipeDetailScreen = ({ navigation, route }) => {
     try {
       setUserRating(rating);
       
-      // Crear objeto de calificación con información del usuario
       const calificacionData = {
         calificacion: rating,
         comentarios: '',
@@ -865,12 +792,10 @@ const RecipeDetailScreen = ({ navigation, route }) => {
       
       console.log('Sending rating data:', calificacionData);
       
-      // Enviar la valoración al backend con el ID del usuario como parámetro
       const response = await api.reviews.create(recipe.id || recipe.idReceta, calificacionData, user.idUsuario);
       
       Alert.alert('Éxito', 'Tu valoración ha sido registrada.');
       
-      // Recargar las valoraciones para actualizar el promedio
       await loadRecipeReviews();
       
     } catch (error) {
@@ -905,7 +830,6 @@ const RecipeDetailScreen = ({ navigation, route }) => {
     
     setIsSubmitting(true);
     try {
-      // Crear objeto de calificación con información del usuario
       const calificacionData = {
         calificacion: userRating || 5,
         comentarios: comment.trim(),
@@ -918,7 +842,6 @@ const RecipeDetailScreen = ({ navigation, route }) => {
       
       console.log('Sending comment data:', calificacionData);
       
-      // Enviar comentario al backend
       const response = await api.reviews.create(recipe.id || recipe.idReceta, calificacionData, user.idUsuario);
       
       setComment('');
@@ -927,7 +850,6 @@ const RecipeDetailScreen = ({ navigation, route }) => {
         'Tu comentario ha sido enviado y será revisado por nuestro equipo antes de publicarse.'
       );
       
-      // Recargar reseñas para mostrar cambios (si están aprobados automáticamente)
       await loadRecipeReviews();
       
     } catch (error) {
@@ -1052,7 +974,6 @@ const RecipeDetailScreen = ({ navigation, route }) => {
             )}
           </View>
           
-          {/* Nombre del creador */}
           <View style={styles.creatorContainer}>
             <Text style={styles.creatorLabel}>Por: </Text>
             <Text style={styles.creatorName}>{recipe.author?.name}</Text>
@@ -1317,7 +1238,6 @@ const RecipeDetailScreen = ({ navigation, route }) => {
         />
       </View>
       
-      {/* Modal para añadir reseña */}
       <Modal
         animationType="slide"
         transparent={true}
@@ -1370,7 +1290,6 @@ const RecipeDetailScreen = ({ navigation, route }) => {
         </View>
       </Modal>
       
-      {/* Modal para escalar receta */}
       <Modal
         animationType="slide"
         transparent={true}

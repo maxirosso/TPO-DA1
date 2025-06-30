@@ -7,15 +7,12 @@ const USER_STORAGE_KEY = 'user_data';
 const TOKEN_STORAGE_KEY = 'user_token';
 const PENDING_USERS_KEY = 'pending_users';
 
-// Función para inicializar datos de usuario de prueba si no existen
 export const initializeTestUsers = async () => {
   try {
     const pendingUsersStr = await AsyncStorage.getItem(PENDING_USERS_KEY);
     let pendingUsers = pendingUsersStr ? JSON.parse(pendingUsersStr) : {};
     
-    // Verificar si ya existe el usuario de prueba
     if (!pendingUsers['test@example.com']) {
-      // Crear usuario de prueba para desarrollo
       pendingUsers['test@example.com'] = {
         id: 'test-user-1',
         email: 'test@example.com',
@@ -26,10 +23,8 @@ export const initializeTestUsers = async () => {
         isVerified: true
       };
       
-      // Guardar en almacenamiento local
       await AsyncStorage.setItem(PENDING_USERS_KEY, JSON.stringify(pendingUsers));
       
-      // Marcar el email como verificado
       await markEmailVerified('test@example.com');
     }
     
@@ -40,7 +35,6 @@ export const initializeTestUsers = async () => {
   }
 };
 
-// Función auxiliar para marcar un email como verificado
 const markEmailVerified = async (email) => {
   try {
     const verifiedEmailsStr = await AsyncStorage.getItem('verified_emails');
@@ -58,7 +52,6 @@ const markEmailVerified = async (email) => {
   }
 };
 
-// Función para resetear la base de datos local (para desarrollo)
 export const resetLocalDatabase = async () => {
   try {
     await AsyncStorage.removeItem(PENDING_USERS_KEY);
@@ -71,7 +64,6 @@ export const resetLocalDatabase = async () => {
   }
 };
 
-// Asegurar que tenemos usuarios de prueba
 initializeTestUsers();
 
 export const authService = {
@@ -79,40 +71,35 @@ export const authService = {
     try {
       await initializeTestUsers();
       try {
-        // Siempre usar Axios para login para asegurar datos de formulario correctos
         const params = new URLSearchParams();
         params.append('mail', email);
         params.append('password', password);
-        console.log('Cuerpo de solicitud de login:', params.toString()); // Registro de depuración
+        console.log('Cuerpo de solicitud de login:', params.toString()); 
         const response = await axios.post(
           `${apiConfig.API_BASE_URL}/login`,
-          params.toString(), // enviar como cadena de texto plana
+          params.toString(), 
           { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
         );
-        console.log('Respuesta de login:', response.data); // Registro de depuración para ver token JWT
+        console.log('Respuesta de login:', response.data); 
         if (response.data) {
           const responseData = response.data;
-          // Manejar el nuevo formato de respuesta JWT
           let user, token;
           
           if (responseData.user && responseData.token) {
-            // Nuevo formato JWT
             user = responseData.user;
             token = responseData.token;
           } else {
-            // Formato antiguo alternativo
             user = responseData;
             token = null;
           }
           
-          // Mapear datos de usuario del backend al formato esperado
           const mappedUser = {
             id: user.idUsuario || user.id,
             nombre: user.nombre || user.name,
             mail: user.mail || user.email,
             nickname: user.nickname || user.username,
             tipo: user.tipo || 'comun', // comun, visitante, alumno
-            rol: user.rol, // Añadir campo rol del backend
+            rol: user.rol, 
             ...user
           };
           
@@ -148,15 +135,12 @@ export const authService = {
   
   register: async (userData) => {
     try {
-      // Usar las utilidades de validación
       const validacion = validarDatosRegistroUsuario(userData);
       if (!validacion.valido) {
-        throw new Error(validacion.errores[0]); // Mostrar el primer error
+        throw new Error(validacion.errores[0]); 
       }
       
-      // Intentar registro con el backend usando el endpoint y carga correctos
       try {
-        // Mapear campos del frontend a campos esperados por el backend
         const backendPayload = {
           mail: userData.email.trim(),
           password: userData.password,
@@ -193,7 +177,6 @@ export const authService = {
       } catch (error) {
         console.error('Error de registro con el backend:', error);
         
-        // Manejar tipos específicos de errores HTTP
         if (error.response) {
           const status = error.response.status;
           const data = error.response.data;
@@ -233,14 +216,12 @@ export const authService = {
   
   markEmailAsVerified: async (email) => {
     try {
-      // Intentar verificar email en backend
       try {
         await axios.post(`${apiConfig.API_BASE_URL}/auth/verify-email`, { email });
         return true;
       } catch (error) {
         console.error('Error al marcar email como verificado en el backend:', error);
         
-        // Fallback local
         return await markEmailVerified(email);
       }
     } catch (error) {
@@ -251,7 +232,6 @@ export const authService = {
   
   logout: async () => {
     try {
-      // No necesitamos llamada al backend, solo eliminar datos locales
       await AsyncStorage.removeItem(USER_STORAGE_KEY);
       await AsyncStorage.removeItem(TOKEN_STORAGE_KEY);
       return true;
@@ -291,7 +271,6 @@ export const authService = {
         return response.data && response.data.success;
       } catch (error) {
         console.error('Error al verificar código con el backend:', error);
-        // Siempre devolver true para desarrollo como fallback
         return true;
       }
     } catch (error) {
@@ -307,7 +286,6 @@ export const authService = {
         return response.data && response.data.success;
       } catch (error) {
         console.error('Error al reenviar código con el backend:', error);
-        // Siempre devolver true para desarrollo como fallback
         return true;
       }
     } catch (error) {
@@ -318,7 +296,6 @@ export const authService = {
   
   completeProfile: async (email, profileData) => {
     try {
-      // Intenta actualizar el perfil en el backend
       try {
         const response = await axios.put(`${apiConfig.API_BASE_URL}/usuarios/perfil`, {
           email: email,
@@ -330,10 +307,8 @@ export const authService = {
         return response.data && response.data.success;
       } catch (error) {
         console.error('Error al completar perfil con el backend:', error);
-        // Fallback local
         const pendingUsersStr = await AsyncStorage.getItem(PENDING_USERS_KEY);
         const pendingUsers = pendingUsersStr ? JSON.parse(pendingUsersStr) : {};
-        // Actualizar datos de perfil del usuario
         if (pendingUsers[email]) {
           pendingUsers[email] = {
             ...pendingUsers[email],
@@ -353,35 +328,29 @@ export const authService = {
   
   checkUsernameAvailability: async (username) => {
     try {
-      // Intenta verificar disponibilidad del nombre de usuario en el backend
       try {
         const response = await axios.get(`${apiConfig.API_BASE_URL}/auth/check-username?username=${username}`);
         return response.data;
       } catch (error) {
         console.error('Error al verificar nombre de usuario con el backend:', error);
         
-        // Fallback local
         const pendingUsersStr = await AsyncStorage.getItem(PENDING_USERS_KEY);
         const pendingUsers = pendingUsersStr ? JSON.parse(pendingUsersStr) : {};
         
-        // Verificar si el nombre de usuario está en uso
         const isTaken = Object.values(pendingUsers).some(user => user.username === username);
         
         if (!isTaken) {
           return { available: true, suggestions: [] };
         }
         
-        // Generar sugerencias si el nombre de usuario está en uso
         const suggestions = [];
-        const baseUsername = username.replace(/\d+$/, ''); // Eliminar cualquier número al final
+        const baseUsername = username.replace(/\d+$/, ''); 
         
-        // Añadir números aleatorios
         for (let i = 0; i < 3; i++) {
           const randomNum = Math.floor(Math.random() * 1000);
           suggestions.push(`${baseUsername}${randomNum}`);
         }
         
-        // Añadir año actual
         const currentYear = new Date().getFullYear();
         suggestions.push(`${baseUsername}${currentYear}`);
         
@@ -392,13 +361,11 @@ export const authService = {
       }
     } catch (error) {
       console.error('Error al verificar disponibilidad de nombre de usuario:', error);
-      // Devolver un valor predeterminado seguro para evitar fallos en la app
       return { available: true, suggestions: [] };
     }
   },
 };
 
-// Función auxiliar para autenticación local
 const attemptLocalAuthentication = async (email, password) => {
   try {
     const pendingUsersStr = await AsyncStorage.getItem(PENDING_USERS_KEY);
@@ -407,7 +374,6 @@ const attemptLocalAuthentication = async (email, password) => {
     const userData = pendingUsers[email];
     
     if (userData && userData.password === password) {
-      // Crear objeto de usuario para la sesión
       const sessionUser = {
         id: userData.id,
         name: userData.name || email.split('@')[0],
@@ -417,7 +383,6 @@ const attemptLocalAuthentication = async (email, password) => {
       
       const token = 'mock-jwt-token-' + Math.random().toString(36).substring(2);
       
-      // Almacenar datos de usuario y token
       await AsyncStorage.setItem(USER_STORAGE_KEY, JSON.stringify(sessionUser));
       await AsyncStorage.setItem(TOKEN_STORAGE_KEY, token);
       

@@ -21,8 +21,8 @@ import dataService from '../../services/dataService';
 
 const RecipeSearchScreen = ({ navigation }) => {
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchType, setSearchType] = useState('name'); // 'name', 'ingredient', 'tag', 'user', 'exclude'
-  const [sortType, setSortType] = useState('alphabetical'); // 'alphabetical', 'newest', 'user'
+  const [searchType, setSearchType] = useState('name'); 
+  const [sortType, setSortType] = useState('alphabetical'); 
   const [filterModalVisible, setFilterModalVisible] = useState(false);
   const [excludeIngredient, setExcludeIngredient] = useState('');
   const [filteredRecipes, setFilteredRecipes] = useState([]);
@@ -35,9 +35,8 @@ const RecipeSearchScreen = ({ navigation }) => {
   }, []);
 
   useEffect(() => {
-    // Show all recipes initially with proper sorting
     if (allRecipes.length > 0) {
-      performSearch(''); // This will apply current sorting to all recipes
+      performSearch(''); 
     }
   }, [allRecipes, sortType]);
 
@@ -62,14 +61,12 @@ const RecipeSearchScreen = ({ navigation }) => {
     if (text.trim() === '') {
       setFilteredRecipes(allRecipes);
     } else {
-      // Trigger search with current search type and new query
       await performSearch(text);
     }
   };
 
   const performSearch = async (query = searchQuery) => {
     if (query.trim() === '') {
-      // Apply sorting to all recipes when no search query
       let sortedRecipes = [...allRecipes];
       switch (sortType) {
         case 'alphabetical':
@@ -89,7 +86,6 @@ const RecipeSearchScreen = ({ navigation }) => {
     setLoading(true);
     try {
       let results = [];
-      // Map frontend sortType to backend orden parameter
       let orden;
       if (sortType === 'newest') {
         orden = 'newest';
@@ -102,7 +98,6 @@ const RecipeSearchScreen = ({ navigation }) => {
       switch (searchType) {
         case 'name':
           results = await dataService.searchRecipesByName(query, orden);
-          // Fallback to local search if backend returns empty
           if (results.length === 0) {
             results = allRecipes.filter(recipe =>
               recipe.title.toLowerCase().includes(query.toLowerCase())
@@ -111,7 +106,6 @@ const RecipeSearchScreen = ({ navigation }) => {
           break;
         case 'ingredient':
           results = await dataService.searchRecipesByIngredient(query, orden);
-          // Fallback to local search if backend returns empty  
           if (results.length === 0) {
             results = allRecipes.filter(recipe =>
               recipe.ingredients.some(ingredient =>
@@ -122,7 +116,6 @@ const RecipeSearchScreen = ({ navigation }) => {
           break;
         case 'exclude':
           results = await dataService.searchRecipesWithoutIngredient(query, orden);
-          // Fallback to local search if backend returns empty
           if (results.length === 0) {
             results = allRecipes.filter(recipe =>
               !recipe.ingredients.some(ingredient =>
@@ -132,14 +125,12 @@ const RecipeSearchScreen = ({ navigation }) => {
           }
           break;
         case 'tag':
-          // For tag search, filter locally from all recipes
           results = allRecipes.filter(recipe =>
             recipe.category && recipe.category.toLowerCase().includes(query.toLowerCase())
           );
           break;
         case 'user':
           results = await dataService.searchRecipesByUser(query, orden);
-          // Fallback to local search if backend returns empty
           if (results.length === 0) {
             results = allRecipes.filter(recipe =>
               recipe.author && recipe.author.toLowerCase().includes(query.toLowerCase())
@@ -150,20 +141,16 @@ const RecipeSearchScreen = ({ navigation }) => {
           results = allRecipes;
       }
 
-      // Additional filter for excluding ingredients (when using other search types)
       if (excludeIngredient.trim() !== '' && searchType !== 'exclude') {
         const excludedResults = await dataService.searchRecipesWithoutIngredient(excludeIngredient, orden);
-        // Get intersection of results and excludedResults
         results = results.filter(recipe => 
           excludedResults.some(excluded => excluded.id === recipe.id)
         );
       }
 
-      // Apply local sorting for tag search and fallback cases
       if (searchType === 'tag' || results.length > 0) {
-        // Check if results need local sorting (fallback cases or tag search)
         const needsLocalSorting = searchType === 'tag' || 
-          (results.length > 0 && results.some(r => !r.fecha)); // No fecha means local data
+          (results.length > 0 && results.some(r => !r.fecha)); 
         
         if (needsLocalSorting) {
           switch (sortType) {
@@ -180,14 +167,13 @@ const RecipeSearchScreen = ({ navigation }) => {
         }
       }
 
-      // Debug log to verify sorting
-      console.log(`Final results for "${query}" with sort "${sortType}":`, 
+      console.log(`Resultados finales para "${query}" con orden "${sortType}":`, 
         results.map(r => `${r.title} (${r.author}) - ${r.fecha}`));
 
       setFilteredRecipes(results);
-      console.log(`Search results for "${query}":`, results.length, 'recipes found');
+      console.log(`Resultados de la busqueda para "${query}":`, results.length, 'recetas encontradas');
     } catch (error) {
-      console.error('Error performing search:', error);
+      console.error('Error al realizar la busqueda:', error);
       setError('Error al buscar recetas');
       setFilteredRecipes([]);
     } finally {
@@ -196,11 +182,10 @@ const RecipeSearchScreen = ({ navigation }) => {
   };
 
   const handleRecipePress = (recipe) => {
-    // Asegurarse de que el ID se pasa correctamente
-    console.log('Navigating to recipe detail with data:', JSON.stringify(recipe));
+    console.log('Navegando al detalle de la receta con datos: ', JSON.stringify(recipe));
     
     if (!recipe || !recipe.id) {
-      console.error('Invalid recipe data:', recipe);
+      console.error('Informacion invalida de la receta:', recipe);
       return;
     }
     
@@ -608,7 +593,7 @@ const styles = StyleSheet.create({
     borderRadius: Metrics.baseBorderRadius,
   },
   activeSortOption: {
-    backgroundColor: Colors.primary + '20', // 20% opacity
+    backgroundColor: Colors.primary + '20', 
   },
   sortOptionText: {
     fontSize: Metrics.smallFontSize,
@@ -622,7 +607,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: Colors.error + '10', // 10% opacity
+    backgroundColor: Colors.error + '10',
     paddingHorizontal: Metrics.mediumSpacing,
     paddingVertical: Metrics.smallSpacing,
     margin: Metrics.mediumSpacing,

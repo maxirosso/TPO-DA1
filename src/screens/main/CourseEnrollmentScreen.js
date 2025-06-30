@@ -22,7 +22,7 @@ import Metrics from '../../themes/metrics';
 const CourseEnrollmentScreen = ({ navigation, route }) => {
   const { course, location } = route.params || {};
   
-  const [paymentMethod, setPaymentMethod] = useState('saved_card'); // 'saved_card', 'new_card', 'other'
+  const [paymentMethod, setPaymentMethod] = useState('saved_card'); // 'saved_card', 'new_card', 'otro'
   const [cardNumber, setCardNumber] = useState('');
   const [expiryDate, setExpiryDate] = useState('');
   const [cvv, setCvv] = useState('');
@@ -50,7 +50,7 @@ const CourseEnrollmentScreen = ({ navigation, route }) => {
   const formatCardNumber = (text) => {
     const cleaned = text.replace(/\D/g, '');
     const formatted = cleaned.replace(/(\d{4})(?=\d)/g, '$1 ');
-    return formatted.slice(0, 19); // Max 16 digits + 3 spaces
+    return formatted.slice(0, 19); // maximo 16 digitos + 3 espacios
   };
   
   const formatExpiryDate = (text) => {
@@ -105,7 +105,6 @@ const CourseEnrollmentScreen = ({ navigation, route }) => {
     
     setIsLoading(true);
     
-    // Simulate API call for enrollment
     setTimeout(() => {
       setIsLoading(false);
       
@@ -116,7 +115,6 @@ const CourseEnrollmentScreen = ({ navigation, route }) => {
           {
             text: 'OK',
             onPress: () => {
-              // Navigate to My Courses screen
               navigation.reset({
                 index: 0,
                 routes: [
@@ -301,7 +299,7 @@ const CourseEnrollmentScreen = ({ navigation, route }) => {
                       value={cardNumber}
                       onChangeText={handleCardNumberChange}
                       keyboardType="numeric"
-                      maxLength={19} // 16 digits + 3 spaces
+                      maxLength={19} // 16 digitos + 3 espacios
                     />
                     <Icon name="credit-card" size={20} color={Colors.textMedium} />
                   </View>
@@ -316,7 +314,7 @@ const CourseEnrollmentScreen = ({ navigation, route }) => {
                       value={expiryDate}
                       onChangeText={handleExpiryDateChange}
                       keyboardType="numeric"
-                      maxLength={5} // MM/YY
+                      maxLength={5} 
                     />
                   </View>
                   
@@ -544,7 +542,7 @@ const styles = StyleSheet.create({
   },
   selectedPaymentOption: {
     borderColor: Colors.primary,
-    backgroundColor: Colors.primary + '05', // 5% opacity
+    backgroundColor: Colors.primary + '05',
   },
   radioContainer: {
     marginRight: Metrics.baseSpacing,

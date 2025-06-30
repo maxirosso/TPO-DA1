@@ -166,7 +166,6 @@ const HelpSupportScreen = ({ navigation }) => {
     }
 
     try {
-      // Simulate sending message
       await new Promise(resolve => setTimeout(resolve, 2000));
       
       Alert.alert(
@@ -238,7 +237,6 @@ const HelpSupportScreen = ({ navigation }) => {
         ¿No encontraste lo que buscabas? Contáctanos directamente.
       </Text>
 
-      {/* Quick Actions */}
       <View style={styles.quickActionsContainer}>
         <Text style={styles.subsectionTitle}>Acciones Rápidas</Text>
         <View style={styles.quickActionsGrid}>
@@ -258,7 +256,6 @@ const HelpSupportScreen = ({ navigation }) => {
         </View>
       </View>
 
-      {/* Contact Options */}
       <View style={styles.contactOptionsContainer}>
         <Text style={styles.subsectionTitle}>Opciones de Contacto</Text>
         {contactOptions.map((option) => (
@@ -279,7 +276,6 @@ const HelpSupportScreen = ({ navigation }) => {
         ))}
       </View>
 
-      {/* Contact Form */}
       <View style={styles.contactFormContainer}>
         <Text style={styles.subsectionTitle}>Enviar Mensaje</Text>
         
@@ -400,7 +396,6 @@ const HelpSupportScreen = ({ navigation }) => {
         </View>
       </LinearGradient>
 
-      {/* Tabs */}
       <View style={styles.tabsContainer}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
           {renderTabButton('faq', 'FAQ', 'help-circle')}
@@ -409,7 +404,6 @@ const HelpSupportScreen = ({ navigation }) => {
         </ScrollView>
       </View>
 
-      {/* Content */}
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {activeSection === 'faq' && renderFAQSection()}
         {activeSection === 'contact' && renderContactSection()}
@@ -488,7 +482,6 @@ const styles = StyleSheet.create({
     color: Colors.textDark,
     marginBottom: Metrics.mediumSpacing,
   },
-  // FAQ Styles
   faqItem: {
     backgroundColor: Colors.card,
     borderRadius: Metrics.baseBorderRadius,
@@ -524,7 +517,6 @@ const styles = StyleSheet.create({
     lineHeight: Metrics.mediumLineHeight,
     marginTop: Metrics.baseSpacing,
   },
-  // Contact Styles
   quickActionsContainer: {
     marginBottom: Metrics.largeSpacing,
   },

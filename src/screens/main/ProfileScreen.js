@@ -27,7 +27,6 @@ import dataService from '../../services/dataService';
 const ProfileScreen = ({ navigation }) => {
   const { signOut, user: contextUser, isVisitor, exitVisitorMode } = useContext(AuthContext);
 
-  // User state management
   const [user, setUser] = useState({
     name: 'Usuario',
     username: '@usuario',
@@ -57,21 +56,18 @@ const ProfileScreen = ({ navigation }) => {
 
   const loadUserData = async () => {
     try {
-      // First try to get user from context (active session)
       if (contextUser) {
-        // Map backend user types to frontend display  
         let accountType = 'user';
         if (contextUser.tipo === 'visitante') accountType = 'visitor';
         else if (contextUser.tipo === 'alumno') accountType = 'student';
         else if (contextUser.tipo === 'comun') accountType = 'user';
         
-        // Load user's recipe count from backend
         let recipeCount = 0;
         try {
           const userRecipes = await dataService.searchRecipesByUser(contextUser.nombre || contextUser.name || '');
           recipeCount = userRecipes.length;
         } catch (error) {
-          console.log('Error loading user recipe count:', error);
+          console.log('Error al cargar la cuenta de la receta del usuario:', error);
         }
         
         setUser({
@@ -90,23 +86,20 @@ const ProfileScreen = ({ navigation }) => {
         return;
       }
 
-      // Fallback to AsyncStorage
       const userData = await AsyncStorage.getItem('user_data');
       if (userData) {
         const parsedUser = JSON.parse(userData);
-        // Map backend user types to frontend display
         let accountType = 'user';
         if (parsedUser.tipo === 'visitante') accountType = 'visitor';
         else if (parsedUser.tipo === 'alumno') accountType = 'student';
         else if (parsedUser.tipo === 'comun') accountType = 'user';
         
-        // Load user's recipe count from backend
         let recipeCount = 0;
         try {
           const userRecipes = await dataService.searchRecipesByUser(parsedUser.nombre || parsedUser.name || '');
           recipeCount = userRecipes.length;
         } catch (error) {
-          console.log('Error loading user recipe count:', error);
+          console.log('Error al cargar la cuenta de la receta del usuario:', error);
         }
         
         setUser({
@@ -166,8 +159,6 @@ const ProfileScreen = ({ navigation }) => {
     );
   };
 
-  // Menu items based on task requirements only
-  // Check if current user can approve recipes (empresa type)
   const canApproveRecipes = () => {
     return contextUser?.tipo === 'empresa' || user.tipo === 'empresa';
   };
@@ -208,7 +199,6 @@ const ProfileScreen = ({ navigation }) => {
       }
     ];
 
-    // Add upgrade option for regular users (not students or visitors)
     if (user.accountType === 'user') {
       baseItems.push({
         id: 'upgrade_to_student',
@@ -220,7 +210,6 @@ const ProfileScreen = ({ navigation }) => {
       });
     }
 
-    // Add courses only for students
     if (user.accountType === 'student') {
       baseItems.push({
         id: 'my_courses',
@@ -232,7 +221,6 @@ const ProfileScreen = ({ navigation }) => {
       });
     }
 
-    // Add admin panel for empresa users
     if (canApproveRecipes()) {
       baseItems.push({
         id: 'admin_panel',
@@ -244,7 +232,6 @@ const ProfileScreen = ({ navigation }) => {
       });
     }
 
-    // Add basic settings for all authenticated users
     if (user.accountType !== 'visitor') {
       baseItems.push({
         id: 'account_settings',
@@ -273,16 +260,15 @@ const ProfileScreen = ({ navigation }) => {
         navigation.navigate('PendingRecipes');
         break;
       case 'upgrade_to_student':
-        console.log('🔍 Debug - contextUser:', contextUser);
-        console.log('🔍 Debug - user:', user);
+        console.log('Debug - contextUser:', contextUser);
+        console.log('Debug - user:', user);
         let userId = contextUser?.idUsuario || contextUser?.id || user?.idUsuario || user?.id;
         
-        // Si no hay userId válido, usar el email del usuario como identificador temporal
         if (!userId || userId === 'undefined' || userId === null) {
           userId = contextUser?.mail || contextUser?.email || user?.email || 'temp_' + Date.now();
         }
         
-        console.log('🔍 Debug - final userId to send:', userId);
+        console.log('Debug - final userId a enviar:', userId);
         navigation.navigate('UpgradeToStudent', { 
           userId: userId,
           userEmail: contextUser?.mail || contextUser?.email || user?.email
@@ -323,7 +309,6 @@ const ProfileScreen = ({ navigation }) => {
 
     setLoading(true);
     try {
-      // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 1000));
       
       await saveUserData(editedUser);
@@ -346,7 +331,7 @@ const ProfileScreen = ({ navigation }) => {
 
       await Share.share(shareContent);
     } catch (error) {
-      console.log('Error sharing profile:', error);
+      console.log('Error al compartir el perfil:', error);
     }
   };
 
@@ -363,12 +348,10 @@ const ProfileScreen = ({ navigation }) => {
   };
 
   const openCamera = () => {
-    // In a real app, you would use react-native-image-picker
     Alert.alert('Cámara', 'Funcionalidad de cámara implementada');
   };
 
   const openGallery = () => {
-    // In a real app, you would use react-native-image-picker
     Alert.alert('Galería', 'Funcionalidad de galería implementada');
   };
 
@@ -509,7 +492,6 @@ const ProfileScreen = ({ navigation }) => {
     </Modal>
   );
 
-  // Render visitor registration screen
   const renderVisitorScreen = () => (
     <SafeAreaView style={styles.container} edges={['top']}>
       <StatusBar backgroundColor={Colors.card} barStyle="light-content" />
@@ -571,7 +553,6 @@ const ProfileScreen = ({ navigation }) => {
           </View>
         </View>
 
-        {/* Sección Premium de Upgrade a Alumno */}
         <View style={styles.premiumSection}>
           <LinearGradient
             colors={[Colors.secondary, Colors.secondaryDark]}
@@ -611,7 +592,6 @@ const ProfileScreen = ({ navigation }) => {
                 console.log('🔍 Debug - user:', user);
                 let userId = contextUser?.idUsuario || contextUser?.id || user?.idUsuario || user?.id;
                 
-                // Si no hay userId válido, usar el email del usuario como identificador temporal
                 if (!userId || userId === 'undefined' || userId === null) {
                   userId = contextUser?.mail || contextUser?.email || user?.email || 'temp_' + Date.now();
                 }
@@ -634,7 +614,6 @@ const ProfileScreen = ({ navigation }) => {
             title="Crear Cuenta"
             onPress={() => {
               exitVisitorMode();
-              // This will navigate back to auth screens
             }}
             style={styles.registerButton}
             fullWidth
@@ -644,7 +623,6 @@ const ProfileScreen = ({ navigation }) => {
             style={styles.loginButton}
             onPress={() => {
               exitVisitorMode();
-              // This will navigate back to auth screens
             }}
           >
             <Text style={styles.loginButtonText}>Ya tengo cuenta - Iniciar Sesión</Text>
@@ -654,7 +632,6 @@ const ProfileScreen = ({ navigation }) => {
     </SafeAreaView>
   );
 
-  // If user is a visitor, show the registration screen
   if (isVisitor) {
     return renderVisitorScreen();
   }
@@ -796,7 +773,6 @@ const ProfileScreen = ({ navigation }) => {
           iconName="log-out"
         />
 
-        {/* Development helper for creating empresa users */}
         {user.accountType === 'user' && (
           <TouchableOpacity
             style={styles.devHelperButton}
@@ -1045,7 +1021,6 @@ const styles = StyleSheet.create({
     color: Colors.textLight,
     textAlign: 'center',
   },
-  // Modal styles
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
@@ -1188,7 +1163,6 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: Colors.primary,
   },
-  // Premium section styles
   premiumSection: {
     marginVertical: Metrics.mediumSpacing,
   },

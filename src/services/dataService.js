@@ -1,7 +1,6 @@
 import { api } from './api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// Normaliza los campos de receta del backend al formato del frontend
 export function mapBackendRecipe(receta) {
   return {
     id: receta.idReceta,
@@ -18,7 +17,7 @@ export function mapBackendRecipe(receta) {
     cantidadPersonas: receta.cantidadPersonas,
     date: receta.fecha,
     fecha: receta.fecha,
-    time: 30, // Default cooking time
+    time: 30, 
     ingredients: Array.isArray(receta.ingredientes) ? receta.ingredientes.map(ing => ({
       name: ing.nombre || ing.name,
       amount: ing.cantidad && ing.unidadMedida ? `${ing.cantidad} ${ing.unidadMedida}`.trim() : (ing.amount || '1 unidad'),
@@ -59,19 +58,17 @@ export function mapBackendRecipe(receta) {
               receta.tipo ? receta.tipo.descripcion : 'Sin categoría',
     tipoReceta: receta.tipoReceta || receta.tipo,
     tags: receta.tipoReceta ? [receta.tipoReceta.descripcion] : [],
-    rating: receta.calificacionPromedio || 0, // Mapear calificacionPromedio del backend
+    rating: receta.calificacionPromedio || 0, 
     calificacionPromedio: receta.calificacionPromedio || 0,
     reviews: receta.totalCalificaciones || 0,
     totalCalificaciones: receta.totalCalificaciones || 0,
     autorizada: receta.autorizada,
-    // Campos de estado de finalización en lista de recetas
     completed: receta.completada || false,
     completada: receta.completada || false,
     completedDate: receta.fechaCompletada,
     fechaCompletada: receta.fechaCompletada,
     addedDate: receta.fechaAgregada,
     fechaAgregada: receta.fechaAgregada,
-    // Fotos adicionales de la receta
     additionalImages: Array.isArray(receta.multimedia) ? 
                      receta.multimedia.filter(media => media.tipo === 'foto_receta').map(media => media.url) : 
                      [],
@@ -79,21 +76,18 @@ export function mapBackendRecipe(receta) {
   };
 }
 
-// Mapea un curso del backend al formato del frontend
 function mapBackendCourse(curso) {
   console.log('=== MAPPING BACKEND COURSE ===');
   console.log('Curso recibido:', curso);
   
-  // Determinar el status basado en las fechas y estado de inscripción
   let status = 'active';
   const today = new Date();
   const startDate = new Date(curso.fechaInicio);
   const endDate = new Date(curso.fechaFin);
   
-  // Si hay estado de inscripción, usarlo
   if (curso.estadoInscripcion) {
     if (curso.estadoInscripcion === 'cancelado') {
-      status = 'cancelled'; // No debería llegar aquí si el backend filtra correctamente
+      status = 'cancelled'; 
     } else if (today < startDate) {
       status = 'upcoming';
     } else if (today > endDate) {
@@ -102,7 +96,6 @@ function mapBackendCourse(curso) {
       status = 'active';
     }
   } else {
-    // Si no hay estado de inscripción, es un curso disponible
     status = 'available';
   }
   
@@ -110,7 +103,7 @@ function mapBackendCourse(curso) {
     id: curso.idCurso,
     idCurso: curso.idCurso,
     idCronograma: curso.idCronograma,
-    idInscripcion: curso.idInscripcion, // ID de la inscripción
+    idInscripcion: curso.idInscripcion, 
     title: curso.descripcion || 'Sin título',
     descripcion: curso.descripcion || 'Sin descripción',
     contenidos: curso.contenidos || 'No especificado',
@@ -118,22 +111,20 @@ function mapBackendCourse(curso) {
     duracion: curso.duracion && curso.duracion > 0 ? curso.duracion : '-',
     precio: curso.precio !== null && curso.precio !== undefined ? curso.precio : '-',
     modalidad: curso.modalidad || 'No especificado',
-    insumos: curso.insumos, // 1 = alumno trae insumos, 0 = empresa brinda insumos
+    insumos: curso.insumos, 
     imageUrl: 'https://via.placeholder.com/300x200?text=Curso',
     availableSeats: curso.vacantesDisponibles || 0,
     startDate: curso.fechaInicio || '',
     endDate: curso.fechaFin || '',
     location: curso.sede ? curso.sede.nombre || curso.sede.nombreSede : '',
     instructor: 'Chef Profesional',
-    status: status, // Estado calculado
+    status: status, 
     nextSession: curso.fechaInicio || '',
     totalHours: curso.duracion && curso.duracion > 0 ? curso.duracion : '-',
     topics: curso.contenidos ? curso.contenidos.split(',') : [],
     sede: curso.sede || null,
-    // Campos de progreso y asistencia por defecto
     progress: curso.progress || 0,
-    attendance: curso.attendance || [], // Array vacío por defecto para evitar errores
-    // Campos adicionales del backend
+    attendance: curso.attendance || [], 
     estadoInscripcion: curso.estadoInscripcion,
     estadoPago: curso.estadoPago,
     fechaInscripcion: curso.fechaInscripcion,
@@ -144,7 +135,6 @@ function mapBackendCourse(curso) {
   return mappedCourse;
 }
 
-// Mapea un usuario del backend al formato del frontend
 function mapBackendUser(usuario) {
   return {
     id: usuario.idUsuario,
@@ -160,7 +150,6 @@ function mapBackendUser(usuario) {
   };
 }
 
-// Mapea un alumno del backend al formato del frontend
 function mapBackendAlumno(alumno) {
   return {
     id: alumno.idAlumno,
@@ -169,9 +158,8 @@ function mapBackendAlumno(alumno) {
     dniBack: alumno.dniFondo,
     tramite: alumno.tramite,
     accountBalance: alumno.cuentaCorriente,
-    cuentaCorriente: alumno.cuentaCorriente, // Agregar el campo original también
+    cuentaCorriente: alumno.cuentaCorriente, 
     idCronograma: alumno.idCronograma,
-    // Información adicional del usuario
     mail: alumno.mail,
     nombre: alumno.nombre,
     nickname: alumno.nickname,
@@ -179,7 +167,6 @@ function mapBackendAlumno(alumno) {
   };
 }
 
-// Mapea una sede del backend al formato del frontend
 function mapBackendSede(sede) {
   return {
     id: sede.idSede,
@@ -196,7 +183,6 @@ function mapBackendSede(sede) {
   };
 }
 
-// Mapea un cronograma del backend al formato del frontend
 function mapBackendCronograma(cronograma) {
   return {
     id: cronograma.idCronograma,
@@ -215,7 +201,6 @@ class DataService {
     this.cacheTimeout = 5 * 60 * 1000; // 5 minutos
   }
 
-  // Verifica si el backend está disponible
   async checkBackendAvailability() {
     try {
       await api.utils.checkConnection();
@@ -228,10 +213,8 @@ class DataService {
     }
   }
 
-  // Método genérico para intentar primero con el backend, luego recurrir a datos simulados
   async tryBackendFirst(backendCall, mockData, cacheKey = null) {
     try {
-      // Intentar obtener del caché primero si se proporciona cacheKey
       if (cacheKey) {
         const cached = await this.getFromCache(cacheKey);
         if (cached) {
@@ -239,11 +222,9 @@ class DataService {
         }
       }
 
-      // Intentar backend
       if (this.useBackend) {
         const result = await backendCall();
         
-        // Almacenar en caché el resultado si es exitoso
         if (cacheKey && result.success) {
           await this.saveToCache(cacheKey, result.data);
         }
@@ -255,11 +236,9 @@ class DataService {
       this.useBackend = false;
     }
 
-    // Recurrir a datos simulados
     return mockData;
   }
 
-  // Gestión de caché
   async getFromCache(key) {
     try {
       const cached = await AsyncStorage.getItem(`cache_${key}`);
@@ -287,15 +266,12 @@ class DataService {
     }
   }
 
-  // Métodos de recetas
   async getAllRecipes() {
     try {
       console.log('📲 Solicitando todas las recetas al backend...');
-      // Usar el endpoint real del backend
-      const response = await api.recipes.getAll(); // Este debe mapear a /getAllRecetas
+      const response = await api.recipes.getAll(); 
       console.log(`Total de recetas recibidas: ${response.data?.length || 0}`);
       
-      // Mapear y filtrar solo recetas autorizadas
       const recipes = response.data.map(mapBackendRecipe);
       const authorizedRecipes = recipes.filter(recipe => recipe.autorizada === true);
       
@@ -314,10 +290,8 @@ class DataService {
       const result = await api.recipes.getLatest();
       console.log(`Recetas recibidas del backend: ${result.data?.length || 0}`);
       
-      // Mapear las recetas del backend al formato frontend
       const recipes = result.data.map(mapBackendRecipe);
       
-      // Mostrar información detallada de cada receta
       if (recipes.length > 0) {
         console.log('Detalle de las recetas recibidas:');
         recipes.forEach(recipe => {
@@ -483,13 +457,11 @@ class DataService {
           fotoPrincipal: recipeData.imageUrl || recipeData.fotoPrincipal,
           porciones: parseInt(recipeData.servings || recipeData.porciones || 1),
           cantidadPersonas: parseInt(recipeData.servings || recipeData.cantidadPersonas || 1),
-          // Enviar pasos como array de objetos en lugar de string concatenado
           pasos: Array.isArray(recipeData.instructions) 
             ? recipeData.instructions.map((inst, index) => ({
                 texto: inst.text || inst.toString()
               }))
             : [],
-          // Mantener instrucciones para compatibilidad hacia atrás
           instrucciones: Array.isArray(recipeData.instructions) 
             ? recipeData.instructions.map(i => i.text || i).join('\n')
             : (recipeData.instructions || recipeData.instrucciones || ''),
@@ -498,7 +470,6 @@ class DataService {
           },
           idTipo: recipeData.tipoReceta || recipeData.idTipo || { idTipo: 1 },
           ingredientes: (recipeData.ingredients || recipeData.ingredientes || []).map(ing => {
-            // Normalizar ingrediente
             if (typeof ing === 'string') {
               return {
                 nombre: ing,
@@ -507,7 +478,6 @@ class DataService {
               };
             }
             
-            // Extraer cantidad y unidad desde amount si existe
             let cantidad = 1;
             let unidadMedida = 'unidad';
             
@@ -532,14 +502,12 @@ class DataService {
         
         console.log('Formatted recipe data:', formattedData);
         
-        // Intentar con el nuevo endpoint primero
         try {
           const response = await api.recipes.create(formattedData);
           console.log('Recipe created successfully:', response);
           return response;
         } catch (primaryError) {
           console.log('Primary create endpoint failed:', primaryError);
-          // Intentar con el endpoint alternativo
           const altResponse = await api.recipes.createAlternative(formattedData);
           console.log('Recipe created with alternative endpoint:', altResponse);
           return altResponse;
@@ -549,7 +517,6 @@ class DataService {
       console.log('Failed to create recipe on backend:', error);
     }
 
-    // Fallback: save locally
     const newRecipe = {
       ...recipeData,
       idReceta: Date.now().toString(),
@@ -567,7 +534,6 @@ class DataService {
 
   
   async getAllCourses(idUsuario) {
-    // Forzar idUsuario a 1 si no viene definido
     const safeId = idUsuario ? idUsuario : 1;
     try {
       const response = await api.courses.getAll(safeId);
@@ -590,50 +556,47 @@ class DataService {
 
   async getUserCourses(idUsuario) {
     try {
-      console.log('📚 getUserCourses - ID Usuario recibido:', idUsuario);
+      console.log('getUserCourses - ID Usuario recibido:', idUsuario);
       
-      // Verificar si el usuario existe y es alumno
       const userData = await AsyncStorage.getItem('user_data');
       let userInfo = null;
       if (userData) {
         userInfo = JSON.parse(userData);
-        console.log('👤 Información del usuario:', userInfo);
+        console.log('Información del usuario:', userInfo);
       }
       
-      // Si el usuario no es alumno, devolver array vacío con mensaje específico
       if (userInfo && userInfo.tipo && userInfo.tipo !== 'alumno') {
-        console.log('⚠️ Usuario no es alumno, tipo:', userInfo.tipo);
-        console.log('💡 Para ver cursos, el usuario debe estar registrado como alumno');
+        console.log('Usuario no es alumno, tipo:', userInfo.tipo);
+        console.log('Para ver cursos, el usuario debe estar registrado como alumno');
         return [];
       }
       
-      // Intentar obtener cursos usando el idUsuario como idAlumno
-      console.log('🎓 Llamando al endpoint /alumno/' + idUsuario);
+      console.log('Llamando al endpoint /alumno/' + idUsuario);
       const result = await api.courses.getByStudent(idUsuario);
       
       if (result && result.data) {
-        console.log('✅ Cursos encontrados:', result.data.length);
+        console.log('Cursos encontrados:', result.data.length);
         return result.data.map(mapBackendCourse) || [];
       } else {
-        console.log('📭 No se encontraron datos de cursos');
+        console.log('No se encontraron datos de cursos');
         return [];
       }
     } catch (error) {
-      console.error('❌ Error completo en getUserCourses:', error);
-      console.error('❌ Error message:', error.message);
-      console.error('❌ Error response:', error.response);
+      console.error('Error completo en getUserCourses:', error);
+      console.error('Error message:', error.message);
+      console.error('Error response:', error.response);
       
       if (error.response) {
         const status = error.response.status;
         const errorData = error.response.data;
         
-        console.error(`❌ Status HTTP: ${status}`);
-        console.error('❌ Datos del error:', errorData);
+        console.error(`Status HTTP: ${status}`);
+        console.error('Datos del error:', errorData);
         
         if (status === 404) {
-          console.log('🔍 Usuario no encontrado como alumno - probablemente no está registrado como alumno');
+          console.log('Usuario no encontrado como alumno - probablemente no está registrado como alumno');
         } else if (status === 500) {
-          console.log('🔧 Error del servidor - revisar logs del backend');
+          console.log('Error del servidor - revisar logs del backend');
         }
       }
       
@@ -659,13 +622,13 @@ class DataService {
       console.log('API Base URL:', api.baseURL);
       
       const result = await api.courses.enroll(idAlumno, idCronograma);
-      console.log('✅ Inscripción exitosa:', result);
+      console.log('Inscripción exitosa:', result);
       return result.data;
     } catch (error) {
-      console.error('❌ Error completo inscripción:', error);
-      console.error('❌ Error response:', error.response);
-      console.error('❌ Error status:', error.response?.status);
-      console.error('❌ Error data:', error.response?.data);
+      console.error('Error completo inscripción:', error);
+      console.error('Error response:', error.response);
+      console.error('Error status:', error.response?.status);
+      console.error('Error data:', error.response?.data);
       console.log('Error al inscribirse en el curso:', error.message);
       throw error;
     }
@@ -679,19 +642,18 @@ class DataService {
       console.log('API Base URL:', api.baseURL);
       
       const result = await api.courses.cancelEnrollment(idInscripcion, reintegroEnTarjeta);
-      console.log('✅ Resultado exitoso:', result);
+      console.log('Resultado exitoso:', result);
       return result.data;
     } catch (error) {
-      console.error('❌ Error completo:', error);
-      console.error('❌ Error response:', error.response);
-      console.error('❌ Error status:', error.response?.status);
-      console.error('❌ Error data:', error.response?.data);
+      console.error('Error completo:', error);
+      console.error('Error response:', error.response);
+      console.error('Error status:', error.response?.status);
+      console.error('Error data:', error.response?.data);
       console.log('Error al cancelar inscripción:', error.message);
       throw error;
     }
   }
 
-  // Auth methods
   async login(mail, password) {
     try {
       if (this.useBackend) {
@@ -705,7 +667,6 @@ class DataService {
       console.log('Login failed:', error);
     }
 
-    // Fallback: check local users or create visitor session
     const mockUser = {
       idUsuario: 999,
       mail,
@@ -775,7 +736,6 @@ class DataService {
         }
         await AsyncStorage.setItem('local_enrollments', JSON.stringify(enrollments));
       }
-      // Sincronizar usuarios pendientes de registro
       const pendingUsers = await AsyncStorage.getItem('pending_registrations');
       if (pendingUsers) {
         const users = JSON.parse(pendingUsers);
@@ -796,7 +756,6 @@ class DataService {
     }
   }
 
-  // Inicialización del servicio
   async initialize() {
     await this.checkBackendAvailability();
     if (this.useBackend) {
@@ -955,20 +914,17 @@ class DataService {
     try {
       console.log(`Updating recipe ${recipeId} for user ${userId}`, recipeData);
       
-      // Formato esperado por el backend
       const formattedData = {
         nombreReceta: recipeData.title || recipeData.nombreReceta,
         descripcionReceta: recipeData.description || recipeData.descripcionReceta,
         fotoPrincipal: recipeData.imageUrl || recipeData.fotoPrincipal,
         porciones: parseInt(recipeData.servings || recipeData.porciones || 1),
         cantidadPersonas: parseInt(recipeData.servings || recipeData.cantidadPersonas || 1),
-        // Enviar pasos como array de objetos
         pasos: Array.isArray(recipeData.instructions) 
           ? recipeData.instructions.map((inst, index) => ({
               texto: inst.text || inst.toString()
             }))
           : [],
-        // Mantener instrucciones para compatibilidad
         instrucciones: Array.isArray(recipeData.instructions) 
           ? recipeData.instructions.map(i => i.text || i).join('\n')
           : (recipeData.instructions || recipeData.instrucciones || ''),
@@ -977,19 +933,15 @@ class DataService {
         },
         idTipo: recipeData.tipoReceta || recipeData.idTipo || { idTipo: 1 },
         ingredientes: [],
-        // Agregar fotos adicionales de la receta
         fotos: recipeData.fotos || [],
-        // Agregar fotos de pasos específicos  
         fotosInstrucciones: recipeData.fotosInstrucciones || []
       };
 
-      // Procesar ingredientes con un formato consistente
       const ingredientesToProcess = recipeData.ingredients || recipeData.ingredientes || [];
       console.log('Ingredientes a procesar:', JSON.stringify(ingredientesToProcess));
       
       if (ingredientesToProcess.length > 0) {
         formattedData.ingredientes = ingredientesToProcess.map(ing => {
-          // Normalizar ingrediente según su formato
           if (typeof ing === 'string') {
             return {
               nombre: ing,
@@ -998,12 +950,10 @@ class DataService {
             };
           }
           
-          // Para ingredientes en formato de objeto
           let nombre = ing.name || ing.nombre || '';
           let cantidad = 1;
           let unidadMedida = ing.unit || ing.unidadMedida || 'unidad';
           
-          // Analizar la cantidad si viene como string en 'amount'
           if (ing.amount && typeof ing.amount === 'string') {
             const match = ing.amount.match(/^(\d*\.?\d+)\s*(.*)$/);
             if (match) {
@@ -1013,10 +963,8 @@ class DataService {
               }
             }
           } else if (ing.quantity) {
-            // Si viene como quantity separado (formato de interfaz de edición)
             cantidad = parseFloat(ing.quantity) || 1;
           } else if (ing.cantidad) {
-            // Si viene en formato backend
             cantidad = parseFloat(ing.cantidad) || 1;
           }
           
@@ -1102,7 +1050,6 @@ class DataService {
     }
   }
 
-  // Visitantes (sin código de verificación)
   async registerVisitor(email, alias) {
     try {
       const result = await api.auth.registerVisitor(email, alias);
@@ -1113,7 +1060,6 @@ class DataService {
     }
   }
 
-  // Visitantes (con código de verificación en 2 etapas)
   async registerVisitorStage1(email, alias) {
     try {
       const result = await api.auth.registerVisitorStage1(email, alias);
@@ -1121,13 +1067,10 @@ class DataService {
     } catch (error) {
       console.log('Error registering visitor stage 1:', error.message);
       
-      // Si el backend devolvió un error con información estructurada, extraerla
       if (error.response && error.response.data) {
-        // El backend devolvió un objeto JSON con información del error
         const errorData = error.response.data;
         console.log('Backend error data:', errorData);
         
-        // Crear un nuevo error que incluya la información estructurada
         const enhancedError = new Error(errorData.error || error.message);
         enhancedError.aliasUnavailable = errorData.aliasUnavailable;
         enhancedError.suggestions = errorData.suggestions;
@@ -1165,18 +1108,14 @@ class DataService {
     return api.auth.getSugerenciasAlias(baseAlias);
   }
 
-  // Llama al endpoint de registro de usuario (etapa 1)
   async registerUserStage1(email, alias) {
     try {
       const response = await api.auth.registerUserStage1(email, alias);
-      return response.data; // Devuelve los datos de la respuesta (incluye success, message, suggestions)
+      return response.data;  
     } catch (error) {
-      // Si el backend devuelve un error (ej. 400 Bad Request), el objeto de error de axios
-      // contendrá la respuesta del servidor en error.response.data
       if (error.response && error.response.data) {
         return error.response.data;
       }
-      // Si es otro tipo de error (ej. de red), lanzar una excepción genérica
       throw new Error('Error de comunicación con el servidor.');
     }
   }
@@ -1216,7 +1155,7 @@ class DataService {
       const result = await api.auth.registerStudent(email, idUsuario, medioPago, dniFrente, dniFondo, tramite);
       return result.data;
     } catch (error) {
-      console.log('Error al registrar estudiante:', error.message);
+      console.log('Error al registrar alumno:', error.message);
       throw error;
     }
   }
@@ -1231,14 +1170,11 @@ class DataService {
     }
   }
 
-  // Métodos de lista de recetas (Lista de recetas a intentar)
-  
-  // Agregar receta a la lista pendiente
+
   async addRecipeToPendingList(idReceta) {
     try {
       console.log('Agregando receta a la lista pendiente:', idReceta);
       
-      //Verificar si la receta ya existe en la lista actual
       const existingList = await this.getPendingRecipesList();
       const alreadyExists = existingList.some(r => {
         const existingId = String(r.id || r.idReceta);
@@ -1251,22 +1187,18 @@ class DataService {
         return { success: false, message: 'La receta ya está en tu lista de pendientes' };
       }
       
-      //Verificar si la receta fue eliminada permanentemente antes y limpiar si es necesario
       const permanentlyRemoved = await this.getPermanentlyRemovedList();
       if (permanentlyRemoved.includes(String(idReceta))) {
         console.log('La receta fue eliminada permanentemente, eliminando de la lista negra y volviendo a agregar');
-        // Eliminar de la lista de eliminados permanentemente para permitir volver a agregar
         const updatedRemoved = permanentlyRemoved.filter(id => id !== String(idReceta));
         await AsyncStorage.setItem('permanently_removed_recipes', JSON.stringify(updatedRemoved));
       }
       
-      // Obtener detalles de la receta primero
       const recipe = await this.getRecipeById(idReceta);
       if (!recipe) {
         return { success: false, message: 'No se pudo encontrar la receta' };
       }
       
-      //Obtener usuario actual para la solicitud al backend
       let currentUser = null;
       try {
         const userData = await AsyncStorage.getItem('user_data');
@@ -1277,7 +1209,6 @@ class DataService {
         console.log('Error al obtener usuario actual:', error.message);
       }
 
-      //Intentar primero con el backend usando el ID de usuario
       let backendSuccess = false;
       try {
         console.log('Agregando receta al backend con ID de usuario:', currentUser?.idUsuario || 'ninguno');
@@ -1341,7 +1272,6 @@ class DataService {
       
       let backendSuccess = false;
       
-      // Obtener usuario actual para la solicitud al backend
       let currentUser = null;
       try {
         const userData = await AsyncStorage.getItem('user_data');
@@ -1361,12 +1291,11 @@ class DataService {
         console.log('Tipo de respuesta del backend:', typeof result);
         console.log('Claves de respuesta del backend:', result ? Object.keys(result) : 'null');
         
-        // Verificar si la operación del backend fue exitosa
         const isBackendSuccess = result && (
-          result.success === true ||  // Éxito explícito
-          result.success !== false || // No falló explícitamente
-          (typeof result === 'object' && !result.error) || // Objeto sin error
-          (typeof result === 'string' && result.includes('eliminad')) // Mensaje de éxito
+          result.success === true || 
+          result.success !== false ||
+          (typeof result === 'object' && !result.error) ||
+          (typeof result === 'string' && result.includes('eliminad')) 
         );
         
         if (isBackendSuccess) {
@@ -1380,16 +1309,12 @@ class DataService {
         console.log('Detalles del error del backend:', backendError);
       }
       
-      // Forzar eliminación del almacenamiento local
       await this.forceRemoveFromLocalStorage(idReceta);
       
-      // Agregar a la lista de eliminados permanentemente
       await this.addToPermanentlyRemovedList(idReceta);
       
-      // Limpiar caché
       await AsyncStorage.removeItem('cache_pending_recipes');
       
-      // Limpiar localStorage para forzar actualización del backend en la próxima carga
       console.log('Limpiando localStorage para forzar actualización del backend en la próxima carga');
       
       console.log('Limpieza completa finalizada para la receta:', idReceta);
@@ -1406,13 +1331,11 @@ class DataService {
     }
   }
 
-  // Método auxiliar para eliminar del almacenamiento local
   async removeFromLocalStorage(idReceta) {
     try {
       const existingList = await this.getPendingRecipesList();
       console.log('Intentando eliminar receta con ID:', idReceta, 'de la lista de', existingList.length, 'recetas');
       
-      // Filtrar usando ambos campos id e idReceta para compatibilidad
       const initialLength = existingList.length;
       const updatedList = existingList.filter(recipe => 
         recipe.id !== idReceta && 
@@ -1435,23 +1358,19 @@ class DataService {
     }
   }
 
-  // Método de limpieza que elimina completamente una receta del almacenamiento local (incluyendo estados de finalización)
   async cleanupLocalStorage(idReceta) {
     try {
-      console.log('🧹 Limpiando almacenamiento local para la receta:', idReceta);
+      console.log('Limpiando almacenamiento local para la receta:', idReceta);
       
-      // Obtener datos del almacenamiento local directamente (no fusionados con backend)
       const stored = await AsyncStorage.getItem('pending_recipes_list');
       let localRecipes = stored ? JSON.parse(stored) : [];
       
-      // Filtrar la receta completamente
       const cleanedList = localRecipes.filter(recipe => {
         const recipeId = recipe.id || recipe.idReceta;
         const targetId = idReceta;
         return String(recipeId) !== String(targetId);
       });
       
-      // Guardar la lista limpia
       await AsyncStorage.setItem('pending_recipes_list', JSON.stringify(cleanedList));
       console.log(`Receta ${idReceta} completamente eliminada del almacenamiento local. Restantes: ${cleanedList.length}`);
       
@@ -1462,12 +1381,10 @@ class DataService {
     }
   }
 
-  // FORZAR eliminación del almacenamiento local - limpieza más agresiva
   async forceRemoveFromLocalStorage(idReceta) {
     try {
       console.log('FORZANDO eliminación de receta del almacenamiento local:', idReceta);
       
-      // Obtener datos actuales del almacenamiento local
       const stored = await AsyncStorage.getItem('pending_recipes_list');
       let localRecipes = stored ? JSON.parse(stored) : [];
       
@@ -1478,7 +1395,6 @@ class DataService {
         completed: r.completed
       })));
       
-      // Filtrado más agresivo - verificar todas las combinaciones posibles de ID
       const cleanedList = localRecipes.filter(recipe => {
         const recipeIdStr = String(recipe.id || '');
         const recipeIdRecetaStr = String(recipe.idReceta || '');
@@ -1493,7 +1409,6 @@ class DataService {
         return shouldKeep;
       });
       
-      // Guardar la lista limpia
       await AsyncStorage.setItem('pending_recipes_list', JSON.stringify(cleanedList));
       
       console.log('Después de la eliminación - recetas restantes:', cleanedList.map(r => ({
@@ -1512,7 +1427,6 @@ class DataService {
     }
   }
 
-  // Obtener lista de recetas pendientes (combina datos del backend con estados de finalización del almacenamiento local)
   async getPendingRecipesList() {
     try {
       console.log('Getting pending recipes list...');
@@ -1520,10 +1434,8 @@ class DataService {
       let backendRecipes = [];
       let backendAvailable = false;
       
-      // Get permanently removed recipes list
       const permanentlyRemoved = await this.getPermanentlyRemovedList();
       
-      // Get current user for backend request
       let currentUser = null;
       try {
         const userData = await AsyncStorage.getItem('user_data');
@@ -1534,7 +1446,6 @@ class DataService {
         console.log('Error getting current user:', error.message);
       }
 
-      // Try to get recipes from backend first
       try {
         console.log('Getting recipes from backend with user ID:', currentUser?.idUsuario || 'none');
         
@@ -1544,19 +1455,14 @@ class DataService {
         console.log('Backend response type:', typeof result);
         console.log('Backend response keys:', result ? Object.keys(result) : 'null');
         
-        // Handle different response formats from backend
         let backendData = null;
         if (Array.isArray(result)) {
-          // Direct array response
           backendData = result;
         } else if (result && Array.isArray(result.data)) {
-          // Wrapped in data property
           backendData = result.data;
         } else if (result && result.recetas && Array.isArray(result.recetas)) {
-          // Wrapped in recetas property
           backendData = result.recetas;
         } else if (result && typeof result === 'object' && !result.error) {
-          // Object response, maybe success but no data
           backendData = [];
           console.log('Backend returned object without data array, treating as empty list');
         }
@@ -1564,7 +1470,6 @@ class DataService {
         if (backendData !== null) {
           backendRecipes = backendData
             .filter(recipe => {
-              // Filter out permanently removed recipes
               const recipeId = String(recipe.idReceta || recipe.id);
               return !permanentlyRemoved.includes(recipeId);
             })
@@ -1574,7 +1479,6 @@ class DataService {
                 ...mapped,
                 id: mapped.id || mapped.idReceta,
                 idReceta: mapped.idReceta || mapped.id,
-                // Keep the completed status from backend, don't override it
                 completed: mapped.completed || false,
                 addedDate: mapped.addedDate || new Date().toISOString()
               };
@@ -1619,7 +1523,7 @@ class DataService {
         
         if (cleanedLocalRecipes.length !== localRecipes.length) {
           await AsyncStorage.setItem('pending_recipes_list', JSON.stringify(cleanedLocalRecipes));
-          console.log(`🧹 Cleaned ${localRecipes.length - cleanedLocalRecipes.length} orphaned recipes from localStorage`);
+          console.log(`Cleaned ${localRecipes.length - cleanedLocalRecipes.length} orphaned recipes from localStorage`);
         }
         
         
@@ -1642,7 +1546,6 @@ class DataService {
         console.log(`${mergedRecipes.length} recipes merged (STRICT: backend-only + localStorage states)`);
         return mergedRecipes;
       } else {
-        // Fallback to localStorage only
         console.log(`${localRecipes.length} recipes loaded from localStorage (fallback)`);
         return localRecipes;
       }
@@ -1656,9 +1559,7 @@ class DataService {
   async cleanupOrphanedRecipes(backendRecipes, localRecipes) {
     try {
       const backendIds = new Set(backendRecipes.map(r => String(r.id || r.idReceta)));
-      
-      // Filtrar recetas locales que no están en el backend
-      const cleanedLocalRecipes = localRecipes.filter(localRecipe => {
+            const cleanedLocalRecipes = localRecipes.filter(localRecipe => {
         const localId = String(localRecipe.id || localRecipe.idReceta);
         return backendIds.has(localId);
       });
@@ -1829,8 +1730,6 @@ class DataService {
     }
   }
 
-
-  
   
   async testBackendConnection() {
     try {
@@ -1903,23 +1802,19 @@ class DataService {
     }
   }
 
-  // Método de debug para probar conexión y endpoints
   async debugConnection() {
-    console.log('🔧 === DEBUG DE CONEXIÓN ===');
+    console.log('=== DEBUG DE CONEXIÓN ===');
     
     try {
-      // Probar conexión básica
       const baseUrl = api.baseURL;
-      console.log('🌐 URL base de la API:', baseUrl);
+      console.log('URL base de la API:', baseUrl);
       
-      // Probar endpoint básico
       const response = await fetch(baseUrl);
-      console.log('✅ Conexión básica exitosa, status:', response.status);
+      console.log('Conexión básica exitosa, status:', response.status);
       
-      // Probar endpoint específico
       const testResponse = await fetch(`${baseUrl}/`);
       const testText = await testResponse.text();
-      console.log('🧪 Endpoint de prueba:', testText);
+      console.log('Endpoint de prueba:', testText);
       
       return {
         success: true,
@@ -1927,7 +1822,7 @@ class DataService {
         message: 'Conexión exitosa'
       };
     } catch (error) {
-      console.error('❌ Error en debug de conexión:', error);
+      console.error('Error en debug de conexión:', error);
       return {
         success: false,
         error: error.message,
@@ -1937,7 +1832,6 @@ class DataService {
   }
 }
 
-//singleton instancia
 const dataService = new DataService();
 
 export default dataService; 

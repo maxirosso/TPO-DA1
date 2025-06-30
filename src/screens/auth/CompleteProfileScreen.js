@@ -30,7 +30,7 @@ const CompleteProfileScreen = ({ navigation, route }) => {
   const { completeProfile, signIn } = useContext(AuthContext);
   
   const handleCompleteProfile = async () => {
-    // Validate inputs
+    //Validar inputs
     if (!email || typeof email !== 'string' || !email.includes('@')) {
       Alert.alert('Error', 'No se encontró el correo electrónico para completar el perfil. Por favor, regístrate nuevamente.');
       return;
@@ -53,7 +53,7 @@ const CompleteProfileScreen = ({ navigation, route }) => {
     setIsLoading(true);
     
     try {
-      // Save profile data
+      //Guardar info del perfil 
       const result = await completeProfile(email, {
         name,
         phoneNumber,
@@ -61,18 +61,14 @@ const CompleteProfileScreen = ({ navigation, route }) => {
       });
       
       if (result) {
-        // Try to automatically sign in the user after profile completion
         try {
-          // Note: In a real app, you would retrieve the password from secure storage or use a token
           await signIn(email, password);
           
-          // Reset navigation stack to start from main app
           navigation.reset({
             index: 0,
             routes: [{ name: 'Login' }],
           });
         } catch (error) {
-          // If auto-login fails, redirect to login screen
           navigation.reset({
             index: 0,
             routes: [{ name: 'Login' }],
@@ -85,7 +81,7 @@ const CompleteProfileScreen = ({ navigation, route }) => {
         );
       }
     } catch (error) {
-      console.error('Complete profile error:', error);
+      console.error('Errro al completar el perfil:', error);
       Alert.alert(
         'Error',
         'Ha ocurrido un error al completar tu perfil. Por favor, intenta nuevamente.'
@@ -96,7 +92,6 @@ const CompleteProfileScreen = ({ navigation, route }) => {
   };
   
   const handleSkip = () => {
-    // Complete profile with minimal information
     completeProfile(email, { name: email.split('@')[0] })
       .then(() => {
         navigation.reset({
@@ -105,7 +100,7 @@ const CompleteProfileScreen = ({ navigation, route }) => {
         });
       })
       .catch((error) => {
-        console.error('Skip profile completion error:', error);
+        console.error('Error al omitir la finalizacion del perfil:', error);
         navigation.reset({
           index: 0,
           routes: [{ name: 'Login' }],

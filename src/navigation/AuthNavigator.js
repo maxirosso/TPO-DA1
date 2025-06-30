@@ -1,7 +1,7 @@
 import React from 'react';
 import { createStackNavigator } from '@react-navigation/stack';
 
-// Auth Screens
+//Pantallas de autenticacion
 import LoginScreen from '../screens/auth/LoginScreen';
 import SignupScreen from '../screens/auth/SignupScreen';
 import VerificationScreen from '../screens/auth/VerificationScreen';

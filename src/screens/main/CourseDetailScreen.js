@@ -26,7 +26,6 @@ const CourseDetailScreen = ({ navigation, route }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // Get data from route params
   const { 
     course: courseProp, 
     enrollment, 
@@ -65,7 +64,7 @@ const CourseDetailScreen = ({ navigation, route }) => {
             price: courseData.precio,
             modalidad: courseData.modalidad,
             category: courseData.modalidad,
-            insumos: courseData.insumos, // Agregar campo de insumos
+            insumos: courseData.insumos, 
             imageUrl: 'https://via.placeholder.com/300x200?text=Curso+Culinario',
             startDate: courseData.fechaInicio,
             endDate: courseData.fechaFin,
@@ -75,7 +74,7 @@ const CourseDetailScreen = ({ navigation, route }) => {
             nextSession: courseData.fechaInicio,
             totalHours: courseData.duracion,
             topics: courseData.contenidos ? courseData.contenidos.split(',') : [],
-            sede: courseData.sede // También asegurar que sede esté disponible
+            sede: courseData.sede 
           });
         } else {
           setError('No se encontró información del curso.');
@@ -95,13 +94,12 @@ const CourseDetailScreen = ({ navigation, route }) => {
   };
   
   const handleEnroll = () => {
-    // Check user type first
     if (userType !== 'student') {
       Alert.alert(
         'Acceso Restringido',
         userType === 'visitor' 
-          ? 'Regístrate como estudiante para inscribirte a cursos.'
-          : 'Actualiza tu perfil a estudiante para acceder a todas las funcionalidades.',
+          ? 'Regístrate como alumno para inscribirte a cursos.'
+          : 'Actualiza tu perfil a alumno para acceder a todas las funcionalidades.',
         [
           { text: 'Cancelar', style: 'cancel' },
           { 
@@ -113,7 +111,6 @@ const CourseDetailScreen = ({ navigation, route }) => {
       return;
     }
 
-    // If already enrolled, show message
     if (isEnrolled) {
       Alert.alert(
         'Ya Inscrito',
@@ -129,11 +126,9 @@ const CourseDetailScreen = ({ navigation, route }) => {
       return;
     }
 
-    // Use the enrollment function passed from CourseScreen
     if (onEnroll && course) {
       onEnroll(course, course.sede);
     } else {
-      // Fallback to navigation if onEnroll is not available
       navigation.navigate('CourseEnrollment', { 
         course,
         location: course.sede
@@ -572,7 +567,7 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     padding: Metrics.mediumSpacing,
-    paddingBottom: 100, // Extra padding for the footer
+    paddingBottom: 100, 
   },
   courseHeader: {
     flexDirection: 'row',
@@ -581,7 +576,7 @@ const styles = StyleSheet.create({
     marginBottom: Metrics.mediumSpacing,
   },
   levelBadge: {
-    backgroundColor: Colors.info + '20', // 20% opacity
+    backgroundColor: Colors.info + '20', 
     paddingVertical: 4,
     paddingHorizontal: 8,
     borderRadius: Metrics.baseBorderRadius,
@@ -693,7 +688,7 @@ const styles = StyleSheet.create({
   changeLocationButton: {
     paddingVertical: 6,
     paddingHorizontal: 12,
-    backgroundColor: Colors.primary + '10', // 10% opacity
+    backgroundColor: Colors.primary + '10', 
     borderRadius: Metrics.baseBorderRadius,
   },
   changeLocationText: {
@@ -935,7 +930,7 @@ const styles = StyleSheet.create({
     marginLeft: 4,
   },
   discountBadge: {
-    backgroundColor: Colors.success + '20', // 20% opacity
+    backgroundColor: Colors.success + '20', 
     paddingVertical: 2,
     paddingHorizontal: 6,
     borderRadius: Metrics.baseBorderRadius,

@@ -22,7 +22,7 @@ import Metrics from '../../themes/metrics';
 import { api } from '../../services/api';
 
 const ForgotPasswordScreen = ({ navigation }) => {
-  const [stage, setStage] = useState(1); // 1 = email, 2 = code verification, 3 = new password
+  const [stage, setStage] = useState(1); // 1 = email, 2 = verificacion del codigo, 3 = nueva contrasenia 
   const [email, setEmail] = useState('');
   const [verificationCode, setVerificationCode] = useState(['', '', '', '']);
   const [newPassword, setNewPassword] = useState('');
@@ -63,7 +63,6 @@ const ForgotPasswordScreen = ({ navigation }) => {
       
       console.log('Respuesta del servidor:', response);
       
-      // El backend retorna un string directamente si es exitoso
       if (response && (typeof response === 'string' || response.success !== false)) {
         Alert.alert(
           'Código Enviado',
@@ -82,11 +81,9 @@ const ForgotPasswordScreen = ({ navigation }) => {
     } catch (error) {
       console.error('Error sending recovery code:', error);
       
-      // Manejar diferentes tipos de errores
       let errorMessage = 'No se pudo enviar el código de recuperación.';
       
       if (error.response) {
-        // Error del servidor
         if (error.response.status === 400) {
           errorMessage = 'Email no encontrado en el sistema o usuario no habilitado.';
         } else if (error.response.status >= 500) {
@@ -95,7 +92,6 @@ const ForgotPasswordScreen = ({ navigation }) => {
           errorMessage = error.response.data || 'Error desconocido del servidor.';
         }
       } else if (error.request) {
-        // Error de red
         errorMessage = 'Error de conexión. Verifica tu internet e intenta nuevamente.';
       }
       
@@ -105,18 +101,15 @@ const ForgotPasswordScreen = ({ navigation }) => {
     }
   };
 
-  // Manejar entrada de código de verificación
   const handleCodeInput = (value, index) => {
     const newCode = [...verificationCode];
     newCode[index] = value;
     setVerificationCode(newCode);
 
-    // Auto-focus siguiente input
     if (value && index < 3) {
       inputRefs[index + 1].current?.focus();
     }
 
-    // Auto-submit cuando el código esté completo
     if (value && index === 3 && newCode.every(digit => digit !== '')) {
       handleVerifyCode(newCode.join(''));
     }
@@ -140,12 +133,11 @@ const ForgotPasswordScreen = ({ navigation }) => {
 
     setIsLoading(true);
     try {
-      console.log('🟡 Verificando código de recuperación:', { email, code });
+      console.log('Verificando código de recuperación:', { email, code });
       const response = await api.auth.verifyRecoveryCode(email, code);
       
-      console.log('🟢 Respuesta de verificación:', response);
+      console.log('Respuesta de verificación:', response);
       
-      // El backend retorna un Map<String, Object> con success y message
       if (response && response.success === true) {
         Alert.alert(
           'Código Válido',
@@ -156,12 +148,11 @@ const ForgotPasswordScreen = ({ navigation }) => {
         const errorMessage = response?.message || 'Código inválido o expirado. Verifica que hayas ingresado el código correcto y que no hayan pasado 30 minutos.';
         Alert.alert('Error', errorMessage);
         
-        // Limpiar código para permitir reintento
         setVerificationCode(['', '', '', '']);
         inputRefs[0].current?.focus();
       }
     } catch (error) {
-      console.error('🔴 Error verifying code:', error);
+      console.error('Error verifying code:', error);
       
       let errorMessage = 'No se pudo verificar el código.';
       
@@ -179,7 +170,6 @@ const ForgotPasswordScreen = ({ navigation }) => {
       
       Alert.alert('Error', errorMessage);
       
-      // Limpiar código en caso de error
       setVerificationCode(['', '', '', '']);
       inputRefs[0].current?.focus();
     } finally {
@@ -207,13 +197,12 @@ const ForgotPasswordScreen = ({ navigation }) => {
     setIsLoading(true);
     try {
       const code = verificationCode.join('');
-      console.log('🟡 Cambiando contraseña para:', email);
+      console.log('Cambiando contraseña para:', email);
       
       const response = await api.auth.changePasswordWithCode(email, code, newPassword);
       
-      console.log('🟢 Respuesta de cambio de contraseña:', response);
+      console.log('Respuesta de cambio de contraseña:', response);
       
-      // El backend retorna un Map<String, Object> con success y message
       if (response && response.success === true) {
         Alert.alert(
           '¡Contraseña Cambiada!',
@@ -228,7 +217,7 @@ const ForgotPasswordScreen = ({ navigation }) => {
         Alert.alert('Error', errorMessage);
       }
     } catch (error) {
-      console.error('🔴 Error changing password:', error);
+      console.error('Error changing password:', error);
       
       let errorMessage = 'No se pudo cambiar la contraseña.';
       
@@ -250,7 +239,6 @@ const ForgotPasswordScreen = ({ navigation }) => {
     }
   };
 
-  // Renderizar cada etapa
   const renderStageOne = () => (
     <View style={styles.formContainer}>
       <Text style={styles.title}>¿Olvidaste tu contraseña?</Text>
@@ -525,7 +513,7 @@ const styles = StyleSheet.create({
   },
   warningText: {
     fontSize: Metrics.smallFontSize,
-    color: '#FF6B35', // Color naranjo para advertencia
+    color: '#FF6B35',
     fontWeight: '500',
     textAlign: 'center',
     marginTop: Metrics.baseSpacing,

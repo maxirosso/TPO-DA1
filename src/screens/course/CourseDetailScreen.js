@@ -99,7 +99,6 @@ const CourseDetailScreen = ({ route, navigation }) => {
         { 
           text: 'Crear Cuenta', 
           onPress: () => {
-            // Navigate to registration
             navigation.navigate('ProfileTab');
           }
         }
@@ -135,7 +134,6 @@ const CourseDetailScreen = ({ route, navigation }) => {
         </Text>
       </View>
 
-      {/* Basic Course Description */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Descripción del Curso</Text>
         <Text style={styles.sectionText}>
@@ -150,7 +148,6 @@ const CourseDetailScreen = ({ route, navigation }) => {
         </TouchableOpacity>
       </View>
 
-      {/* Basic Course Details */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Información Básica</Text>
         <View style={styles.basicDetailsGrid}>
@@ -167,7 +164,6 @@ const CourseDetailScreen = ({ route, navigation }) => {
         </View>
       </View>
 
-      {/* Registration Call to Action */}
       <View style={styles.registrationCTA}>
         <Text style={styles.ctaTitle}>¿Te interesa este curso?</Text>
         <Text style={styles.ctaDescription}>
@@ -185,13 +181,11 @@ const CourseDetailScreen = ({ route, navigation }) => {
 
   const renderOverviewTab = () => (
     <View style={styles.tabContent}>
-      {/* Course Description */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Descripción del Curso</Text>
         <Text style={styles.sectionText}>{course.fullDescription}</Text>
       </View>
 
-      {/* Instructor Information */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Instructor</Text>
         <View style={styles.instructorCard}>
@@ -207,7 +201,6 @@ const CourseDetailScreen = ({ route, navigation }) => {
         </View>
       </View>
 
-      {/* Course Details */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Detalles del Curso</Text>
         <View style={styles.detailsGrid}>
@@ -234,7 +227,6 @@ const CourseDetailScreen = ({ route, navigation }) => {
         </View>
       </View>
 
-      {/* Topics */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Temas a Abordar</Text>
         {course.topics.map((topic, index) => (
@@ -245,7 +237,6 @@ const CourseDetailScreen = ({ route, navigation }) => {
         ))}
       </View>
 
-      {/* Practical Activities */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Actividades Prácticas</Text>
         {course.practicalActivities.map((activity, index) => (
@@ -260,9 +251,8 @@ const CourseDetailScreen = ({ route, navigation }) => {
 
   const renderRequirementsTab = () => (
     <View style={styles.tabContent}>
-      {/* Requirements */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Requisitos del Estudiante</Text>
+        <Text style={styles.sectionTitle}>Requisitos del Alumno</Text>
         {course.requirements.map((requirement, index) => (
           <View key={index} style={styles.requirementItem}>
             <Icon name="alert-circle" size={16} color={Colors.error} />
@@ -271,7 +261,6 @@ const CourseDetailScreen = ({ route, navigation }) => {
         ))}
       </View>
 
-      {/* Provided Materials */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Materiales Incluidos</Text>
         {course.providedMaterials.map((material, index) => (
@@ -282,7 +271,6 @@ const CourseDetailScreen = ({ route, navigation }) => {
         ))}
       </View>
 
-      {/* Instructions */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Instrucciones Importantes</Text>
         {course.instructions.map((instruction, index) => (
@@ -344,7 +332,6 @@ const CourseDetailScreen = ({ route, navigation }) => {
           </View>
         </View>
 
-        {/* Facilities */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Instalaciones</Text>
           {locationInfo.facilities.map((facility, index) => (
@@ -355,7 +342,6 @@ const CourseDetailScreen = ({ route, navigation }) => {
           ))}
         </View>
 
-        {/* QR Code Section for Enrolled Students */}
         {isEnrolled && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Registro de Asistencia</Text>
@@ -395,7 +381,6 @@ const CourseDetailScreen = ({ route, navigation }) => {
 
     return (
       <View style={styles.tabContent}>
-        {/* Enrollment Information */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Información de Inscripción</Text>
           <View style={styles.enrollmentCard}>
@@ -424,7 +409,6 @@ const CourseDetailScreen = ({ route, navigation }) => {
           </View>
         </View>
 
-        {/* Progress Information */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Progreso del Curso</Text>
           <View style={styles.progressCard}>
@@ -454,7 +438,6 @@ const CourseDetailScreen = ({ route, navigation }) => {
           </View>
         </View>
 
-        {/* Attendance Record */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Registro de Asistencia</Text>
           {enrollment.attendanceRecord.map((record, index) => (
@@ -482,7 +465,6 @@ const CourseDetailScreen = ({ route, navigation }) => {
           ))}
         </View>
 
-        {/* Account Balance */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Estado de Cuenta</Text>
           <View style={styles.accountCard}>
@@ -503,7 +485,6 @@ const CourseDetailScreen = ({ route, navigation }) => {
     <SafeAreaView style={styles.container} edges={['top']}>
       <StatusBar backgroundColor={Colors.gradientStart} barStyle="dark-content" />
       
-      {/* Header */}
       <LinearGradient
         colors={[Colors.gradientStart, Colors.gradientEnd]}
         style={styles.headerContainer}
@@ -519,7 +500,6 @@ const CourseDetailScreen = ({ route, navigation }) => {
         </View>
       </LinearGradient>
 
-      {/* Course Image and Basic Info */}
       <View style={styles.courseImageContainer}>
         <Image
           source={{ uri: course.imageUrl }}
@@ -540,7 +520,6 @@ const CourseDetailScreen = ({ route, navigation }) => {
         </LinearGradient>
       </View>
 
-      {/* Tabs */}
       <View style={styles.tabsContainer}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
           {renderTabButton('overview', 'Resumen', 'book-open')}
@@ -550,7 +529,6 @@ const CourseDetailScreen = ({ route, navigation }) => {
         </ScrollView>
       </View>
 
-      {/* Tab Content */}
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {activeTab === 'overview' && (isVisitor ? renderVisitorOverviewTab() : renderOverviewTab())}
         {activeTab === 'requirements' && (isVisitor ? renderVisitorOverviewTab() : renderRequirementsTab())}

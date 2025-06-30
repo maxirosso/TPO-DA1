@@ -159,7 +159,6 @@ const UpgradeToStudentScreen = ({ navigation, route }) => {
       return;
     }
 
-    // Verificar que tenemos un userId válido o email
     if (!userId || userId === 'undefined' || userId === null) {
       Alert.alert('Error', 'No se pudo identificar el usuario. Por favor, inicia sesión nuevamente.');
       return;
@@ -167,17 +166,15 @@ const UpgradeToStudentScreen = ({ navigation, route }) => {
 
     setLoading(true);
     try {
-      // Si el userId no es un número, usar el email del usuario
       let identifierToUse = userId;
       if (isNaN(parseInt(userId))) {
         identifierToUse = userEmail || userId;
-        console.log('🔄 Using email as identifier:', identifierToUse);
+        console.log('Using email as identifier:', identifierToUse);
       }
       
-      console.log('🚀 Sending upgrade request with identifier:', identifierToUse);
+      console.log('Sending upgrade request with identifier:', identifierToUse);
       const result = await dataService.upgradeToStudent(identifierToUse, formData);
       
-      // Actualizar el tipo de usuario en el contexto y salir del modo visitante
       if (user) {
         const updatedUser = {
           ...user,
@@ -186,7 +183,6 @@ const UpgradeToStudentScreen = ({ navigation, route }) => {
         setUser(updatedUser);
       }
       
-      // Salir del modo visitante para que pueda acceder como alumno
       exitVisitorMode();
       
       Alert.alert(
@@ -196,7 +192,6 @@ const UpgradeToStudentScreen = ({ navigation, route }) => {
           {
             text: 'Continuar',
             onPress: () => {
-              // Navegar al home como alumno
               navigation.reset({
                 index: 0,
                 routes: [{ name: 'HomeTab' }],

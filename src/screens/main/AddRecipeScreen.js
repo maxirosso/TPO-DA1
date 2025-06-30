@@ -31,11 +31,9 @@ import dataService from '../../services/dataService';
 const AddRecipeScreen = ({ navigation, route }) => {
   const { isVisitor, user } = useContext(AuthContext);
   
-  // Obtener parámetros de edición desde la navegación
   const editingRecipe = route?.params?.editingRecipe;
   const isEditing = route?.params?.isEditing || false;
   
-  // Redirigir visitantes al registro
   useEffect(() => {
     if (isVisitor) {
       Alert.alert(
@@ -51,7 +49,6 @@ const AddRecipeScreen = ({ navigation, route }) => {
     }
   }, [isVisitor, navigation]);
   
-     // Función para limpiar completamente el formulario
    const clearAllFields = () => {
      console.log('Limpiando todos los campos del formulario');
      
@@ -67,7 +64,6 @@ const AddRecipeScreen = ({ navigation, route }) => {
      setIsTitleValid(true);
      setTitleError('');
      
-     // Establecer tipo por defecto si hay tipos disponibles
      if (recipeTypes.length > 0) {
        setSelectedRecipeType(recipeTypes[0]);
      } else {
@@ -75,31 +71,25 @@ const AddRecipeScreen = ({ navigation, route }) => {
      }
    };
 
-   // Función para manejar el botón de atrás
    const handleBackPress = () => {
      if (isEditing) {
        console.log('Saliendo del modo edición hacia AddTab limpio');
-       // Si estamos editando, ir a AddTab con campos limpios
        navigation.navigate('AddTab', {
          editingRecipe: undefined,
          isEditing: false,
          onRecipeUpdated: undefined
        });
      } else {
-       // Si no estamos editando, comportamiento normal
        navigation.goBack();
      }
    };
 
-  // Limpiar campos cada vez que se entra en la vista
   useFocusEffect(
     React.useCallback(() => {
-      // Solo limpiar si no estamos en modo edición
       if (!isEditing) {
         console.log('Limpiando campos de AddRecipeScreen al entrar en la vista');
         clearAllFields();
         
-        // Limpiar parámetros de navegación para evitar persistencia
         if (route.params && (route.params.editingRecipe || route.params.isEditing)) {
           navigation.setParams({
             editingRecipe: undefined,
@@ -111,7 +101,6 @@ const AddRecipeScreen = ({ navigation, route }) => {
     }, [isEditing, recipeTypes, navigation, route.params])
   );
 
-  // Si es visitante, no renderizar el contenido de la pantalla
   if (isVisitor) {
     return null;
   }
@@ -131,7 +120,6 @@ const AddRecipeScreen = ({ navigation, route }) => {
   const [isTitleValid, setIsTitleValid] = useState(true);
   const [titleError, setTitleError] = useState('');
 
-  // Unidades de medida disponibles según la tabla
   const unidadesMedida = [
     { id: 1, descripcion: 'gramos' },
     { id: 2, descripcion: 'Unidades' },
@@ -139,25 +127,21 @@ const AddRecipeScreen = ({ navigation, route }) => {
     { id: 4, descripcion: 'tazas' }
   ];
 
-  // Cargar datos de receta si está en modo edición
   useEffect(() => {
     if (isEditing && editingRecipe) {
       loadExistingRecipe(editingRecipe);
     }
   }, [isEditing, editingRecipe]);
 
-  // Cargar tipos de receta desde el backend
   useEffect(() => {
     loadRecipeTypes();
   }, []);
 
-  // Detectar cuando se regresa del modo edición y limpiar campos
   useEffect(() => {
     if (!isEditing && route.params?.isEditing === false) {
       console.log('Regresando del modo edición, limpiando campos...');
       clearAllFields();
       
-      // Limpiar parámetros de navegación
       navigation.setParams({
         editingRecipe: undefined,
         isEditing: undefined,
@@ -174,13 +158,11 @@ const AddRecipeScreen = ({ navigation, route }) => {
       console.log('Tipos de receta cargados:', types);
       setRecipeTypes(types);
       
-      // Establecer tipo por defecto si ninguno está seleccionado
       if (types.length > 0 && !selectedRecipeType) {
         setSelectedRecipeType(types[0]);
       }
     } catch (error) {
       console.error('Error al cargar tipos de receta:', error);
-      // Alternativa a un tipo por defecto
       const defaultTypes = [{ idTipo: 1, descripcion: 'Postres' }];
       setRecipeTypes(defaultTypes);
       setSelectedRecipeType(defaultTypes[0]);
@@ -279,7 +261,6 @@ const AddRecipeScreen = ({ navigation, route }) => {
   const loadExistingRecipe = async (recipe) => {
     console.log('Cargando receta existente:', JSON.stringify(recipe, null, 2));
     
-    // Cargar multimedia de la receta si está disponible
     let multimedia = [];
     try {
       const recipeId = recipe.id || recipe.idReceta;
@@ -298,11 +279,9 @@ const AddRecipeScreen = ({ navigation, route }) => {
     setServings(recipe.servings?.toString() || recipe.porciones?.toString() || '');
     setRecipeImage(recipe.imageUrl || recipe.fotoPrincipal);
     
-    // Manejar ingredientes
     if (recipe.ingredients && Array.isArray(recipe.ingredients)) {
       console.log('Cargando ingredientes del formato frontend:', JSON.stringify(recipe.ingredients));
       const formattedIngredients = recipe.ingredients.map(ing => {
-        // Extraer cantidad y unidad desde 'amount' si existe
         let quantity = '';
         let name = '';
         let unit = 'gramos';
@@ -316,7 +295,6 @@ const AddRecipeScreen = ({ navigation, route }) => {
         }
         
         if (ing.amount && typeof ing.amount === 'string') {
-          // Intentar extraer cantidad y unidad desde el formato "X unidad"
           const match = ing.amount.match(/^(\d*\.?\d+)\s*(.*)$/);
           if (match) {
             quantity = match[1];
@@ -365,11 +343,9 @@ const AddRecipeScreen = ({ navigation, route }) => {
       
       setIngredients(formattedIngredients);
     } else {
-      // Si no hay ingredientes, inicializar con uno vacío
       setIngredients([{ quantity: '', name: '', unit: 'gramos' }]);
     }
     
-    // Manejar instrucciones
     let processedInstructions = [];
     if (recipe.instructions && Array.isArray(recipe.instructions)) {
       processedInstructions = recipe.instructions.map(inst => ({
@@ -395,11 +371,10 @@ const AddRecipeScreen = ({ navigation, route }) => {
       }
     }
     
-    // Aplicar fotos de multimedia a las instrucciones si están disponibles
     if (multimedia && Array.isArray(multimedia)) {
       const fotosInstrucciones = multimedia.filter(media => media.idPaso !== null);
       fotosInstrucciones.forEach(foto => {
-        const pasoIndex = foto.idPaso - 1; // Los pasos empiezan en 1, los arrays en 0
+        const pasoIndex = foto.idPaso - 1; 
         if (pasoIndex >= 0 && pasoIndex < processedInstructions.length) {
           processedInstructions[pasoIndex].image = foto.urlContenido;
         }
@@ -408,12 +383,10 @@ const AddRecipeScreen = ({ navigation, route }) => {
     
     setInstructions(processedInstructions);
     
-    // Manejar tipo de receta - preferir objeto de tipo real sobre categorías
     if (recipe.tipo || recipe.tipoReceta) {
       const recipeTypeFromData = recipe.tipo || recipe.tipoReceta;
       console.log('Tipo de receta desde datos:', recipeTypeFromData);
       
-      // Establecer el tipo de receta seleccionado basado en los datos
       setTimeout(() => {
         if (recipeTypes.length > 0) {
           const matchingType = recipeTypes.find(type => 
@@ -424,13 +397,12 @@ const AddRecipeScreen = ({ navigation, route }) => {
             setSelectedRecipeType(matchingType);
           }
         }
-      }, 100); // Pequeño retraso para asegurar que recipeTypes esté cargado
+      }, 100); 
     }
   };
 
   const updateRecipe = async (recipeData) => {
     try {
-      // Obtener datos del usuario actual
       const currentUser = user || await getCurrentUser();
       
       if (!currentUser || !currentUser.idUsuario) {
@@ -438,33 +410,26 @@ const AddRecipeScreen = ({ navigation, route }) => {
         return;
       }
 
-      // Validar ID de receta
       const recipeId = editingRecipe.id || editingRecipe.idReceta;
       if (!recipeId) {
         Alert.alert('Error', 'ID de receta no válido');
         return;
       }
 
-      // Asegurar que los ingredientes estén correctamente formateados para actualización
       console.log('Ingredientes originales:', JSON.stringify(recipeData.ingredients));
       
-      // Formatear adecuadamente la receta con todos los datos necesarios
       const completeRecipeData = {
         ...recipeData,
         tipoReceta: selectedRecipeType,
-        // Asegurar que los ingredientes tienen los campos requeridos
         ingredients: recipeData.ingredients.map(ing => ({
           name: ing.name.trim(),
           quantity: ing.quantity || '1',
           unit: ing.unit || 'unidad'
         })),
-        // Agregar fotos adicionales para guardar en multimedia
         fotos: [],
-        // Agregar fotos de instrucciones/pasos
         fotosInstrucciones: []
       };
 
-      // Recopilar fotos adicionales (si hubiera alguna foto principal adicional)
       if (recipeData.imageUrl) {
         completeRecipeData.fotos.push({
           url: recipeData.imageUrl,
@@ -473,7 +438,6 @@ const AddRecipeScreen = ({ navigation, route }) => {
         });
       }
 
-      // Recopilar fotos de instrucciones/pasos
       recipeData.instructions.forEach((instruction, index) => {
         if (instruction.image) {
           completeRecipeData.fotosInstrucciones.push({
@@ -489,14 +453,12 @@ const AddRecipeScreen = ({ navigation, route }) => {
       console.log('Fotos adicionales:', completeRecipeData.fotos);
       console.log('Fotos de instrucciones:', completeRecipeData.fotosInstrucciones);
 
-      // Usar el método centralizado para actualizar la receta
       const result = await dataService.updateUserRecipe(
         recipeId, 
         completeRecipeData, 
         currentUser.idUsuario
       );
       
-      // Ejecutar el callback onRecipeUpdated si existe
       const onRecipeUpdated = route.params?.onRecipeUpdated;
       
       if (result.success) {
@@ -506,11 +468,9 @@ const AddRecipeScreen = ({ navigation, route }) => {
           [{ 
             text: 'OK', 
             onPress: () => {
-              // Llamar al callback si existe
               if (typeof onRecipeUpdated === 'function') {
                 onRecipeUpdated();
               }
-              // Navegar a la pantalla principal
               navigation.navigate('HomeTab');
             } 
           }]
@@ -520,7 +480,6 @@ const AddRecipeScreen = ({ navigation, route }) => {
       }
     } catch (error) {
       console.error('Error al actualizar receta:', error);
-      // Mostrar mensaje de error más específico
       let errorMessage = 'No se pudo actualizar la receta';
       if (error.message && typeof error.message === 'string') {
         if (error.message.includes('403') || error.message.includes('Forbidden')) {
@@ -540,7 +499,6 @@ const AddRecipeScreen = ({ navigation, route }) => {
 
   const getCurrentUser = async () => {
     try {
-      // Intentar diferentes claves de almacenamiento posibles
       let userData = await AsyncStorage.getItem('user_data');
       if (!userData) {
         userData = await AsyncStorage.getItem('user');
@@ -562,7 +520,6 @@ const AddRecipeScreen = ({ navigation, route }) => {
     try {
       const netInfo = await NetInfo.fetch();
       
-      // Verificar si está conectado
       if (!netInfo.isConnected) {
         Alert.alert(
           'Sin Conexión',
@@ -572,7 +529,6 @@ const AddRecipeScreen = ({ navigation, route }) => {
         return 'offline';
       }
 
-      // Verificar tipo de conexión
       const connectionType = netInfo.type;
       const isWiFi = connectionType === 'wifi';
       
@@ -613,7 +569,7 @@ const AddRecipeScreen = ({ navigation, route }) => {
         id: Date.now().toString(),
         status: 'pending_upload',
         createdAt: new Date().toISOString(),
-        tipoReceta: selectedRecipeType, // Guardar el tipo de receta seleccionado
+        tipoReceta: selectedRecipeType, 
       };
       
       recipes.push(newRecipe);
@@ -634,7 +590,6 @@ const AddRecipeScreen = ({ navigation, route }) => {
 
   const uploadRecipe = async (recipeData) => {
     try {
-      // Obtener datos del usuario actual
       const currentUser = user || await getCurrentUser();
       
       if (!currentUser || !currentUser.idUsuario) {
@@ -642,23 +597,20 @@ const AddRecipeScreen = ({ navigation, route }) => {
         return;
       }
 
-      // Mapear datos de receta del frontend al formato del backend
       const backendRecipeData = {
         nombreReceta: recipeData.title.trim(),
         descripcionReceta: recipeData.description.trim(),
-        fotoPrincipal: recipeData.imageUrl, // Enviar como URL directamente
+        fotoPrincipal: recipeData.imageUrl,
         porciones: parseInt(recipeData.servings) || 1,
         cantidadPersonas: parseInt(recipeData.servings) || 1,
         instrucciones: recipeData.instructions.map(inst => inst.text).join('\n'),
-        fecha: new Date().toISOString().split('T')[0], // Fecha actual en formato YYYY-MM-DD
+        fecha: new Date().toISOString().split('T')[0], 
         autorizada: false, // Siempre falso para recetas nuevas que requieren aprobación
         usuario: {
           idUsuario: currentUser.idUsuario
         },
-        idTipo: selectedRecipeType, // Enviar el objeto completo
-        // Ingredientes mapeados correctamente al formato del backend
+        idTipo: selectedRecipeType, 
         ingredientes: recipeData.ingredients.map((ing, index) => {
-          // Analizar cantidad de forma más segura
           const amountText = ing.amount || '1 unidad';
           const match = amountText.match(/^(\d*\.?\d+)\s*(.*)$/);
           
@@ -667,7 +619,6 @@ const AddRecipeScreen = ({ navigation, route }) => {
           
           if (match) {
             cantidad = parseFloat(match[1]) || 1;
-            // Solo usar la unidad del texto si no hay una unidad seleccionada
             if (!ing.unit && match[2].trim()) {
               unidadMedida = match[2].trim();
             }
@@ -679,13 +630,10 @@ const AddRecipeScreen = ({ navigation, route }) => {
             unidadMedida: unidadMedida
           };
         }),
-        // Agregar fotos adicionales para guardar en multimedia
         fotos: [],
-        // Agregar fotos de instrucciones/pasos
         fotosInstrucciones: []
       };
 
-      // Recopilar fotos adicionales (si hubiera alguna foto principal adicional)
       if (recipeData.imageUrl) {
         backendRecipeData.fotos.push({
           url: recipeData.imageUrl,
@@ -694,7 +642,6 @@ const AddRecipeScreen = ({ navigation, route }) => {
         });
       }
 
-      // Recopilar fotos de instrucciones/pasos
       recipeData.instructions.forEach((instruction, index) => {
         if (instruction.image) {
           backendRecipeData.fotosInstrucciones.push({
@@ -713,22 +660,18 @@ const AddRecipeScreen = ({ navigation, route }) => {
       let response;
       
       try {
-        // Usar el método simple que no tiene problemas de autenticación
         response = await api.recipes.createSimple(backendRecipeData);
       } catch (primaryError) {
         console.log('Falló el endpoint simple, intentando alternativa:', primaryError.message);
         try {
-          // Intentar endpoint principal como segunda opción
           response = await api.recipes.create(backendRecipeData);
         } catch (secondaryError) {
           console.log('Falló el endpoint principal, intentando último recurso:', secondaryError.message);
-          // Intentar endpoint alternativo como último recurso
           response = await api.recipes.createAlternative(backendRecipeData);
         }
       }
 
       if (response.success || response.data) {
-        // Limpiar campos después de guardar exitosamente
         clearAllFields();
         
         Alert.alert(
@@ -744,7 +687,6 @@ const AddRecipeScreen = ({ navigation, route }) => {
       console.error('Error al subir la receta:', error);
       let errorMessage = 'No se pudo subir la receta.';
       
-      // Proporcionar mensajes de error más específicos
       if (error.message.includes('400')) {
         errorMessage = 'Datos de receta inválidos. Verifica que todos los campos estén completos.';
       } else if (error.message.includes('401')) {
@@ -760,20 +702,16 @@ const AddRecipeScreen = ({ navigation, route }) => {
     }
   };
 
-  // Verificar si el nombre de la receta ya existe y retornar la receta existente
   const checkRecipeTitleExists = async (title) => {
     try {
       if (!title.trim() || isEditing) return null;
       
-      // Obtener el usuario actual
       const currentUser = user || await getCurrentUser();
       if (!currentUser || !currentUser.idUsuario) return null;
 
       try {
-        // Buscar recetas con nombre similar
         const { data } = await api.recipes.getByName(title.trim());
         
-        // Filtrar solo recetas del usuario actual con nombre exacto
         const matchingRecipes = Array.isArray(data) ? data.filter(r => 
           r.usuario && 
           r.usuario.idUsuario === currentUser.idUsuario && 
@@ -782,11 +720,9 @@ const AddRecipeScreen = ({ navigation, route }) => {
 
         return matchingRecipes.length > 0 ? matchingRecipes[0] : null;
       } catch (error) {
-        // Si es un error 404, significa que no hay recetas con ese nombre
         if (error.message && error.message.includes('404')) {
           return null;
         }
-        // Para otros errores, lanzamos el error para manejarlo en el catch externo
         throw error;
       }
     } catch (error) {
@@ -795,12 +731,10 @@ const AddRecipeScreen = ({ navigation, route }) => {
     }
   };
 
-  // Manejar cambios en el título
   const handleTitleChange = (newTitle) => {
     setTitle(newTitle);
     
     if (newTitle.trim().length > 0) {
-      // Verificar después de un breve retraso para evitar demasiadas consultas
       setTimeout(async () => {
         const existingRecipe = await checkRecipeTitleExists(newTitle);
         setIsTitleValid(!existingRecipe);
@@ -816,7 +750,6 @@ const AddRecipeScreen = ({ navigation, route }) => {
     }
   };
 
-  // Función para reemplazar receta existente
   const replaceExistingRecipe = async (existingRecipe, newRecipeData) => {
     try {
       const currentUser = user || await getCurrentUser();
@@ -826,7 +759,6 @@ const AddRecipeScreen = ({ navigation, route }) => {
         return;
       }
 
-      // Primero eliminar la receta existente
       console.log('Eliminando receta existente:', existingRecipe.idReceta);
       const deleteResult = await dataService.deleteUserRecipe(existingRecipe.idReceta, currentUser.idUsuario);
       
@@ -835,11 +767,9 @@ const AddRecipeScreen = ({ navigation, route }) => {
         return;
       }
 
-             // Luego crear la nueva receta
        console.log('Creando nueva receta para reemplazar...');
        await uploadRecipe(newRecipeData);
        
-       // Limpiar campos después de reemplazar exitosamente
        clearAllFields();
        
      } catch (error) {
@@ -848,9 +778,7 @@ const AddRecipeScreen = ({ navigation, route }) => {
      }
    };
 
-  // Función para editar receta existente
   const editExistingRecipe = (existingRecipe) => {
-    // Mapear la receta del backend al formato del frontend
     const mappedRecipe = {
       id: existingRecipe.idReceta,
       idReceta: existingRecipe.idReceta,
@@ -878,19 +806,16 @@ const AddRecipeScreen = ({ navigation, route }) => {
       usuario: existingRecipe.usuario
     };
 
-    // Navegar a la pantalla de edición
     navigation.navigate('AddTab', {
       editingRecipe: mappedRecipe,
       isEditing: true,
       onRecipeUpdated: () => {
-        // Callback para recargar datos si es necesario
         navigation.navigate('HomeTab');
       }
     });
   };
 
   const handleSaveRecipe = async () => {
-    // Validación
     if (!title.trim()) {
       Alert.alert('Error', 'El título de la receta es obligatorio');
       return;
@@ -913,7 +838,6 @@ const AddRecipeScreen = ({ navigation, route }) => {
 
     setIsLoading(true);
 
-    // Debug de ingredientes
     console.log('Ingredientes actuales en handleSaveRecipe:', JSON.stringify(ingredients));
 
     const recipeData = {
@@ -940,16 +864,13 @@ const AddRecipeScreen = ({ navigation, route }) => {
 
     try {
       if (isEditing && editingRecipe) {
-        // Actualizar receta existente
         await updateRecipe(recipeData);
       } else {
-        // Verificar si el nombre ya existe antes de crear nueva receta
         const existingRecipe = await checkRecipeTitleExists(recipeData.title);
         
         if (existingRecipe) {
           setIsLoading(false);
           
-          // Mostrar diálogo con opciones
           Alert.alert(
             'Receta Existente',
             `Ya tienes una receta llamada "${recipeData.title}". ¿Qué deseas hacer?`,
@@ -979,7 +900,6 @@ const AddRecipeScreen = ({ navigation, route }) => {
           return;
         }
 
-        // Si no existe receta con ese nombre, continuar con el flujo normal
         const networkStatus = await checkNetworkCost();
 
         switch (networkStatus) {
@@ -1219,7 +1139,6 @@ const AddRecipeScreen = ({ navigation, route }) => {
                   </TouchableOpacity>
                 </View>
 
-                {/* Controles de imagen para el paso */}
                 <View style={styles.instructionImageControls}>
                   {instruction.image ? (
                     <View style={styles.instructionImagePreview}>
@@ -1261,7 +1180,6 @@ const AddRecipeScreen = ({ navigation, route }) => {
         </ScrollView>
       </KeyboardAvoidingView>
 
-      {/* Modal selector de unidades */}
       <Modal
         animationType="slide"
         transparent={true}
@@ -1614,7 +1532,7 @@ const styles = StyleSheet.create({
 
     instructionImageControls: {
     marginTop: Metrics.baseSpacing,
-    marginLeft: 34, // Alinear con el texto de la instrucción
+    marginLeft: 34, 
   },
   instructionImagePreview: {
     position: 'relative',

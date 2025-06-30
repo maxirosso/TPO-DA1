@@ -30,7 +30,6 @@ const MyCoursesScreen = ({ navigation }) => {
   const [error, setError] = useState(null);
   const [accountBalance, setAccountBalance] = useState(0);
 
-  // 🔄 Se ejecuta cada vez que la pantalla gana el foco (cuando entras a la vista)
   useFocusEffect(
     useCallback(() => {
       console.log('🔄 MyCoursesScreen focused - Recargando cursos...');
@@ -38,22 +37,21 @@ const MyCoursesScreen = ({ navigation }) => {
     }, [])
   );
 
-  // Función para cargar la cuenta corriente del usuario
   const loadUserAccountBalance = async (userId) => {
     try {
-      console.log('🏦 Cargando cuenta corriente para usuario:', userId);
+      console.log('Cargando cuenta corriente para usuario:', userId);
       const alumnoData = await dataService.getAlumnoById(userId);
       
       if (alumnoData && (alumnoData.accountBalance !== undefined || alumnoData.cuentaCorriente !== undefined)) {
         const balance = alumnoData.accountBalance !== undefined ? alumnoData.accountBalance : alumnoData.cuentaCorriente;
-        console.log('✅ Cuenta corriente cargada desde backend:', balance);
+        console.log('Cuenta corriente cargada desde backend:', balance);
         setAccountBalance(Number(balance) || 0);
       } else {
-        console.log('⚠️ No se encontró información de cuenta corriente');
+        console.log('No se encontró información de cuenta corriente');
         setAccountBalance(0);
       }
     } catch (error) {
-      console.error('❌ Error cargando cuenta corriente:', error);
+      console.error('Error cargando cuenta corriente:', error);
       setAccountBalance(0);
     }
   };
@@ -74,60 +72,55 @@ const MyCoursesScreen = ({ navigation }) => {
         userType = parsed.tipo;
       }
       
-      console.log('👤 Usuario ID para cargar mis cursos:', userId);
-      console.log('👤 Tipo de usuario:', userType);
+      console.log('Usuario ID para cargar mis cursos:', userId);
+      console.log('Tipo de usuario:', userType);
       
       if (!userId) throw new Error('Usuario no autenticado');
       
-      // Verificar si el usuario es alumno
       if (userType && userType !== 'alumno') {
-        console.log('⚠️ Usuario no es alumno, tipo:', userType);
+        console.log('Usuario no es alumno, tipo:', userType);
         setError('Para ver cursos debes estar registrado como alumno. Ve a "Actualizar a Alumno" en tu perfil.');
         setEnrolledCourses([]);
         setUpcomingCourses([]);
         return;
       }
       
-      console.log('🎓 Cargando cursos del usuario...');
+      console.log('Cargando cursos del usuario...');
       const userCourses = await dataService.getUserCourses(userId);
-      console.log('✅ Cursos del usuario recibidos:', userCourses.length);
+      console.log('Cursos del usuario recibidos:', userCourses.length);
       
-      // Debug adicional si no hay cursos
       if (userCourses.length === 0) {
-        console.log('🔍 === DEBUG: No hay cursos ===');
-        console.log('🔍 Ejecutando debug de conexión...');
+        console.log('=== DEBUG: No hay cursos ===');
+        console.log('Ejecutando debug de conexión...');
         const debugResult = await dataService.debugConnection();
-        console.log('🔍 Resultado debug:', debugResult);
+        console.log('Resultado debug:', debugResult);
       }
       
       if (userCourses.length === 0) {
-        console.log('📭 No hay cursos para este alumno');
+        console.log(' No hay cursos para este alumno');
         setError('No tienes cursos inscriptos. Explora los cursos disponibles para inscribirte.');
         setEnrolledCourses([]);
         setUpcomingCourses([]);
         return;
       }
       
-      // Filtrar cursos por estado (solo inscripciones activas deberían venir del backend)
       const activeCourses = userCourses.filter(c => c.status === 'active' || c.status === 'upcoming' || c.status === 'completed');
       const upcomingCourses = userCourses.filter(c => c.status === 'upcoming');
       
-      console.log('📋 Cursos activos filtrados:', activeCourses.length);
-      console.log('📅 Cursos próximos filtrados:', upcomingCourses.length);
+      console.log('Cursos activos filtrados:', activeCourses.length);
+      console.log('Cursos próximos filtrados:', upcomingCourses.length);
       
       setEnrolledCourses(activeCourses);
       setUpcomingCourses(upcomingCourses);
       
-      // Limpiar error si hay cursos
       if (activeCourses.length > 0) {
         setError(null);
       }
       
-      console.log('🎉 Carga de mis cursos completada exitosamente');
+      console.log('Carga de mis cursos completada exitosamente');
     } catch (err) {
-      console.error('❌ Error al cargar mis cursos:', err);
+      console.error('Error al cargar mis cursos:', err);
       
-      // Mensajes de error más específicos
       if (err.message.includes('no autenticado')) {
         setError('Debes iniciar sesión para ver tus cursos.');
       } else if (err.message.includes('Network Error') || err.message.includes('connect')) {
@@ -194,7 +187,6 @@ const MyCoursesScreen = ({ navigation }) => {
   };
 
   const handleAttendanceQR = (course) => {
-    // Navegar solo si el id del curso es válido
     if (!course.id) {
       Alert.alert('Error', 'No se puede registrar asistencia porque el curso no tiene un identificador válido.');
       return;
@@ -207,9 +199,8 @@ const MyCoursesScreen = ({ navigation }) => {
     console.log('Course data:', course);
     console.log('idInscripcion:', course.idInscripcion);
     
-    // Verificar que el curso tenga un ID de inscripción válido
     if (!course.idInscripcion) {
-      console.error('❌ No se encontró idInscripcion en el curso');
+      console.error('No se encontró idInscripcion en el curso');
       Alert.alert('Error', 'No se puede cancelar la inscripción porque no se encontró el ID de inscripción.');
       return;
     }
@@ -234,7 +225,7 @@ const MyCoursesScreen = ({ navigation }) => {
     } else {
       refundPercentage = 0;
       refundMessage = 'Sin reembolso';
-      warningMessage = '\n⚠️ ATENCIÓN: El curso ya ha iniciado. No recibirás reembolso, pero podrás darte de baja si es necesario.';
+      warningMessage = '\nATENCIÓN: El curso ya ha iniciado. No recibirás reembolso, pero podrás darte de baja si es necesario.';
     }
     
     console.log('Días hasta inicio:', daysDifference);
@@ -255,13 +246,12 @@ const MyCoursesScreen = ({ navigation }) => {
           text: 'Sí, Cancelar',
           style: 'destructive',
           onPress: async () => {
-            console.log('✅ Iniciando cancelación...');
+            console.log('Iniciando cancelación...');
             try {
               setLoading(true);
               const result = await dataService.cancelEnrollment(course.idInscripcion, true);
-              console.log('✅ Resultado de cancelación:', result);
+              console.log('Resultado de cancelación:', result);
               
-              // Mensaje de confirmación personalizado según el escenario
               let confirmationMessage = '';
               if (daysDifference < 0) {
                 confirmationMessage = `Has cancelado tu inscripción al curso "${course.title}".\n\nAunque el curso ya había iniciado, tu cancelación ha sido procesada sin reembolso. Esperamos que encuentres otro curso que se ajuste mejor a tus necesidades.`;
@@ -271,7 +261,6 @@ const MyCoursesScreen = ({ navigation }) => {
                 confirmationMessage = `Has cancelado tu inscripción al curso "${course.title}".\n\nSe ha iniciado el proceso de reembolso del ${refundPercentage}% del valor del curso. El reintegro ha sido acreditado automáticamente en tu cuenta corriente.`;
               }
               
-              // Refrescar el saldo desde el backend si el usuario está disponible
               const userId = user?.id || user?.idUsuario;
               if (userId && refundPercentage > 0) {
                 await loadUserAccountBalance(parseInt(userId, 10));
@@ -284,14 +273,13 @@ const MyCoursesScreen = ({ navigation }) => {
                   {
                     text: 'OK',
                     onPress: () => {
-                      // Recargar la lista de cursos después de cerrar el alert
-                      loadCourses(false); // Recarga silenciosa después de cancelar
+                      loadCourses(false); 
                     }
                   }
                 ]
               );
             } catch (error) {
-              console.error('❌ Error al cancelar inscripción:', error);
+              console.error('Error al cancelar inscripción:', error);
               Alert.alert('Error', `No se pudo cancelar la inscripción: ${error.message || 'Error desconocido'}`);
             } finally {
               setLoading(false);
@@ -652,7 +640,6 @@ const MyCoursesScreen = ({ navigation }) => {
         data={getFilteredCourses()}
         renderItem={renderCourseItem}
         keyExtractor={(item, index) => {
-          // Crear una key única combinando múltiples campos
           const id = item.id || item.idCurso || item.idCronograma || item.idInscripcion;
           return `course_${id}_${item.title}_${index}`;
         }}
@@ -662,7 +649,6 @@ const MyCoursesScreen = ({ navigation }) => {
           <View style={styles.emptyContainer}>
             <Icon name="book-open" size={60} color={Colors.textLight} />
             
-            {/* Mostrar mensaje específico según el error */}
             {error ? (
               <>
                 <Text style={styles.emptyTitle}>
@@ -672,7 +658,6 @@ const MyCoursesScreen = ({ navigation }) => {
                   {error}
                 </Text>
                 
-                {/* Botón específico según el tipo de error */}
                 {error.includes('alumno') ? (
                   <Button
                     title="Actualizar a Alumno"
@@ -803,10 +788,10 @@ const styles = StyleSheet.create({
     marginLeft: Metrics.baseSpacing,
   },
   passedBadge: {
-    backgroundColor: Colors.success + '20', // 20% opacity
+    backgroundColor: Colors.success + '20',
   },
   failedBadge: {
-    backgroundColor: Colors.error + '20', // 20% opacity
+    backgroundColor: Colors.error + '20', 
   },
   statusText: {
     fontSize: Metrics.smallFontSize,
@@ -826,7 +811,7 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   nextSessionContainer: {
-    backgroundColor: Colors.primary + '10', // 10% opacity
+    backgroundColor: Colors.primary + '10', 
     padding: Metrics.baseSpacing,
     borderRadius: Metrics.baseBorderRadius,
     marginBottom: Metrics.baseSpacing,
@@ -920,7 +905,7 @@ const styles = StyleSheet.create({
   upcomingInfoContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.primary + '10', // 10% opacity
+    backgroundColor: Colors.primary + '10', 
     padding: Metrics.baseSpacing,
     borderRadius: Metrics.baseBorderRadius,
     marginBottom: Metrics.mediumSpacing,

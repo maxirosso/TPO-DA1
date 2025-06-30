@@ -135,7 +135,7 @@ export const validarNumeroTramite = (numeroTramite) => {
 };
 
 /**
- * Valida todos los datos de registro de estudiante
+ * Valida todos los datos de registro de alumno
  */
 export const validarDatosRegistroEstudiante = (datos) => {
   const errores = [];

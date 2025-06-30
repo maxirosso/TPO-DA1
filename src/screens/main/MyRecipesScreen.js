@@ -36,7 +36,6 @@ const MyRecipesScreen = ({ navigation }) => {
     loadCurrentUser();
   }, []);
 
-  // Cargar recetas cuando la pantalla recibe el foco
   useFocusEffect(
     React.useCallback(() => {
       loadMyRecipes();
@@ -54,10 +53,8 @@ const MyRecipesScreen = ({ navigation }) => {
     }
   };
 
-  // Verificar si el usuario actual puede aprobar recetas (empresa/admin)
   const canApproveRecipes = () => {
     if (!currentUser) return false;
-    // Permitir acceso de administrador para representantes de empresas 
     return currentUser.tipo === 'empresa';
   };
 
@@ -65,7 +62,6 @@ const MyRecipesScreen = ({ navigation }) => {
     setLoading(true);
     setError(null);
     try {
-      // Obtener datos del usuario actual
       let currentUser = null;
       const userData = await AsyncStorage.getItem('user_data');
       if (userData) {
@@ -78,19 +74,16 @@ const MyRecipesScreen = ({ navigation }) => {
         return;
       }
 
-      // Usar el endpoint específico para obtener las recetas propias del usuario (incluyendo pendientes)
       const userId = currentUser.idUsuario || currentUser.id;
       let userRecipes = [];
       
       try {
-        // Intentar primero con el endpoint dedicado de recetas de usuario
         const userRecipesResponse = await dataService.getUserRecipes ? 
           await dataService.getUserRecipes(userId) : 
           await api.recipes.getByUser(userId);
         userRecipes = userRecipesResponse || [];
       } catch (error) {
         console.log('Error al obtener recetas de usuario por ID, intentando búsqueda por nombre:', error);
-        // Alternativa: búsqueda por nombre
         userRecipes = await dataService.searchRecipesByUser(currentUser.nombre || currentUser.name || '');
       }
       
@@ -129,7 +122,6 @@ const MyRecipesScreen = ({ navigation }) => {
             editingRecipe: recipe,
             isEditing: true,
             onRecipeUpdated: () => {
-              // Recargar las recetas después de actualizar
               loadMyRecipes();
             }
           })
@@ -150,11 +142,9 @@ const MyRecipesScreen = ({ navigation }) => {
           style: 'destructive',
           onPress: async () => {
             try {
-              // Obtener ID de usuario para eliminación en backend
               const userId = currentUser?.idUsuario || currentUser?.id;
               
               if (userId) {
-                // Intentar eliminar primero del backend
                 const result = await dataService.deleteUserRecipe(recipeId, userId);
                 
                 if (result.success) {
@@ -164,12 +154,10 @@ const MyRecipesScreen = ({ navigation }) => {
                 }
               }
               
-              // Actualizar estado local independientemente del éxito del backend (para capacidades offline)
               const updatedRecipes = myRecipes.filter(recipe => recipe.id !== recipeId);
               setMyRecipes(updatedRecipes);
               await AsyncStorage.setItem('myRecipes', JSON.stringify(updatedRecipes));
               
-              // Recargar recetas desde el backend para asegurar sincronización
               setTimeout(() => {
                 loadMyRecipes();
               }, 1000);
@@ -196,7 +184,6 @@ const MyRecipesScreen = ({ navigation }) => {
     try {
       await dataService.approveRecipe(recipeId, approve);
       
-      // Actualizar estado local
       const updatedRecipes = myRecipes.map(recipe =>
         recipe.id === recipeId ? { 
           ...recipe, 
@@ -339,7 +326,6 @@ const MyRecipesScreen = ({ navigation }) => {
           >
             <Icon name="trash-2" size={16} color={Colors.error} />
           </TouchableOpacity>
-          {/* Botón de aprobación de administrador - solo para usuarios autorizados */}
           {canApproveRecipes() && item.status === 'pending_approval' && (
             <TouchableOpacity
               style={[styles.actionButton, styles.adminButton]}
@@ -388,7 +374,6 @@ const MyRecipesScreen = ({ navigation }) => {
           )}
         </View>
 
-        {/* Estadísticas */}
         <View style={styles.statsContainer}>
           <View style={styles.statCard}>
             <Text style={styles.statValue}>{recipesByStatus.published.length}</Text>
@@ -405,14 +390,12 @@ const MyRecipesScreen = ({ navigation }) => {
         </View>
       </LinearGradient>
 
-      {/* Categorías */}
       <View style={styles.categoriesContainer}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
           {categories.map(category => renderCategoryTab(category))}
         </ScrollView>
       </View>
 
-      {/* Lista de Recetas */}
       <View style={styles.content}>
         {filteredRecipes.length === 0 ? (
           <View style={styles.emptyContainer}>

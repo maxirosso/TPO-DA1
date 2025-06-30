@@ -32,10 +32,10 @@ class ApiService {
       changePasswordWithCode: (email, codigo, nuevaPassword) => this.postForm('/cambiarContrasenaConCodigo', { mail: email, codigo, nuevaPassword }),
     };
 
-    // Objeto para métodos relacionados con recetas
+    //Endpoints de los métodos relacionados con recetas
     this.recipes = {
       getAll: () => this.get('/getAllRecetas'),
-      getLatest: () => this.get('/ultimasRecetas', { timestamp: new Date().getTime() }), // Las 3 últimas recetas
+      getLatest: () => this.get('/ultimasRecetas', { timestamp: new Date().getTime() }),
       getById: (id) => this.get(`/getRecetaById/${id}`),
       getByUser: (idUsuario) => this.get('/getRecetasUsuario', { idUsuario }),
       getByName: (nombrePlato, orden = 'alfabetico') => this.get('/getNombrereceta', { nombrePlato, orden }),
@@ -45,7 +45,7 @@ class ApiService {
       getByUserProfile: (usuario, orden = 'alfabetico') => this.get('/getUsuarioReceta', { usuario, orden }),
       search: (nombre) => this.get('/buscarRecetas', { nombre }),
       create: (recipeData) => this.post('/crearRecetaConIngredientes', recipeData),
-      createAlternative: (recipeData) => this.post('/CargarNuevasRecetas', recipeData), // Endpoint alternativo
+      createAlternative: (recipeData) => this.post('/CargarNuevasRecetas', recipeData), 
       createWithFiles: (receta, files) => this.uploadFile('/cargarReceta', files[0], receta),
       publish: (recipeData) => this.post('/publicarRecetas', recipeData),
       update: (idReceta, recipeData) => this.put(`/recetas/${idReceta}`, recipeData),
@@ -66,7 +66,7 @@ class ApiService {
       getTypes: () => this.get('/getTiposReceta'),
     };
 
-    // Endpoints de cursos 
+    //Endpoints de los métodos relacionados con cursos
     this.courses = {
       getAll: (idUsuario) => this.get('/getCursosDisponibles', { idUsuario }),
       getAvailable: (idUsuario) => this.get('/getCursosDisponibles', { idUsuario }),
@@ -80,27 +80,26 @@ class ApiService {
         this.postForm(`/baja/${idInscripcion}`, { reintegroEnTarjeta }),
     };
 
-    // Endpoints de estudiantes
+    //Endpoints de los métodos relacionados con alumnos
     this.students = {
       register: (mail, idUsuario, medioPago, dniFrente, dniFondo, tramite) => 
         this.postForm('/registrarAlumno', { mail, idUsuario, medioPago, dniFrente, dniFondo, tramite }),
-      // todavia no esta implementado del todo. 
     };
 
-    // Endpoints de calificaciones
+    //Endpoints de los métodos relacionados con calificaciones
     this.ratings = {
       add: (idReceta, calificacion) => this.post(`/valorarReceta/${idReceta}`, calificacion),
       authorize: (idCalificacion) => this.put(`/autorizarComentario/${idCalificacion}`),
       getByRecipe: (idReceta) => this.get(`/getValoracionReceta/${idReceta}`),
     };
 
-    // Endpoints de usuarios
+    //Endpoints de los métodos relacionados con usuarios
     this.users = {
       getByEmail: (mail) => this.get('/getUsuarioByEmail', { mail }),
       updateProfile: (userData) => this.put('/usuarios/perfil', userData),
     };
 
-    // Endpoints de reseñas 
+    //Endpoints de los métodos relacionados con reseñas
     this.reviews = {
       getByRecipe: (idReceta) => this.get(`/getValoracionReceta/${idReceta}`),
       create: (idReceta, reviewData, idUsuario) => {
@@ -113,20 +112,18 @@ class ApiService {
         });
         
         if (idUsuario) {
-          // Si tenemos ID de usuario, agregarlo como parámetro de consulta
           return this.request(`${endpoint}?idUsuario=${idUsuario}`, {
             method: 'POST',
             body: reviewData
           });
         } else {
-          // Sin ID de usuario, envío normal
           return this.post(endpoint, reviewData);
         }
       },
       authorize: (idCalificacion) => this.put(`/autorizarComentario/${idCalificacion}`),
     };
 
-    // Endpoints de lista de recetas (Lista de recetas a intentar)
+    //Endpoints de los métodos relacionados con lista de recetas 
     this.recipeList = {
       add: (idUsuario, receta) => this.post(`/lista/${idUsuario}`, receta),
       addById: (idReceta) => this.post(`/agregarReceta/${idReceta}`),
@@ -158,7 +155,7 @@ class ApiService {
       },
     };
 
-    // Endpoints de recetas guardadas
+    //Endpoints de los métodos relacionados con recetas guardadas
     this.savedRecipes = {
       save: (idReceta) => {
         console.log(`[API] Guardando receta ${idReceta}`);
@@ -258,7 +255,6 @@ class ApiService {
       ...options,
     };
 
-    // Agregar cuerpo para solicitudes POST/PUT
     if (
       config.body &&
       typeof config.body === 'object' &&
@@ -270,7 +266,6 @@ class ApiService {
     }
 
     try {
-      // Verificar conectividad primero
       const connected = await this.isConnected();
       if (!connected) {
         throw new Error('Sin conexión a internet');
@@ -286,14 +281,12 @@ class ApiService {
       
       clearTimeout(timeoutId);
 
-      // Manejar errores HTTP
       if (!response.ok) {
         let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
         let errorData = null;
         
         try {
           const responseText = await response.text();
-          // Intentar analizar como JSON primero, si falla usar texto
           try {
             errorData = JSON.parse(responseText);
             errorMessage = errorData.error || errorData.message || responseText;
@@ -301,18 +294,14 @@ class ApiService {
             errorMessage = responseText || errorMessage;
           }
         } catch (textError) {
-          // Usar mensaje de error predeterminado si no podemos leer la respuesta
         }
         
-        // Crear error específico con información adicional
         const error = new Error(errorMessage);
         error.status = response.status;
         error.statusText = response.statusText;
         
-        // Si hay información estructurada del backend, preservarla
         if (errorData && typeof errorData === 'object') {
           error.response = { data: errorData };
-          // Preservar campos específicos para sugerencias de alias
           if (errorData.aliasUnavailable) {
             error.aliasUnavailable = errorData.aliasUnavailable;
           }
@@ -327,7 +316,6 @@ class ApiService {
         throw error;
       }
 
-      // Analizar respuesta según el tipo de contenido
       const contentType = response.headers.get('content-type');
       let data;
       
@@ -335,9 +323,7 @@ class ApiService {
         if (contentType && contentType.includes('application/json')) {
           data = await response.json();
         } else {
-          // Manejar respuestas de texto (como mensajes de éxito)
           const textData = await response.text();
-          // Intentar analizar como JSON si es posible, de lo contrario mantener como texto
           try {
             data = JSON.parse(textData);
           } catch (jsonError) {
@@ -346,7 +332,6 @@ class ApiService {
         }
       } catch (parseError) {
         console.warn('Error al analizar respuesta:', parseError);
-        // Respuesta vacía como alternativa
         data = '';
       }
       
@@ -355,7 +340,6 @@ class ApiService {
     } catch (error) {
       console.log(`Error de API [${config.method} ${url}]:`, error.message);
       
-      // Manejar tipos de errores específicos
       if (error.name === 'AbortError') {
         throw new Error('Tiempo de espera agotado');
       }
@@ -388,7 +372,6 @@ class ApiService {
   async postForm(endpoint, data = {}) {
     const formData = new URLSearchParams();
     Object.keys(data).forEach(key => {
-      // Manejar valores nulos e indefinidos
       const value = data[key];
       if (value !== null && value !== undefined) {
         formData.append(key, value.toString());
@@ -415,11 +398,10 @@ class ApiService {
     });
   }
 
-  // Solicitud PUT con datos de formulario (para Spring Boot @RequestParam)
+  // Solicitud PUT con datos de formulario 
   async putForm(endpoint, data = {}) {
     const formData = new URLSearchParams();
     Object.keys(data).forEach(key => {
-      // Manejar valores nulos e indefinidos
       const value = data[key];
       if (value !== null && value !== undefined) {
         formData.append(key, value.toString());
@@ -444,14 +426,12 @@ class ApiService {
   async uploadFile(endpoint, file, additionalData = {}) {
     const formData = new FormData();
     
-    // Agregar archivo
     formData.append('archivos', {
       uri: file.uri,
       type: file.type || 'image/jpeg',
       name: file.name || 'image.jpg',
     });
 
-    // Agregar datos adicionales
     Object.keys(additionalData).forEach(key => {
       formData.append(key, additionalData[key]);
     });
@@ -471,7 +451,6 @@ class ApiService {
   async uploadRecipeWithFiles(endpoint, recipeData, files = []) {
     const formData = new FormData();
     
-    // Agregar todos los archivos
     files.forEach((file, index) => {
       if (file && file.uri) {
         formData.append('archivos', {
@@ -482,17 +461,13 @@ class ApiService {
       }
     });
 
-    // Agregar datos de la receta
     Object.keys(recipeData).forEach(key => {
       if (recipeData[key] !== null && recipeData[key] !== undefined) {
         if (typeof recipeData[key] === 'object' && !Array.isArray(recipeData[key])) {
-          // Para objetos anidados (como usuario, tipoReceta), convertir a JSON string
           formData.append(key, JSON.stringify(recipeData[key]));
         } else if (Array.isArray(recipeData[key])) {
-          // Para arrays, convertir a JSON string
           formData.append(key, JSON.stringify(recipeData[key]));
         } else {
-          // Para valores primitivos
           formData.append(key, recipeData[key].toString());
         }
       }
@@ -527,10 +502,8 @@ class ApiService {
 
   // Método de upgrade a alumno
   async upgradeToStudent(idUsuario, studentData) {
-    // Crear FormData para manejar archivos e información
     const formData = new FormData();
     
-    // Agregar datos del formulario
     if (studentData.numeroTramiteDNI) {
       formData.append('tramite', studentData.numeroTramiteDNI);
     }
@@ -541,7 +514,6 @@ class ApiService {
       formData.append('password', studentData.password);
     }
     
-    // Agregar imágenes del DNI
     if (studentData.fotoDNIFrente && studentData.fotoDNIFrente.uri) {
       formData.append('dniFrente', {
         uri: studentData.fotoDNIFrente.uri,
@@ -568,7 +540,6 @@ class ApiService {
   }
 }
 
-// Crear instancia singleton
 const apiService = new ApiService();
 
 export default apiService;
@@ -579,28 +550,21 @@ export const api = {
   auth: {
     login: (mail, password) => apiService.postForm('/login', { mail, password }),
     register: (userData) => apiService.post('/registrarUsuario', userData),
-    // Verificación de username
     checkUsername: (username) => apiService.get('/auth/check-username', { username }),
-    // Visitantes (sin código de verificación)
     registerVisitor: (mail, alias) => apiService.postForm('/registrarVisitante', { mail, alias }),
-    // Visitantes (con código de verificación en 2 etapas)
     registerVisitorStage1: (mail, alias) => apiService.postForm('/registrarVisitanteEtapa1', { mail, alias }),
     verifyVisitorCode: (mail, codigo) => apiService.postForm('/verificarCodigoVisitante', { mail, codigo }),
     resendVisitorCode: (mail) => apiService.postForm('/reenviarCodigoVisitante', { mail }),
     getSugerenciasAlias: (baseAlias) => apiService.get('/sugerenciasAlias', { baseAlias }),
-    // Usuarios (con código de verificación en 2 etapas)
     registerUserStage1: (mail, alias) => apiService.postForm('/registrarUsuarioEtapa1', { mail, alias }),
     verifyUserCode: (mail, codigo) => apiService.postForm('/verificarCodigoUsuario', { mail, codigo }),
     completeUserRegistration: (mail, nombre, password) => apiService.postForm('/completarRegistroUsuario', { mail, nombre, password }),
     resendUserCode: (mail) => apiService.postForm('/reenviarCodigoUsuario', { mail }),
-    // Recuperación de contraseña (30 minutos de validez)
     resetPassword: (mail) => apiService.postForm('/recuperarContrasena', { mail }),
     verifyRecoveryCode: (mail, codigo) => apiService.postForm('/verificarCodigoRecuperacion', { mail, codigo }),
     changePasswordWithCode: (mail, codigo, nuevaPassword) => apiService.postForm('/cambiarContrasenaConCodigo', { mail, codigo, nuevaPassword }),
-    // Alumnos (igual que usuarios + datos adicionales)
     registerStudent: (mail, idUsuario, medioPago, dniFrente, dniFondo, tramite) => 
       apiService.postForm('/registrarAlumno', { mail, idUsuario, medioPago, dniFrente, dniFondo, tramite }),
-    // Métodos para upgrade a estudiante
     upgradeToStudent: (idUsuario, studentData) => apiService.upgradeToStudent(idUsuario, studentData),
     createEmpresaUser: (userData) => apiService.post('/crearUsuarioEmpresa', userData),
     createAdminUser: (userData) => apiService.post('/crearUsuarioAdmin', userData),
@@ -609,7 +573,7 @@ export const api = {
   // Endpoints de recetas 
   recipes: {
     getAll: () => apiService.get('/getAllRecetas'),
-    getLatest: () => apiService.get('/ultimasRecetas', { timestamp: new Date().getTime() }), // Las 3 últimas recetas
+    getLatest: () => apiService.get('/ultimasRecetas', { timestamp: new Date().getTime() }), 
     getById: (id) => apiService.get(`/getRecetaById/${id}`),
     getByUser: (idUsuario) => apiService.get('/getRecetasUsuario', { idUsuario }),
     getByName: (nombrePlato, orden = 'alfabetico') => apiService.get('/getNombrereceta', { nombrePlato, orden }),
@@ -619,8 +583,8 @@ export const api = {
     getByUserProfile: (usuario, orden = 'alfabetico') => apiService.get('/getUsuarioReceta', { usuario, orden }),
     search: (nombre) => apiService.get('/buscarRecetas', { nombre }),
     create: (recipeData) => apiService.post('/crearRecetaConIngredientes', recipeData),
-    createAlternative: (recipeData) => apiService.post('/CargarNuevasRecetas', recipeData), // Endpoint alternativo
-    createSimple: (recipeData) => apiService.post('/crearRecetaSimple', recipeData), // Endpoint sin problemas de autenticación
+    createAlternative: (recipeData) => apiService.post('/CargarNuevasRecetas', recipeData), 
+    createSimple: (recipeData) => apiService.post('/crearRecetaSimple', recipeData), 
     createWithFiles: (receta, files) => apiService.uploadFile('/cargarReceta', files[0], receta),
     createWithMultipleFiles: (recipeData, files) => apiService.uploadRecipeWithFiles('/cargarReceta', recipeData, files),
     publish: (recipeData) => apiService.post('/publicarRecetas', recipeData),
@@ -657,11 +621,10 @@ export const api = {
   },
 
 
-  // Endpoints de estudiantes
+  // Endpoints de alumnos
   students: {
     register: (mail, idUsuario, medioPago, dniFrente, dniFondo, tramite) => 
       apiService.postForm('/registrarAlumno', { mail, idUsuario, medioPago, dniFrente, dniFondo, tramite }),
-    // todavia no esta implementado del todo. 
   },
 
   // Endpoints de alumnos
@@ -697,13 +660,11 @@ export const api = {
       });
       
       if (idUsuario) {
-        // Si tenemos ID de usuario, agregarlo como parámetro de consulta
         return apiService.request(`${endpoint}?idUsuario=${idUsuario}`, {
           method: 'POST',
           body: reviewData
         });
       } else {
-        // Sin ID de usuario, envío normal
         return apiService.post(endpoint, reviewData);
       }
     },

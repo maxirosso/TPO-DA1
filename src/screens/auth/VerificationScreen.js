@@ -27,7 +27,7 @@ const VerificationScreen = ({ navigation, route }) => {
   const [verificationCode, setVerificationCode] = useState(['', '', '', '']);
   const [isLoading, setIsLoading] = useState(false);
   const [isResending, setIsResending] = useState(false);
-  const [timeLeft, setTimeLeft] = useState(24 * 60 * 60); // 24 hours in seconds
+  const [timeLeft, setTimeLeft] = useState(24 * 60 * 60); //24 horas en segundos 
   const [activeInput, setActiveInput] = useState(null);
   
   const { verifyCode, resendVerificationCode, enterVisitorMode, setUser } = useContext(AuthContext);
@@ -52,15 +52,13 @@ const VerificationScreen = ({ navigation, route }) => {
   };
   
   const handleCodeChange = (text, index) => {
-    // Only allow numbers
+    //solo permite numeros
     if (!/^\d*$/.test(text)) return;
     
-    // Update the digits of the code
     const newCode = [...verificationCode];
     newCode[index] = text;
     setVerificationCode(newCode);
     
-    // Auto-focus the next input if the current one is filled
     if (text && index < 3) {
       inputRefs[index + 1].current.focus();
       setActiveInput(index + 1);
@@ -68,7 +66,6 @@ const VerificationScreen = ({ navigation, route }) => {
   };
   
   const handleKeyPress = (e, index) => {
-    // Handle backspace key to move to the previous input
     if (e.nativeEvent.key === 'Backspace' && !verificationCode[index] && index > 0) {
       inputRefs[index - 1].current.focus();
       setActiveInput(index - 1);
@@ -77,7 +74,6 @@ const VerificationScreen = ({ navigation, route }) => {
 
   const handleKeyboardPress = (key) => {
     if (activeInput === null) {
-      // If no input is active, activate the first empty one
       for (let i = 0; i < verificationCode.length; i++) {
         if (!verificationCode[i]) {
           setActiveInput(i);
@@ -86,7 +82,6 @@ const VerificationScreen = ({ navigation, route }) => {
         }
       }
       
-      // If all inputs are filled, select the last one
       if (activeInput === null) {
         setActiveInput(verificationCode.length - 1);
         inputRefs[verificationCode.length - 1].current.focus();
@@ -95,31 +90,25 @@ const VerificationScreen = ({ navigation, route }) => {
     }
 
     if (key === '⌫') {
-      // Handle backspace
       const newCode = [...verificationCode];
       if (newCode[activeInput]) {
         newCode[activeInput] = '';
         setVerificationCode(newCode);
       } else if (activeInput > 0) {
-        // Move to previous input if current is empty
         setActiveInput(activeInput - 1);
         inputRefs[activeInput - 1].current.focus();
       }
     } else if (key === 'espacio') {
-      // Space - do nothing
       return;
     } else if (key === 'return') {
-      // Handle return - validate the code
       if (verificationCode.every(digit => digit !== '')) {
         handleVerify();
       }
     } else if (/^\d$/.test(key)) {
-      // Handle digit press
       const newCode = [...verificationCode];
       newCode[activeInput] = key;
       setVerificationCode(newCode);
       
-      // Auto-focus next input
       if (activeInput < verificationCode.length - 1) {
         setActiveInput(activeInput + 1);
         inputRefs[activeInput + 1].current.focus();
@@ -128,7 +117,6 @@ const VerificationScreen = ({ navigation, route }) => {
   };
   
   const handleVerify = async () => {
-    // Verificar que el código esté completo
     const codigo = verificationCode.join('');
     if (codigo.length !== 4) {
       Alert.alert('Código Incompleto', 'Por favor ingresa el código de 4 dígitos completo.');
@@ -138,18 +126,16 @@ const VerificationScreen = ({ navigation, route }) => {
     setIsLoading(true);
     
     try {
-      console.log('🟢 Verificando código:', { email, codigo, userType });
+      console.log('Verificando código:', { email, codigo, userType });
       
       let verificationResult;
       
       if (userType === 'visitante') {
-        // Verificar código de visitante
         verificationResult = await dataService.verifyVisitorCode(email, codigo);
         
-        console.log('🟢 Resultado verificación visitante:', verificationResult);
+        console.log('Resultado verificación visitante:', verificationResult);
         
         if (verificationResult && verificationResult.success && verificationResult.user) {
-          // Guardar datos del usuario en el contexto
           const userData = {
             idUsuario: verificationResult.user.idUsuario,
             mail: verificationResult.user.mail,
@@ -158,7 +144,7 @@ const VerificationScreen = ({ navigation, route }) => {
             habilitado: verificationResult.user.habilitado
           };
           
-          console.log('🟢 Guardando datos del visitante en contexto:', userData);
+          console.log('Guardando datos del visitante en contexto:', userData);
           setUser(userData);
           
           Alert.alert(
@@ -168,7 +154,6 @@ const VerificationScreen = ({ navigation, route }) => {
               { 
                 text: 'Continuar', 
                 onPress: () => {
-                  // Activar modo visitante y navegar a la app principal
                   enterVisitorMode();
                 }
               }
@@ -181,11 +166,9 @@ const VerificationScreen = ({ navigation, route }) => {
           );
         }
       } else {
-        // Verificar código de usuario normal
         verificationResult = await dataService.verifyUserCode(email, codigo);
         
         if (verificationResult && verificationResult.success) {
-          // Navegar a completar perfil para usuarios normales
           navigation.navigate('CompleteProfile', { email });
         } else {
           Alert.alert(
@@ -212,15 +195,13 @@ const VerificationScreen = ({ navigation, route }) => {
     setIsResending(true);
     
     try {
-      console.log('🟢 Reenviando código:', { email, userType });
+      console.log('Reenviando código:', { email, userType });
       
       let resendResult;
       
       if (userType === 'visitante') {
-        // Reenviar código de visitante
         resendResult = await dataService.resendVisitorCode(email);
       } else {
-        // Reenviar código de usuario normal
         resendResult = await dataService.resendUserCode(email);
       }
       
@@ -249,7 +230,6 @@ const VerificationScreen = ({ navigation, route }) => {
     }
   };
 
-  // Generate keyboard rows
   const renderKeyboardRow = (keys) => {
     return (
       <View style={styles.keyboardRow}>
@@ -339,7 +319,6 @@ const VerificationScreen = ({ navigation, route }) => {
           isLoading={isLoading}
         />
         
-        {/* Virtual Keyboard */}
         <View style={styles.keyboard}>
           {renderKeyboardRow(['Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P'])}
           <View style={styles.keyboardMiddleRow}>

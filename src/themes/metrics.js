@@ -67,5 +67,5 @@ export default {
   headerHeight: 56,
   buttonHeight: 48,
   inputHeight: 48,
-  cardWidth: (width - 48) / 2, // For 2 cards per row with 16px spacing
+  cardWidth: (width - 48) / 2, 
 };

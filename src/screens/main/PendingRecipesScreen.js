@@ -31,15 +31,15 @@ const PendingRecipesScreen = ({ navigation }) => {
     setLoading(true);
     setError(null);
     try {
-      console.log('Loading pending recipes...');
+      console.log('Cargando las recetas pendientes...');
       const recipes = await dataService.getPendingRecipesList();
       const recipeStats = await dataService.getPendingRecipesCount();
       
       setPendingRecipes(recipes);
       setStats(recipeStats);
-      console.log('Pending recipes loaded:', recipes.length);
+      console.log('Recetas pendientes cargadas:', recipes.length);
     } catch (error) {
-      console.error('Error loading pending recipes:', error);
+      console.error('Error al cargar las recetas pendientes:', error);
       setError('No se pudieron cargar las recetas pendientes');
     } finally {
       setLoading(false);
@@ -68,7 +68,6 @@ const PendingRecipesScreen = ({ navigation }) => {
   const handleToggleCompletion = async (recipeId, isCurrentlyCompleted) => {
     const newCompletedState = !isCurrentlyCompleted;
 
-    // Show confirmation dialog
     Alert.alert(
       newCompletedState ? 'Marcar como Completada' : 'Marcar como Pendiente',
       newCompletedState 
@@ -82,20 +81,19 @@ const PendingRecipesScreen = ({ navigation }) => {
         {
           text: 'Confirmar',
           onPress: async () => {
-            console.log('Marking recipe as completed:', recipeId, newCompletedState);
+            console.log('Marcando la receta como completada:', recipeId, newCompletedState);
             try {
               const result = await dataService.markRecipeAsCompleted(recipeId, newCompletedState);
               
-              console.log('Reloading pending recipes after mark completion');
+              console.log('Recargando las recetas pendientes luego de marcarlas como finalizadas');
               loadPendingRecipes();
               
-              // Show success message
               if (result && result.error) {
                 console.error('Error result:', result);
                 Alert.alert('Error', result.message || 'No se pudo actualizar el estado de la receta');
               }
             } catch (error) {
-              console.error('Error marking recipe as completed:', error);
+              console.error('Error marcando la receta como completada:', error);
               Alert.alert('Error', 'No se pudo actualizar el estado de la receta');
             }
           }
@@ -117,7 +115,7 @@ const PendingRecipesScreen = ({ navigation }) => {
           text: 'Eliminar',
           style: 'destructive',
           onPress: async () => {
-            console.log('Removing recipe from pending list:', recipeId);
+            console.log('Eliminando la receta de la lista de pendientes:', recipeId);
             try {
               const result = await dataService.removeRecipeFromPendingList(recipeId);
               
@@ -125,11 +123,11 @@ const PendingRecipesScreen = ({ navigation }) => {
                 setPendingRecipes(current => current.filter(r => r.id !== recipeId));
                 Alert.alert('Éxito', 'Receta eliminada de tu lista');
               } else {
-                console.log('Reloading pending recipes after removal');
+                console.log('Recargando las recetas pendientes luego de eliminarlas');
                 loadPendingRecipes();
               }
             } catch (error) {
-              console.error('Error removing recipe from pending list:', error);
+              console.error('Error al eliminar la receta de la lista de pendientes:', error);
               Alert.alert('Error', 'Error al eliminar receta de la lista');
             }
           }

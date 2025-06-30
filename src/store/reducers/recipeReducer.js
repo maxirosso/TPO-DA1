@@ -13,7 +13,6 @@ import {
 
   const FAVORITES_STORAGE_KEY = '@favorites';
 
-  // Helper function to save favorites to AsyncStorage
   const saveFavoritesToStorage = async (favorites) => {
     try {
       await AsyncStorage.setItem(FAVORITES_STORAGE_KEY, JSON.stringify(favorites));
@@ -22,7 +21,6 @@ import {
     }
   };
 
-  // Helper function to load favorites from AsyncStorage
   export const loadFavoritesFromStorage = async () => {
     try {
       const favoritesJson = await AsyncStorage.getItem(FAVORITES_STORAGE_KEY);
@@ -102,7 +100,6 @@ import {
           ? state.favorites.filter(id => id !== recipeId)
           : [...state.favorites, recipeId];
 
-        // Save to AsyncStorage
         saveFavoritesToStorage(newFavorites);
         
         return {

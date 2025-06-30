@@ -83,7 +83,6 @@ const SignupScreen = ({ navigation }) => {
   const handleSignUp = async () => {
     Keyboard.dismiss();
     
-    // Validar entradas
     if (!email || !username || !password) {
       Alert.alert('Campos incompletos', 'Por favor, completa todos los campos requeridos.');
       return;
@@ -117,7 +116,6 @@ const SignupScreen = ({ navigation }) => {
     setIsLoading(true);
     
     try {
-      // Check username availability one final time
       const usernameCheck = await authService.checkUsernameAvailability(username);
       if (!usernameCheck.available) {
         setUsernameError('Este nombre de usuario ya está en uso');
@@ -127,7 +125,6 @@ const SignupScreen = ({ navigation }) => {
         return;
       }
       
-      // Register user and send verification email
       const result = await signUp({
         email,
         username: username.trim(),
@@ -135,7 +132,6 @@ const SignupScreen = ({ navigation }) => {
         userType: activeTab === 'regularUser' ? 'regular' : 'student'
       });
       
-      // If registration successful, navigate based on user type
       if (result && result.success) {
         if (activeTab === 'student') {
           navigation.navigate('StudentRegistration', { email });
@@ -144,7 +140,6 @@ const SignupScreen = ({ navigation }) => {
         }
       }
     } catch (error) {
-      // Handle registration errors
       console.error('Registration error:', error);
       Alert.alert(
         'Error en el registro',
@@ -222,7 +217,7 @@ const SignupScreen = ({ navigation }) => {
                     activeTab === 'student' && styles.activeTabText,
                   ]}
                 >
-                  Estudiante
+                  Alumno
                 </Text>
               </TouchableOpacity>
             </View>

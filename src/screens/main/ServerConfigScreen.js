@@ -44,7 +44,6 @@ const ServerConfigScreen = ({ navigation }) => {
     setTestResult({ status: '', message: '' });
     
     try {
-      // Intentar hacer una petición simple
       const response = await axios.get(`${apiUrl}/getAllRecetas`, { timeout: 30000 });
       
       if (response.status === 200) {
@@ -92,7 +91,6 @@ const ServerConfigScreen = ({ navigation }) => {
       'http://127.0.0.1:8080'
     ];
     
-    // Generar algunas IPs comunes de red local
     for (let i = 1; i <= 10; i++) {
       suggestions.push(`http://192.168.1.${i}:8080`);
     }

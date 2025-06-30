@@ -2,7 +2,6 @@ import { recipeService } from '../../services/api';
 import { loadFavoritesFromStorage } from '../reducers/recipeReducer';
 import { Alert } from 'react-native';
 
-// Action Types
 export const RECIPES_LOADING = 'RECIPES_LOADING';
 export const RECIPES_SUCCESS = 'RECIPES_SUCCESS';
 export const RECIPES_ERROR = 'RECIPES_ERROR';
@@ -13,7 +12,6 @@ export const SAVE_RECIPE_SUCCESS = 'SAVE_RECIPE_SUCCESS';
 export const TOGGLE_FAVORITE = 'TOGGLE_FAVORITE';
 export const LOAD_FAVORITES_SUCCESS = 'LOAD_FAVORITES_SUCCESS';
 
-// Action Creators
 export const fetchRecipes = () => async (dispatch) => {
   dispatch({ type: RECIPES_LOADING });
   

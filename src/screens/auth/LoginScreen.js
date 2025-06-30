@@ -34,7 +34,6 @@ const LoginScreen = ({ navigation }) => {
   
   const { signIn, resendVerificationCode, enterVisitorMode } = useContext(AuthContext);
   
-  // Cargar credenciales guardadas al montar el componente
   useEffect(() => {
     loadSavedCredentials();
   }, []);
@@ -85,7 +84,6 @@ const LoginScreen = ({ navigation }) => {
     
     try {
       await signIn(email, password);
-      // Guardar credenciales si el login fue exitoso
       await saveCredentials(email, password);
     } catch (error) {
       console.log('Error al iniciar sesión:', error);
@@ -96,7 +94,6 @@ const LoginScreen = ({ navigation }) => {
           'El correo electrónico o la contraseña son incorrectos. Si no tienes una cuenta, por favor regístrate primero.'
         );
       } else if (error.message === 'EMAIL_NOT_VERIFIED') {
-        // Esto no debería ocurrir con nuestras modificaciones de desarrollo
         Alert.alert(
           'Correo No Verificado',
           'Tu correo electrónico aún no ha sido verificado. ¿Deseas que te enviemos un nuevo código de verificación?',
@@ -204,13 +201,6 @@ const LoginScreen = ({ navigation }) => {
         style={styles.signInButton}
         isLoading={isLoading}
       />
-      
-      <View style={styles.devNote}>
-        <Text style={styles.devNoteText}>
-          Modo de desarrollo: Utiliza el correo y contraseña predeterminados, 
-          o regístrate para crear una nueva cuenta.
-        </Text>
-      </View>
       
       <View style={styles.divider}>
         <View style={styles.dividerLine} />
@@ -358,7 +348,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: Metrics.largeSpacing,  // Más espacio con el texto de bienvenida
+    marginBottom: Metrics.largeSpacing,  
   },
   headerContent: {
     flexDirection: 'row',

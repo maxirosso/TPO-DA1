@@ -19,17 +19,16 @@ import Metrics from '../../themes/metrics';
 import dataService from '../../services/dataService';
 
 const TwoStageRegistrationScreen = ({ navigation, route }) => {
-  const { userType = 'comun' } = route.params || {}; // 'comun' or 'alumno'
+  const { userType = 'comun' } = route.params || {}; // 'comun' o 'alumno'
 
-  // Stage 1 data
-  const [stage, setStage] = useState(1); // 1 = initial registration, 2 = complete profile
+  const [stage, setStage] = useState(1); // 1 = iniciar registro, 2 = completar perfil 
   const [email, setEmail] = useState('');
   const [username, setUsername] = useState('');
   const [usernameSuggestions, setUsernameSuggestions] = useState([]);
   const [verificationCode, setVerificationCode] = useState('');
   const [emailSent, setEmailSent] = useState(false);
 
-  // Stage 2 data - Complete Profile
+  // Etapa 2 - Completar perfil
   const [profileData, setProfileData] = useState({
     nombre: '',
     password: '',
@@ -38,7 +37,6 @@ const TwoStageRegistrationScreen = ({ navigation, route }) => {
     telefono: '',
   });
 
-  // Student specific data (only for student registration)
   const [studentData, setStudentData] = useState({
     medioPago: '',
     dniFrente: '',
@@ -48,7 +46,7 @@ const TwoStageRegistrationScreen = ({ navigation, route }) => {
 
   const [loading, setLoading] = useState(false);
 
-  // Stage 1: Initial Registration (Email + Username)
+  // Stage 1: Inicio del Registro (Email + Username)
   const handleStageOneSubmit = async () => {
     if (!email.trim() || !email.includes('@')) {
       Alert.alert('Error', 'Por favor ingresa un email válido');
@@ -62,11 +60,9 @@ const TwoStageRegistrationScreen = ({ navigation, route }) => {
 
     setLoading(true);
     try {
-      // Check if email exists and registration was completed
       const existingUser = await dataService.getUserByEmail(email);
       
       if (existingUser && existingUser.habilitado === 'Si') {
-        // User exists and registration is complete
         Alert.alert(
           'Usuario Existente',
           'Ya existe una cuenta con este email y el proceso de registración fue completado. ¿Deseas recuperar tu contraseña?',
@@ -82,7 +78,6 @@ const TwoStageRegistrationScreen = ({ navigation, route }) => {
       }
 
       if (existingUser && existingUser.habilitado !== 'Si') {
-        // User exists but registration was never completed
         Alert.alert(
           'Registro Incompleto',
           'Ya existe una cuenta con este email pero el proceso de registración no se completó. Para liberar este email debes enviar un mail a la empresa para realizar un proceso por fuera de la aplicación móvil.',
@@ -91,18 +86,15 @@ const TwoStageRegistrationScreen = ({ navigation, route }) => {
         return;
       }
 
-      // Check username availability
       const usernameAvailable = await checkUsernameAvailability(username);
       if (!usernameAvailable) {
-        return; // checkUsernameAvailability handles showing suggestions
+        return; 
       }
 
-      // Send verification email according to user type
       let registrationResult;
       if (userType === 'comun' || userType === 'alumno') {
         registrationResult = await dataService.registerUserStage1(email, username);
       } else if (userType === 'visitante') {
-        // Fallback for visitor registration if it's handled here
         registrationResult = await dataService.registerVisitorStage1(email, username);
       }
 
@@ -125,7 +117,6 @@ const TwoStageRegistrationScreen = ({ navigation, route }) => {
       console.log('Registration error:', error);
       
       if (error.message.includes('ya registrado')) {
-        // Username/email already exists, show suggestions
         const suggestions = await generateUsernameSuggestions(username);
         setUsernameSuggestions(suggestions);
         Alert.alert(
@@ -140,7 +131,6 @@ const TwoStageRegistrationScreen = ({ navigation, route }) => {
     }
   };
 
-  // Check username availability and generate suggestions if needed
   const checkUsernameAvailability = async (username) => {
     try {
       const response = await fetch(dataService.api.baseURL + '/auth/check-username?username=' + encodeURIComponent(username));
@@ -157,27 +147,23 @@ const TwoStageRegistrationScreen = ({ navigation, route }) => {
       return true;
     } catch (error) {
       console.log('Error checking username:', error);
-      return true; // Allow to proceed if check fails
+      return true; 
     }
   };
 
-  // Generate username suggestions
   const generateUsernameSuggestions = async (baseUsername) => {
     const suggestions = [];
-    const base = baseUsername.replace(/\d+$/, ''); // Remove trailing numbers
+    const base = baseUsername.replace(/\d+$/, ''); 
     
-    // Add random numbers
     for (let i = 0; i < 3; i++) {
       suggestions.push(base + Math.floor(Math.random() * 1000));
     }
     
-    // Add current year
     suggestions.push(base + new Date().getFullYear());
     
     return suggestions;
   };
 
-  // Handle password recovery
   const handlePasswordRecovery = async () => {
     try {
       await dataService.resetPassword(email);
@@ -190,14 +176,13 @@ const TwoStageRegistrationScreen = ({ navigation, route }) => {
     }
   };
 
-  // Stage 2: Complete Profile (after email verification)
+  // Etapa 2: Completar Perfil despues de la verificacion del email 
   const handleVerifyAndComplete = async () => {
     if (!verificationCode.trim() || verificationCode.length < 6) {
       Alert.alert('Error', 'Por favor ingresa el código de verificación de 6 dígitos');
       return;
     }
 
-    // Validate profile data
     if (!profileData.nombre.trim()) {
       Alert.alert('Error', 'El nombre completo es obligatorio');
       return;
@@ -213,7 +198,6 @@ const TwoStageRegistrationScreen = ({ navigation, route }) => {
       return;
     }
 
-    // Validate student data if registering as student
     if (userType === 'alumno') {
       if (!studentData.medioPago.trim()) {
         Alert.alert('Error', 'El medio de pago es obligatorio para alumnos');
@@ -235,17 +219,14 @@ const TwoStageRegistrationScreen = ({ navigation, route }) => {
 
     setLoading(true);
     try {
-      // Verify email with code (simulate verification)
       const emailVerified = await verifyEmailCode(verificationCode);
       if (!emailVerified) {
         Alert.alert('Error', 'Código de verificación inválido o expirado');
         return;
       }
 
-      // Complete user registration with basic profile
       await dataService.completeUserRegistration(email, profileData.nombre, profileData.password);
 
-      // If student, upgrade to student with additional data
       if (userType === 'alumno') {
         const studentRequest = {
           dniFrente: studentData.dniFrente,
@@ -254,7 +235,6 @@ const TwoStageRegistrationScreen = ({ navigation, route }) => {
           medioPago: studentData.medioPago
         };
 
-        // Get user ID to upgrade
         const user = await dataService.getUserByEmail(email);
         if (user) {
           await dataService.upgradeToStudent(user.idUsuario, studentRequest);
@@ -275,7 +255,6 @@ const TwoStageRegistrationScreen = ({ navigation, route }) => {
     }
   };
 
-  // Resend verification code
   const handleResendCode = async () => {
     try {
       setLoading(true);
@@ -292,11 +271,10 @@ const TwoStageRegistrationScreen = ({ navigation, route }) => {
     }
   };
 
-  // Verify email code using real backend endpoint
   const verifyEmailCode = async (code) => {
     try {
       const result = await dataService.verifyUserCode(email, code);
-      return true; // Si no lanza error, es válido
+      return true; 
     } catch (error) {
       console.log('Email verification error:', error);
       return false;
@@ -443,7 +421,6 @@ const TwoStageRegistrationScreen = ({ navigation, route }) => {
         </TouchableOpacity>
       </View>
 
-      {/* Personal Information */}
       <Text style={styles.sectionTitle}>Información Personal</Text>
       
       <View style={styles.inputGroup}>
@@ -504,7 +481,6 @@ const TwoStageRegistrationScreen = ({ navigation, route }) => {
         />
       </View>
 
-      {/* Student Additional Information */}
       {userType === 'alumno' && (
         <>
           <Text style={styles.sectionTitle}>Información de Alumno</Text>

@@ -119,7 +119,6 @@ const AppSettingsScreen = ({ route, navigation }) => {
           text: 'Limpiar',
           onPress: async () => {
             try {
-              // Simulate cache clearing
               await new Promise(resolve => setTimeout(resolve, 2000));
               Alert.alert('Éxito', 'Caché limpiado correctamente. Se liberaron 150MB de espacio.');
             } catch (error) {
@@ -141,7 +140,6 @@ const AppSettingsScreen = ({ route, navigation }) => {
           text: 'Exportar',
           onPress: async () => {
             try {
-              // Simulate data export
               await new Promise(resolve => setTimeout(resolve, 3000));
               Alert.alert('Éxito', 'Datos exportados correctamente. Revisa tu carpeta de descargas.');
             } catch (error) {
@@ -284,7 +282,6 @@ const AppSettingsScreen = ({ route, navigation }) => {
           )}
         </View>
 
-        {/* Appearance */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Apariencia</Text>
           
@@ -297,7 +294,6 @@ const AppSettingsScreen = ({ route, navigation }) => {
           )}
         </View>
 
-        {/* Language */}
         {renderSelectionRow(
           'Idioma',
           'Selecciona el idioma de la aplicación',
@@ -307,7 +303,6 @@ const AppSettingsScreen = ({ route, navigation }) => {
           'globe'
         )}
 
-        {/* Data & Sync */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Datos y Sincronización</Text>
           
@@ -328,7 +323,6 @@ const AppSettingsScreen = ({ route, navigation }) => {
           )}
         </View>
 
-        {/* Data Usage */}
         {renderSelectionRow(
           'Uso de Datos',
           'Configura cómo la app usa tu conexión',
@@ -338,7 +332,6 @@ const AppSettingsScreen = ({ route, navigation }) => {
           'wifi'
         )}
 
-        {/* Cache Size */}
         {renderSelectionRow(
           'Tamaño de Caché',
           'Cantidad de datos temporales a almacenar',
@@ -348,7 +341,6 @@ const AppSettingsScreen = ({ route, navigation }) => {
           'hard-drive'
         )}
 
-        {/* Storage & Data Management */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Gestión de Datos</Text>
           
@@ -386,7 +378,6 @@ const AppSettingsScreen = ({ route, navigation }) => {
           </TouchableOpacity>
         </View>
 
-        {/* Reset Settings */}
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, { color: Colors.error }]}>Restablecer</Text>
           
@@ -410,7 +401,6 @@ const AppSettingsScreen = ({ route, navigation }) => {
         <View style={styles.bottomPadding} />
       </ScrollView>
 
-      {/* Save Button */}
       <View style={styles.saveContainer}>
         <Button
           title={loading ? "Guardando..." : "Guardar Configuración"}

@@ -35,7 +35,6 @@ const AdminPanelScreen = ({ navigation }) => {
         const user = JSON.parse(userData);
         setCurrentUser(user);
         
-        // Check if user is authorized (empresa/admin)
         const isAuthorized = user.tipo === 'empresa';
         
         if (!isAuthorized) {
@@ -65,10 +64,8 @@ const AdminPanelScreen = ({ navigation }) => {
     setLoading(true);
     setError(null);
     try {
-      // Get all recipes and filter for pending approval
       const allRecipes = await dataService.getAllRecipes();
       
-      // Filter for pending approval - consider null as false (pending)
       const pending = allRecipes.filter(recipe => recipe.autorizada !== true);
       
       setPendingRecipes(pending);

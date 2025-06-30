@@ -4,7 +4,7 @@ import { createStackNavigator } from '@react-navigation/stack';
 import Icon from 'react-native-vector-icons/Feather';
 import { AuthContext } from '../context/AuthContext';
 
-// Main Screens
+//Pantallas principales
 import HomeScreen from '../screens/main/HomeScreen';
 import CourseScreen from '../screens/main/CourseScreen';
 import AddRecipeScreen from '../screens/main/AddRecipeScreen';
@@ -30,13 +30,13 @@ import SavedScaledRecipesScreen from '../screens/recipe/SavedScaledRecipesScreen
 import PendingRecipesScreen from '../screens/main/PendingRecipesScreen';
 import UpgradeToStudentScreen from '../screens/main/UpgradeToStudentScreen';
 
-// Theme
+//Theme
 import Colors from '../themes/colors';
 
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
 
-// Admin Stack Navigator
+//Navegador de Admin  
 const AdminStackScreen = () => (
   <Stack.Navigator
     screenOptions={{
@@ -48,7 +48,7 @@ const AdminStackScreen = () => (
   </Stack.Navigator>
 );
 
-// Regular User Stack Navigator
+//Navegador de Usuario Regular
 const HomeStackScreen = () => (
   <Stack.Navigator
     screenOptions={{
@@ -109,7 +109,7 @@ const ProfileStackScreen = () => (
   </Stack.Navigator>
 );
 
-// Admin Navigation
+//Navegacion de Admin 
 const AdminNavigator = () => (
   <Tab.Navigator
     screenOptions={{
@@ -157,7 +157,7 @@ const AdminNavigator = () => (
   </Tab.Navigator>
 );
 
-// Regular User Navigation
+//Navegacion de Usuario regular 
 const UserNavigator = () => {
   const { user } = React.useContext(AuthContext);
   const isRegularUser = user && (user.tipo === 'comun' || user.accountType === 'user');

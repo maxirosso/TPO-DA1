@@ -62,8 +62,6 @@ const ShoppingListScreen = ({ navigation }) => {
     setLoading(true);
     setError(null);
     try {
-      // Aquí deberías usar el endpoint real del backend para la lista de compras
-      // Por ahora, uso almacenamiento local real
       const savedList = await AsyncStorage.getItem('shoppingList');
       if (savedList) {
         setShoppingList(JSON.parse(savedList));
@@ -202,7 +200,6 @@ const ShoppingListScreen = ({ navigation }) => {
 
     const shareText = `Lista de Compras - ChefNet\n\n${listText}\n\nGenerada con ChefNet`;
     
-    // In a real app, you would use React Native's Share API
     Alert.alert('Compartir Lista', shareText);
   };
 
@@ -353,7 +350,6 @@ const ShoppingListScreen = ({ navigation }) => {
                 <TouchableOpacity
                   style={styles.pickerButton}
                   onPress={() => {
-                    // In a real app, you would show a picker modal
                     Alert.alert('Unidades', units.join(', '));
                   }}
                 >
@@ -370,7 +366,6 @@ const ShoppingListScreen = ({ navigation }) => {
               <TouchableOpacity
                 style={styles.pickerButton}
                 onPress={() => {
-                  // In a real app, you would show a picker modal
                   Alert.alert('Categorías', categories.slice(1).join(', '));
                 }}
               >
@@ -440,7 +435,6 @@ const ShoppingListScreen = ({ navigation }) => {
           </TouchableOpacity>
         </View>
 
-        {/* Stats */}
         <View style={styles.statsContainer}>
           <View style={styles.statItem}>
             <Text style={styles.statValue}>{stats.total}</Text>
@@ -457,14 +451,12 @@ const ShoppingListScreen = ({ navigation }) => {
         </View>
       </LinearGradient>
 
-      {/* Categories */}
       <View style={styles.categoriesContainer}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
           {categories.map(category => renderCategoryTab(category))}
         </ScrollView>
       </View>
 
-      {/* Action Buttons */}
       <View style={styles.actionsContainer}>
         <Button
           title="Agregar Producto"
@@ -483,7 +475,6 @@ const ShoppingListScreen = ({ navigation }) => {
         />
       </View>
 
-      {/* Shopping List */}
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {loading ? (
           <View style={styles.loadingContainer}>
@@ -766,7 +757,6 @@ const styles = StyleSheet.create({
   clearAllButtonText: {
     color: Colors.error,
   },
-  // Modal Styles
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',

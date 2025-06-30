@@ -11,7 +11,7 @@ import Icon from 'react-native-vector-icons/Feather';
 import Colors from '../../themes/colors';
 import Metrics from '../../themes/metrics';
 
-// Using forwardRef for proper ref passing
+//forwardRef para pasar las referencias correctamente
 const Input = forwardRef((props, ref) => {
   const {
     label,
@@ -38,7 +38,7 @@ const Input = forwardRef((props, ref) => {
     ...rest
   } = props;
 
-  // Simplifying security toggle for troubleshooting
+  // Simplificación del interruptor de seguridad para la resolución de problemas
   const renderRightIcon = () => {
     if (rightComponent) {
       return rightComponent;
@@ -98,17 +98,13 @@ const Input = forwardRef((props, ref) => {
           editable={editable}
           onBlur={onBlur}
           onFocus={onFocus}
-          // Ensuring these key keyboard properties are set
           autoCorrect={false}
           spellCheck={false}
           caretHidden={false}
           contextMenuHidden={false}
           selectTextOnFocus={false}
-          // Providing default keyboard behavior
           returnKeyType={rest.returnKeyType || "next"}
           blurOnSubmit={rest.blurOnSubmit || false}
-          // Debug trace helpers (uncomment these if needed to debug)
-          // onKeyPress={(e) => console.log('Key pressed:', e.nativeEvent.key)}
           {...rest}
         />
         
@@ -172,7 +168,6 @@ const styles = StyleSheet.create({
     fontSize: Metrics.baseFontSize,
     color: Colors.textDark,
     paddingVertical: Metrics.baseSpacing,
-    // Ensuring no competing padding issues
     paddingTop: 0,
     paddingBottom: 0,
   },
@@ -193,7 +188,7 @@ const styles = StyleSheet.create({
   },
 });
 
-// Set display name for debugging purposes
+// Establecer el nombre para mostrar con fines de depuración
 Input.displayName = 'Input';
 
 export default Input;

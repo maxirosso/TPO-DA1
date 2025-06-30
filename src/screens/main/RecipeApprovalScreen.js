@@ -38,13 +38,13 @@ const RecipeApprovalScreen = ({ navigation }) => {
   const loadPendingRecipes = async () => {
     try {
       if (!user || !(user.rol === 'admin' || user.tipo === 'empresa')) {
-        throw new Error('Unauthorized access');
+        throw new Error('Acceso desautorizado');
       }
       setLoading(true);
       const recipes = await dataService.getPendingRecipes();
       setPendingRecipes(recipes || []);
     } catch (error) {
-      console.error('Error loading pending recipes:', error);
+      console.error('Error al cargar las recetas pendientes:', error);
       Alert.alert(
         'Error',
         'Error al cargar las recetas pendientes. Intente nuevamente.'
@@ -77,9 +77,9 @@ const RecipeApprovalScreen = ({ navigation }) => {
                 'Éxito',
                 `Receta ${approve ? 'aprobada' : 'rechazada'} exitosamente`
               );
-              loadPendingRecipes(); // Reload the list
+              loadPendingRecipes(); 
             } catch (error) {
-              console.error('Error approving recipe:', error);
+              console.error('Error al aprobar la receta:', error);
               Alert.alert(
                 'Error',
                 `Error al ${action} la receta. Intente nuevamente.`

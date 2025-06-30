@@ -195,7 +195,6 @@ const AboutScreen = ({ navigation }) => {
       </LinearGradient>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {/* App Info */}
         <View style={styles.section}>
           <View style={styles.appLogoContainer}>
             <View style={styles.appLogo}>
@@ -219,7 +218,6 @@ const AboutScreen = ({ navigation }) => {
           </View>
         </View>
 
-        {/* Team */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Nuestro Equipo</Text>
           <Text style={styles.sectionDescription}>
@@ -229,7 +227,6 @@ const AboutScreen = ({ navigation }) => {
           {teamMembers.map((member, index) => renderTeamMember(member, index))}
         </View>
 
-        {/* Contact */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Contacto</Text>
           
@@ -257,7 +254,6 @@ const AboutScreen = ({ navigation }) => {
           </View>
         </View>
 
-        {/* Social Media */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Síguenos</Text>
           <Text style={styles.sectionDescription}>
@@ -269,7 +265,6 @@ const AboutScreen = ({ navigation }) => {
           </View>
         </View>
 
-        {/* Legal */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Legal</Text>
           <Text style={styles.sectionDescription}>
@@ -279,7 +274,6 @@ const AboutScreen = ({ navigation }) => {
           {legalLinks.map((link, index) => renderLegalLink(link, index))}
         </View>
 
-        {/* Developer Info */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Desarrollado por</Text>
           
@@ -301,7 +295,6 @@ const AboutScreen = ({ navigation }) => {
           </View>
         </View>
 
-        {/* Credits */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Créditos</Text>
           
@@ -328,13 +321,12 @@ const AboutScreen = ({ navigation }) => {
           </View>
         </View>
 
-        {/* Copyright */}
         <View style={styles.copyrightContainer}>
           <Text style={styles.copyrightText}>
             © 2024 {appInfo.developer}. Todos los derechos reservados.
           </Text>
           <Text style={styles.copyrightSubtext}>
-            Hecho con ❤️ para la comunidad gastronómica
+            Hecho con amor para la comunidad gastronómica
           </Text>
         </View>
 
@@ -395,7 +387,7 @@ const styles = StyleSheet.create({
     marginBottom: Metrics.mediumSpacing,
     textAlign: 'center',
   },
-  // App Info Styles
+
   appLogoContainer: {
     alignItems: 'center',
     marginBottom: Metrics.largeSpacing,
@@ -454,7 +446,6 @@ const styles = StyleSheet.create({
     color: Colors.textDark,
     marginLeft: Metrics.baseSpacing,
   },
-  // Team Styles
   teamMemberCard: {
     flexDirection: 'row',
     backgroundColor: Colors.background,
@@ -488,7 +479,6 @@ const styles = StyleSheet.create({
     color: Colors.textMedium,
     lineHeight: Metrics.baseLineHeight,
   },
-  // Contact Styles
   contactCard: {
     backgroundColor: Colors.background,
     borderRadius: Metrics.baseBorderRadius,
@@ -505,7 +495,6 @@ const styles = StyleSheet.create({
     marginLeft: Metrics.mediumSpacing,
     textDecorationLine: 'underline',
   },
-  // Social Media Styles
   socialLinksGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -541,7 +530,6 @@ const styles = StyleSheet.create({
     fontSize: Metrics.smallFontSize,
     color: Colors.textMedium,
   },
-  // Legal Styles
   legalLinkCard: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -572,7 +560,6 @@ const styles = StyleSheet.create({
     fontSize: Metrics.smallFontSize,
     color: Colors.textMedium,
   },
-  // Developer Styles
   developerCard: {
     backgroundColor: Colors.background,
     borderRadius: Metrics.baseBorderRadius,
@@ -605,7 +592,6 @@ const styles = StyleSheet.create({
   contactDeveloperButton: {
     minWidth: 180,
   },
-  // Credits Styles
   creditsCard: {
     backgroundColor: Colors.background,
     borderRadius: Metrics.baseBorderRadius,
@@ -635,7 +621,6 @@ const styles = StyleSheet.create({
     fontSize: Metrics.baseFontSize,
     color: Colors.textMedium,
   },
-  // Copyright Styles
   copyrightContainer: {
     alignItems: 'center',
     paddingVertical: Metrics.largeSpacing,

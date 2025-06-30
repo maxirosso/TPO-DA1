@@ -35,7 +35,6 @@ const QRScannerScreen = ({ navigation, route }) => {
   const handleValidQRCode = (result) => {
     setProcessingAttendance(true);
     
-    // Simulate API call to register attendance
     setTimeout(() => {
       setProcessingAttendance(false);
       
@@ -75,7 +74,6 @@ const QRScannerScreen = ({ navigation, route }) => {
       </View>
 
       <View style={styles.cameraContainer}>
-        {/* Note: In a real app, you would use the actual Camera component */}
         <View style={styles.mockCamera}>
           <View style={styles.scanArea}>
             {scanning && !scanned && (

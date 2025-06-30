@@ -36,7 +36,6 @@ const AccountSettingsScreen = ({ navigation, route }) => {
     tramite: '',
   });
 
-  // Load complete user data including student information if applicable
   useEffect(() => {
     loadCompleteUserData();
   }, []);
@@ -45,14 +44,12 @@ const AccountSettingsScreen = ({ navigation, route }) => {
     try {
       setLoading(true);
       
-      // Get current user data from AsyncStorage
       const userData = await AsyncStorage.getItem('user_data');
       if (userData) {
         const parsedUser = JSON.parse(userData);
         setUser(parsedUser);
         setEditedUser(parsedUser);
         
-        // If user is a student, try to load additional student data
         if (parsedUser.tipo === 'alumno' && parsedUser.idUsuario) {
           try {
             const alumnoData = await dataService.getAlumnoById(parsedUser.idUsuario);
@@ -85,12 +82,10 @@ const AccountSettingsScreen = ({ navigation, route }) => {
 
     setLoading(true);
     try {
-      // Update user profile via backend if available
       if (dataService.useBackend) {
         await dataService.updateUserProfile(editedUser);
       }
       
-      // Update local storage
       await AsyncStorage.setItem('user_data', JSON.stringify(editedUser));
       setUser(editedUser);
       setEditModalVisible(false);
@@ -109,7 +104,6 @@ const AccountSettingsScreen = ({ navigation, route }) => {
   };
 
   const handleUpgradeToStudent = async () => {
-    // Validate student data
     if (!studentData.medioPago.trim()) {
       Alert.alert('Error', 'El medio de pago es obligatorio');
       return;
@@ -133,13 +127,10 @@ const AccountSettingsScreen = ({ navigation, route }) => {
         dniFrente: studentData.dniFrente,
         dniFondo: studentData.dniFondo,
         tramite: studentData.tramite,
-        // Note: medioPago will be handled separately as per task requirements
       };
 
-      // Call backend to upgrade user to student
       await dataService.upgradeToStudent(user.idUsuario, studentRequest);
       
-      // Update local user data
       const updatedUser = {
         ...user,
         tipo: 'alumno',
@@ -148,7 +139,7 @@ const AccountSettingsScreen = ({ navigation, route }) => {
           dniFrente: studentData.dniFrente,
           dniFondo: studentData.dniFondo,
           tramite: studentData.tramite,
-          cuentaCorriente: 0, // New account starts at 0
+          cuentaCorriente: 0, 
         }
       };
       
@@ -184,7 +175,7 @@ const AccountSettingsScreen = ({ navigation, route }) => {
   };
 
   const canUpgradeToStudent = () => {
-    return user.tipo === 'comun'; // Only regular users can upgrade to student
+    return user.tipo === 'comun'; 
   };
 
   const handlePasswordRecovery = async () => {
@@ -419,7 +410,6 @@ const AccountSettingsScreen = ({ navigation, route }) => {
       </LinearGradient>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {/* Account Type Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Tipo de Cuenta</Text>
           <View style={styles.accountTypeCard}>
@@ -449,7 +439,6 @@ const AccountSettingsScreen = ({ navigation, route }) => {
           </View>
         </View>
 
-        {/* Personal Information Section */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Información Personal</Text>
@@ -484,7 +473,6 @@ const AccountSettingsScreen = ({ navigation, route }) => {
           </View>
         </View>
 
-        {/* Student Information Section - Only show for students */}
         {user.tipo === 'alumno' && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Información de Alumno</Text>
@@ -519,7 +507,6 @@ const AccountSettingsScreen = ({ navigation, route }) => {
           </View>
         )}
 
-        {/* Password Recovery Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Recuperación de Contraseña</Text>
           <View style={styles.infoCard}>
@@ -680,7 +667,6 @@ const styles = StyleSheet.create({
   dangerAction: {
     borderBottomWidth: 0,
   },
-  // Modal styles
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',

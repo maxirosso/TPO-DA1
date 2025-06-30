@@ -20,10 +20,8 @@ import { api } from '../../services/api';
 import { mapBackendRecipe } from '../../services/dataService';
 import { selectAllRecipes, selectFavorites } from '../../store/selectors/recipeSelectors';
 
-// Categoría por defecto
 const DEFAULT_CATEGORY = 'Todas Guardadas';
 
-// Categorías de colecciones iniciales
 const initialCollections = [
   DEFAULT_CATEGORY,
   'Favoritas',
@@ -44,11 +42,9 @@ const SavedScreen = ({ navigation }) => {
   const [collections, setCollections] = useState(initialCollections);
   const [recipeTypes, setRecipeTypes] = useState([]);
 
-  // Get favorites from Redux store
   const allRecipes = useSelector(selectAllRecipes);
   const favoriteIds = useSelector(selectFavorites);
   
-  // Get favorite recipes by filtering all recipes with favorite IDs
   const favoriteRecipes = savedRecipes.filter(recipe => favoriteIds.includes(recipe.id));
 
   useEffect(() => {
@@ -57,7 +53,6 @@ const SavedScreen = ({ navigation }) => {
     handleCollectionPress(selectedCollection);
   }, [favoriteIds, selectedCollection]);
 
-  // Efecto para recargar las recetas cuando la pantalla obtiene el foco
   useEffect(() => {
     const unsubscribe = navigation.addListener('focus', () => {
       console.log('SavedScreen obtuvo el foco - recargando recetas guardadas');
@@ -69,16 +64,13 @@ const SavedScreen = ({ navigation }) => {
 
   const loadRecipeTypes = async () => {
     try {
-      // Usar la API para obtener los tipos de recetas
       const response = await api.recipes.getTypes();
       if (response && response.data) {
         const types = response.data;
         console.log(`Tipos de recetas cargados: ${types.length}`);
         
-        // Guardar los tipos de recetas
         setRecipeTypes(types);
         
-        // Crear la lista de categorías con "Todas Guardadas" y "Favoritas" al inicio
         const categoryList = [DEFAULT_CATEGORY, 'Favoritas'];
         types.forEach(type => {
           if (type.descripcion) {
@@ -86,7 +78,6 @@ const SavedScreen = ({ navigation }) => {
           }
         });
         
-        // Agregar "Comidas Rápidas" si no está
         if (!categoryList.includes('Comidas Rápidas')) {
           categoryList.push('Comidas Rápidas');
         }
@@ -94,12 +85,10 @@ const SavedScreen = ({ navigation }) => {
         setCollections(categoryList);
       } else {
         console.log('No se pudieron cargar los tipos de recetas');
-        // Fallback a categorías predefinidas
         setCollections(initialCollections);
       }
     } catch (error) {
       console.error('Error al cargar tipos de receta:', error);
-      // Fallback a categorías predefinidas
       setCollections(initialCollections);
     }
   };
@@ -108,7 +97,6 @@ const SavedScreen = ({ navigation }) => {
     setLoading(true);
     setError(null);
     try {
-      // Cargar recetas guardadas desde el API
       console.log('Intentando cargar recetas guardadas desde el API...');
       const response = await api.savedRecipes.get();
       console.log('Respuesta completa del API:', response);
@@ -118,7 +106,6 @@ const SavedScreen = ({ navigation }) => {
       
       if (data && Array.isArray(data)) {
         console.log(`Se encontraron ${data.length} recetas guardadas`);
-        // Mapear las recetas del backend al formato esperado por el frontend
         const mappedRecipes = data.map(receta => {
           const mapped = mapBackendRecipe(receta);
           console.log('Receta original:', receta);
@@ -127,7 +114,6 @@ const SavedScreen = ({ navigation }) => {
         });
         console.log('Todas las recetas mapeadas:', mappedRecipes);
         setSavedRecipes(mappedRecipes);
-        // También actualizar filteredRecipes si estamos en "Todas Guardadas"
         if (selectedCollection === DEFAULT_CATEGORY) {
           console.log('Actualizando filteredRecipes con recetas guardadas');
           setFilteredRecipes(mappedRecipes);
@@ -143,7 +129,6 @@ const SavedScreen = ({ navigation }) => {
       console.error('Error al cargar recetas guardadas:', err);
       setError('No se pudieron cargar las recetas guardadas.');
       
-      // Fallback a recetas guardadas localmente
       try {
         console.log('Intentando cargar recetas guardadas localmente...');
         const saved = await AsyncStorage.getItem('saved_recipes');
@@ -200,7 +185,7 @@ const SavedScreen = ({ navigation }) => {
   const handleCollectionPress = (collection) => {
     console.log(`Cambiando a colección: ${collection}`);
     setSelectedCollection(collection);
-    setSearchQuery(''); // Clear search when changing collection
+    setSearchQuery(''); 
     
     if (collection === DEFAULT_CATEGORY) {
       console.log(`Mostrando todas las recetas guardadas (${savedRecipes.length})`);
