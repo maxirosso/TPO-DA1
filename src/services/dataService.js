@@ -563,10 +563,53 @@ class DataService {
 
   async getUserCourses(idUsuario) {
     try {
+      console.log('📚 getUserCourses - ID Usuario recibido:', idUsuario);
+      
+      // Verificar si el usuario existe y es alumno
+      const userData = await AsyncStorage.getItem('user_data');
+      let userInfo = null;
+      if (userData) {
+        userInfo = JSON.parse(userData);
+        console.log('👤 Información del usuario:', userInfo);
+      }
+      
+      // Si el usuario no es alumno, devolver array vacío con mensaje específico
+      if (userInfo && userInfo.tipo && userInfo.tipo !== 'alumno') {
+        console.log('⚠️ Usuario no es alumno, tipo:', userInfo.tipo);
+        console.log('💡 Para ver cursos, el usuario debe estar registrado como alumno');
+        return [];
+      }
+      
+      // Intentar obtener cursos usando el idUsuario como idAlumno
+      console.log('🎓 Llamando al endpoint /alumno/' + idUsuario);
       const result = await api.courses.getByStudent(idUsuario);
-      return result.data.map(mapBackendCourse) || [];
+      
+      if (result && result.data) {
+        console.log('✅ Cursos encontrados:', result.data.length);
+        return result.data.map(mapBackendCourse) || [];
+      } else {
+        console.log('📭 No se encontraron datos de cursos');
+        return [];
+      }
     } catch (error) {
-      console.log('Error al obtener cursos del usuario:', error.message);
+      console.error('❌ Error completo en getUserCourses:', error);
+      console.error('❌ Error message:', error.message);
+      console.error('❌ Error response:', error.response);
+      
+      if (error.response) {
+        const status = error.response.status;
+        const errorData = error.response.data;
+        
+        console.error(`❌ Status HTTP: ${status}`);
+        console.error('❌ Datos del error:', errorData);
+        
+        if (status === 404) {
+          console.log('🔍 Usuario no encontrado como alumno - probablemente no está registrado como alumno');
+        } else if (status === 500) {
+          console.log('🔧 Error del servidor - revisar logs del backend');
+        }
+      }
+      
       return [];
     }
   }
@@ -1819,6 +1862,39 @@ class DataService {
     } catch (error) {
       console.error('Error resetting recipe list state:', error);
       return { success: false, message: 'Error al reiniciar estado' };
+    }
+  }
+
+  // Método de debug para probar conexión y endpoints
+  async debugConnection() {
+    console.log('🔧 === DEBUG DE CONEXIÓN ===');
+    
+    try {
+      // Probar conexión básica
+      const baseUrl = api.baseURL;
+      console.log('🌐 URL base de la API:', baseUrl);
+      
+      // Probar endpoint básico
+      const response = await fetch(baseUrl);
+      console.log('✅ Conexión básica exitosa, status:', response.status);
+      
+      // Probar endpoint específico
+      const testResponse = await fetch(`${baseUrl}/`);
+      const testText = await testResponse.text();
+      console.log('🧪 Endpoint de prueba:', testText);
+      
+      return {
+        success: true,
+        baseUrl,
+        message: 'Conexión exitosa'
+      };
+    } catch (error) {
+      console.error('❌ Error en debug de conexión:', error);
+      return {
+        success: false,
+        error: error.message,
+        details: error
+      };
     }
   }
 }

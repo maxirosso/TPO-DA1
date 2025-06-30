@@ -43,19 +43,47 @@ const MyCoursesScreen = ({ navigation }) => {
     setError(null);
     try {
       let userId = null;
+      let userType = null;
       const userData = await AsyncStorage.getItem('user_data');
       if (userData) {
         const parsed = JSON.parse(userData);
         userId = parsed.id || parsed.idUsuario;
+        userType = parsed.tipo;
       }
       
       console.log('👤 Usuario ID para cargar mis cursos:', userId);
+      console.log('👤 Tipo de usuario:', userType);
       
       if (!userId) throw new Error('Usuario no autenticado');
+      
+      // Verificar si el usuario es alumno
+      if (userType && userType !== 'alumno') {
+        console.log('⚠️ Usuario no es alumno, tipo:', userType);
+        setError('Para ver cursos debes estar registrado como alumno. Ve a "Actualizar a Alumno" en tu perfil.');
+        setEnrolledCourses([]);
+        setUpcomingCourses([]);
+        return;
+      }
       
       console.log('🎓 Cargando cursos del usuario...');
       const userCourses = await dataService.getUserCourses(userId);
       console.log('✅ Cursos del usuario recibidos:', userCourses.length);
+      
+      // Debug adicional si no hay cursos
+      if (userCourses.length === 0) {
+        console.log('🔍 === DEBUG: No hay cursos ===');
+        console.log('🔍 Ejecutando debug de conexión...');
+        const debugResult = await dataService.debugConnection();
+        console.log('🔍 Resultado debug:', debugResult);
+      }
+      
+      if (userCourses.length === 0) {
+        console.log('📭 No hay cursos para este alumno');
+        setError('No tienes cursos inscriptos. Explora los cursos disponibles para inscribirte.');
+        setEnrolledCourses([]);
+        setUpcomingCourses([]);
+        return;
+      }
       
       // Filtrar cursos por estado (solo inscripciones activas deberían venir del backend)
       const activeCourses = userCourses.filter(c => c.status === 'active' || c.status === 'upcoming' || c.status === 'completed');
@@ -67,10 +95,24 @@ const MyCoursesScreen = ({ navigation }) => {
       setEnrolledCourses(activeCourses);
       setUpcomingCourses(upcomingCourses);
       
+      // Limpiar error si hay cursos
+      if (activeCourses.length > 0) {
+        setError(null);
+      }
+      
       console.log('🎉 Carga de mis cursos completada exitosamente');
     } catch (err) {
       console.error('❌ Error al cargar mis cursos:', err);
-      setError('No se pudieron cargar tus cursos.');
+      
+      // Mensajes de error más específicos
+      if (err.message.includes('no autenticado')) {
+        setError('Debes iniciar sesión para ver tus cursos.');
+      } else if (err.message.includes('Network Error') || err.message.includes('connect')) {
+        setError('Error de conexión. Verifica tu conexión a internet y que el servidor esté funcionando.');
+      } else {
+        setError('No se pudieron cargar tus cursos. Inténtalo nuevamente.');
+      }
+      
       setEnrolledCourses([]);
       setUpcomingCourses([]);
     } finally {
@@ -461,17 +503,7 @@ const MyCoursesScreen = ({ navigation }) => {
           <View style={styles.actionsContainer}>
             <Button
               title="Ver Detalles"
-              onPress={() => navigation.navigate('CourseDetail', { 
-                course: item,
-                courseId: item.id || item.idCurso,
-                isEnrolled: true, // Ya está inscrito porque viene de "Mis Cursos"
-                userType: 'student', // Usuario debe ser estudiante para estar en mis cursos
-                enrollment: {
-                  id: item.idInscripcion,
-                  status: item.status,
-                  enrollmentDate: item.fechaInscripcion
-                }
-              })}
+              onPress={() => navigation.navigate('CourseDetail', { courseId: item.id })}
               type="primary"
               size="small"
               iconName="info"
@@ -581,17 +613,59 @@ const MyCoursesScreen = ({ navigation }) => {
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <Icon name="book-open" size={60} color={Colors.textLight} />
-            <Text style={styles.emptyTitle}>
-              No tienes cursos {activeTab === 'active' ? 'activos' : activeTab === 'completed' ? 'completados' : 'próximos'}
-            </Text>
-            <Text style={styles.emptyText}>
-              Explora nuestro catálogo de cursos para inscribirte en uno.
-            </Text>
-            <Button
-              title="Ver Cursos Disponibles"
-              onPress={() => navigation.navigate('CoursesTab')}
-              style={styles.exploreButton}
-            />
+            
+            {/* Mostrar mensaje específico según el error */}
+            {error ? (
+              <>
+                <Text style={styles.emptyTitle}>
+                  {error.includes('alumno') ? '¡Actualiza tu cuenta!' : 'Sin cursos'}
+                </Text>
+                <Text style={styles.emptyText}>
+                  {error}
+                </Text>
+                
+                {/* Botón específico según el tipo de error */}
+                {error.includes('alumno') ? (
+                  <Button
+                    title="Actualizar a Alumno"
+                    onPress={() => navigation.navigate('UpgradeToStudentScreen')}
+                    style={styles.exploreButton}
+                  />
+                ) : error.includes('inscriptos') ? (
+                  <Button
+                    title="Ver Cursos Disponibles"
+                    onPress={() => navigation.navigate('CoursesTab')}
+                    style={styles.exploreButton}
+                  />
+                ) : error.includes('conexión') ? (
+                  <Button
+                    title="Reintentar"
+                    onPress={() => loadCourses()}
+                    style={styles.exploreButton}
+                  />
+                ) : (
+                  <Button
+                    title="Reintentar"
+                    onPress={() => loadCourses()}
+                    style={styles.exploreButton}
+                  />
+                )}
+              </>
+            ) : (
+              <>
+                <Text style={styles.emptyTitle}>
+                  No tienes cursos {activeTab === 'active' ? 'activos' : activeTab === 'completed' ? 'completados' : 'próximos'}
+                </Text>
+                <Text style={styles.emptyText}>
+                  Explora nuestro catálogo de cursos para inscribirte en uno.
+                </Text>
+                <Button
+                  title="Ver Cursos Disponibles"
+                  onPress={() => navigation.navigate('CoursesTab')}
+                  style={styles.exploreButton}
+                />
+              </>
+            )}
           </View>
         }
       />
