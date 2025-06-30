@@ -49,6 +49,7 @@ class ApiService {
       createWithFiles: (receta, files) => this.uploadFile('/cargarReceta', files[0], receta),
       publish: (recipeData) => this.post('/publicarRecetas', recipeData),
       update: (idReceta, recipeData) => this.put(`/recetas/${idReceta}`, recipeData),
+      updateWithSteps: (idReceta, recipeData) => this.put(`/actualizarRecetaConPasos/${idReceta}`, recipeData),
       delete: (idReceta, idUsuario) => {
         const endpoint = idUsuario ? 
           `/eliminarRecetaCompleta/${idReceta}?idUsuario=${idUsuario}` : 
@@ -466,6 +467,48 @@ class ApiService {
     });
   }
 
+  // Método para subir recetas con múltiples archivos multimedia
+  async uploadRecipeWithFiles(endpoint, recipeData, files = []) {
+    const formData = new FormData();
+    
+    // Agregar todos los archivos
+    files.forEach((file, index) => {
+      if (file && file.uri) {
+        formData.append('archivos', {
+          uri: file.uri,
+          type: file.type || 'image/jpeg',
+          name: file.name || `image_${index}.jpg`,
+        });
+      }
+    });
+
+    // Agregar datos de la receta
+    Object.keys(recipeData).forEach(key => {
+      if (recipeData[key] !== null && recipeData[key] !== undefined) {
+        if (typeof recipeData[key] === 'object' && !Array.isArray(recipeData[key])) {
+          // Para objetos anidados (como usuario, tipoReceta), convertir a JSON string
+          formData.append(key, JSON.stringify(recipeData[key]));
+        } else if (Array.isArray(recipeData[key])) {
+          // Para arrays, convertir a JSON string
+          formData.append(key, JSON.stringify(recipeData[key]));
+        } else {
+          // Para valores primitivos
+          formData.append(key, recipeData[key].toString());
+        }
+      }
+    });
+
+    const headers = await this.buildHeaders({
+      'Content-Type': 'multipart/form-data',
+    });
+
+    return this.request(endpoint, {
+      method: 'POST',
+      headers,
+      body: formData,
+    });
+  }
+
   // Función de escalado
   async scale(idReceta, tipo, porciones) {
     console.log('API scale llamada con:', { idReceta, tipo, porciones });
@@ -577,7 +620,9 @@ export const api = {
     search: (nombre) => apiService.get('/buscarRecetas', { nombre }),
     create: (recipeData) => apiService.post('/crearRecetaConIngredientes', recipeData),
     createAlternative: (recipeData) => apiService.post('/CargarNuevasRecetas', recipeData), // Endpoint alternativo
+    createSimple: (recipeData) => apiService.post('/crearRecetaSimple', recipeData), // Endpoint sin problemas de autenticación
     createWithFiles: (receta, files) => apiService.uploadFile('/cargarReceta', files[0], receta),
+    createWithMultipleFiles: (recipeData, files) => apiService.uploadRecipeWithFiles('/cargarReceta', recipeData, files),
     publish: (recipeData) => apiService.post('/publicarRecetas', recipeData),
     update: (idReceta, recipeData) => apiService.put(`/recetas/${idReceta}`, recipeData),
     delete: (idReceta, idUsuario) => {
@@ -591,9 +636,10 @@ export const api = {
       apiService.postForm(`/ajustarPorIngrediente/${idReceta}`, { nombreIngrediente, nuevaCantidad }),
     getSuggestions: (idTipo) => apiService.get('/sugerenciasRecetas', { idTipo }),
     approve: (idReceta, aprobar = true) => apiService.approve(idReceta, aprobar),
-    approveRecipe: (idReceta, aprobar = true) => apiService.putForm(`/aprobarRecipe/${idReceta}`, { aprobar }),
-    getPendingRecipes: () => apiService.get('/getRecetasPendientes'),
-    getTypes: () => apiService.get('/getTiposReceta'),
+          approveRecipe: (idReceta, aprobar = true) => apiService.putForm(`/aprobarRecipe/${idReceta}`, { aprobar }),
+      getPendingRecipes: () => apiService.get('/getRecetasPendientes'),
+      getTypes: () => apiService.get('/getTiposReceta'),
+      getMultimedia: (idReceta) => apiService.get(`/getMultimediaReceta/${idReceta}`),
   },
 
   // Endpoints de cursos 

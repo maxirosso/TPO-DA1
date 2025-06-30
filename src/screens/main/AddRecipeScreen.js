@@ -60,7 +60,7 @@ const AddRecipeScreen = ({ navigation, route }) => {
      setServings('');
      setRecipeImage(null);
      setIngredients([{ quantity: '', name: '', unit: 'gramos' }]);
-     setInstructions(['']);
+     setInstructions([{ text: '', image: null }]);
      setIsLoading(false);
      setCurrentEditingIngredient(null);
      setShowUnitSelector(false);
@@ -120,8 +120,9 @@ const AddRecipeScreen = ({ navigation, route }) => {
   const [description, setDescription] = useState('');
   const [servings, setServings] = useState('');
   const [recipeImage, setRecipeImage] = useState(null);
+
   const [ingredients, setIngredients] = useState([{ quantity: '', name: '', unit: 'gramos' }]);
-  const [instructions, setInstructions] = useState(['']);
+  const [instructions, setInstructions] = useState([{ text: '', image: null }]);
   const [isLoading, setIsLoading] = useState(false);
   const [recipeTypes, setRecipeTypes] = useState([]);
   const [selectedRecipeType, setSelectedRecipeType] = useState(null);
@@ -195,16 +196,18 @@ const AddRecipeScreen = ({ navigation, route }) => {
         maxWidth: 800,
       },
       (response) => {
-              if (response.didCancel) {
-        return;
-      }
+        if (response.didCancel) {
+          return;
+        }
 
-      if (response.assets && response.assets.length > 0) {
-        setRecipeImage(response.assets[0].uri);
-      }
+        if (response.assets && response.assets.length > 0) {
+          setRecipeImage(response.assets[0].uri);
+        }
       },
     );
   };
+
+
 
   const handleAddIngredient = () => {
     setIngredients([...ingredients, { quantity: '', name: '', unit: 'gramos' }]);
@@ -225,12 +228,12 @@ const AddRecipeScreen = ({ navigation, route }) => {
   };
 
   const handleAddInstruction = () => {
-    setInstructions([...instructions, '']);
+    setInstructions([...instructions, { text: '', image: null }]);
   };
 
   const handleUpdateInstruction = (text, index) => {
     const updatedInstructions = [...instructions];
-    updatedInstructions[index] = text;
+    updatedInstructions[index] = { ...updatedInstructions[index], text };
     setInstructions(updatedInstructions);
   };
 
@@ -242,8 +245,53 @@ const AddRecipeScreen = ({ navigation, route }) => {
     }
   };
 
-  const loadExistingRecipe = (recipe) => {
+  const handleSelectInstructionImage = (index) => {
+    ImagePicker.launchImageLibrary(
+      {
+        mediaType: 'photo',
+        includeBase64: false,
+        maxHeight: 600,
+        maxWidth: 800,
+      },
+      (response) => {
+        if (response.didCancel) {
+          return;
+        }
+
+        if (response.assets && response.assets.length > 0) {
+          const updatedInstructions = [...instructions];
+          updatedInstructions[index] = { 
+            ...updatedInstructions[index], 
+            image: response.assets[0].uri 
+          };
+          setInstructions(updatedInstructions);
+        }
+      },
+    );
+  };
+
+  const handleRemoveInstructionImage = (index) => {
+    const updatedInstructions = [...instructions];
+    updatedInstructions[index] = { ...updatedInstructions[index], image: null };
+    setInstructions(updatedInstructions);
+  };
+
+  const loadExistingRecipe = async (recipe) => {
     console.log('Cargando receta existente:', JSON.stringify(recipe, null, 2));
+    
+    // Cargar multimedia de la receta si está disponible
+    let multimedia = [];
+    try {
+      const recipeId = recipe.id || recipe.idReceta;
+      if (recipeId) {
+        const multimediaResponse = await api.recipes.getMultimedia(recipeId);
+        multimedia = multimediaResponse.data || multimediaResponse || [];
+        console.log('Multimedia cargada:', multimedia);
+      }
+    } catch (error) {
+      console.log('Error cargando multimedia:', error);
+      multimedia = [];
+    }
     
     setTitle(recipe.title || recipe.nombreReceta || '');
     setDescription(recipe.description || recipe.descripcionReceta || '');
@@ -322,15 +370,43 @@ const AddRecipeScreen = ({ navigation, route }) => {
     }
     
     // Manejar instrucciones
+    let processedInstructions = [];
     if (recipe.instructions && Array.isArray(recipe.instructions)) {
-      setInstructions(recipe.instructions.map(inst => inst.text || inst.toString()));
+      processedInstructions = recipe.instructions.map(inst => ({
+        text: inst.text || inst.toString(),
+        image: inst.image || inst.imageUrl || null
+      }));
+    } else if (recipe.pasos && Array.isArray(recipe.pasos)) {
+      processedInstructions = recipe.pasos.map(paso => ({
+        text: paso.texto || paso.text || paso.toString(),
+        image: paso.imagen || paso.imageUrl || null
+      }));
     } else if (recipe.instrucciones) {
       if (Array.isArray(recipe.instrucciones)) {
-        setInstructions(recipe.instrucciones.map(inst => inst.toString()));
+        processedInstructions = recipe.instrucciones.map(inst => ({
+          text: inst.toString(),
+          image: null
+        }));
       } else if (typeof recipe.instrucciones === 'string') {
-        setInstructions(recipe.instrucciones.split('\n').filter(step => step.trim()));
+        processedInstructions = recipe.instrucciones.split('\n').filter(step => step.trim()).map(step => ({
+          text: step,
+          image: null
+        }));
       }
     }
+    
+    // Aplicar fotos de multimedia a las instrucciones si están disponibles
+    if (multimedia && Array.isArray(multimedia)) {
+      const fotosInstrucciones = multimedia.filter(media => media.idPaso !== null);
+      fotosInstrucciones.forEach(foto => {
+        const pasoIndex = foto.idPaso - 1; // Los pasos empiezan en 1, los arrays en 0
+        if (pasoIndex >= 0 && pasoIndex < processedInstructions.length) {
+          processedInstructions[pasoIndex].image = foto.urlContenido;
+        }
+      });
+    }
+    
+    setInstructions(processedInstructions);
     
     // Manejar tipo de receta - preferir objeto de tipo real sobre categorías
     if (recipe.tipo || recipe.tipoReceta) {
@@ -381,10 +457,37 @@ const AddRecipeScreen = ({ navigation, route }) => {
           name: ing.name.trim(),
           quantity: ing.quantity || '1',
           unit: ing.unit || 'unidad'
-        }))
+        })),
+        // Agregar fotos adicionales para guardar en multimedia
+        fotos: [],
+        // Agregar fotos de instrucciones/pasos
+        fotosInstrucciones: []
       };
+
+      // Recopilar fotos adicionales (si hubiera alguna foto principal adicional)
+      if (recipeData.imageUrl) {
+        completeRecipeData.fotos.push({
+          url: recipeData.imageUrl,
+          tipo: 'foto_principal',
+          extension: 'jpg'
+        });
+      }
+
+      // Recopilar fotos de instrucciones/pasos
+      recipeData.instructions.forEach((instruction, index) => {
+        if (instruction.image) {
+          completeRecipeData.fotosInstrucciones.push({
+            url: instruction.image,
+            paso: index + 1,
+            tipo: 'foto_paso',
+            extension: 'jpg'
+          });
+        }
+      });
       
       console.log('Datos completos de receta para actualización:', JSON.stringify(completeRecipeData, null, 2));
+      console.log('Fotos adicionales:', completeRecipeData.fotos);
+      console.log('Fotos de instrucciones:', completeRecipeData.fotosInstrucciones);
 
       // Usar el método centralizado para actualizar la receta
       const result = await dataService.updateUserRecipe(
@@ -543,7 +646,7 @@ const AddRecipeScreen = ({ navigation, route }) => {
       const backendRecipeData = {
         nombreReceta: recipeData.title.trim(),
         descripcionReceta: recipeData.description.trim(),
-        fotoPrincipal: recipeData.imageUrl,
+        fotoPrincipal: recipeData.imageUrl, // Enviar como URL directamente
         porciones: parseInt(recipeData.servings) || 1,
         cantidadPersonas: parseInt(recipeData.servings) || 1,
         instrucciones: recipeData.instructions.map(inst => inst.text).join('\n'),
@@ -552,7 +655,7 @@ const AddRecipeScreen = ({ navigation, route }) => {
         usuario: {
           idUsuario: currentUser.idUsuario
         },
-        idTipo: selectedRecipeType, // Usar directamente el tipo de receta seleccionado
+        idTipo: selectedRecipeType, // Enviar el objeto completo
         // Ingredientes mapeados correctamente al formato del backend
         ingredientes: recipeData.ingredients.map((ing, index) => {
           // Analizar cantidad de forma más segura
@@ -575,20 +678,53 @@ const AddRecipeScreen = ({ navigation, route }) => {
             cantidad: cantidad,
             unidadMedida: unidadMedida
           };
-        })
+        }),
+        // Agregar fotos adicionales para guardar en multimedia
+        fotos: [],
+        // Agregar fotos de instrucciones/pasos
+        fotosInstrucciones: []
       };
 
+      // Recopilar fotos adicionales (si hubiera alguna foto principal adicional)
+      if (recipeData.imageUrl) {
+        backendRecipeData.fotos.push({
+          url: recipeData.imageUrl,
+          tipo: 'foto_principal',
+          extension: 'jpg'
+        });
+      }
+
+      // Recopilar fotos de instrucciones/pasos
+      recipeData.instructions.forEach((instruction, index) => {
+        if (instruction.image) {
+          backendRecipeData.fotosInstrucciones.push({
+            url: instruction.image,
+            paso: index + 1,
+            tipo: 'foto_paso',
+            extension: 'jpg'
+          });
+        }
+      });
+
       console.log('Enviando datos de receta al backend:', backendRecipeData);
+      console.log('Fotos adicionales:', backendRecipeData.fotos);
+      console.log('Fotos de instrucciones:', backendRecipeData.fotosInstrucciones);
 
       let response;
       
       try {
-        // Intentar primero el endpoint principal
-        response = await api.recipes.create(backendRecipeData);
+        // Usar el método simple que no tiene problemas de autenticación
+        response = await api.recipes.createSimple(backendRecipeData);
       } catch (primaryError) {
-        console.log('Falló el endpoint principal, intentando alternativa:', primaryError.message);
-        // Intentar endpoint alternativo si el principal falla
-        response = await api.recipes.createAlternative(backendRecipeData);
+        console.log('Falló el endpoint simple, intentando alternativa:', primaryError.message);
+        try {
+          // Intentar endpoint principal como segunda opción
+          response = await api.recipes.create(backendRecipeData);
+        } catch (secondaryError) {
+          console.log('Falló el endpoint principal, intentando último recurso:', secondaryError.message);
+          // Intentar endpoint alternativo como último recurso
+          response = await api.recipes.createAlternative(backendRecipeData);
+        }
       }
 
       if (response.success || response.data) {
@@ -770,7 +906,7 @@ const AddRecipeScreen = ({ navigation, route }) => {
       return;
     }
 
-    if (instructions.filter(inst => inst.trim()).length === 0) {
+    if (instructions.filter(inst => inst.text && inst.text.trim()).length === 0) {
       Alert.alert('Error', 'Debes agregar al menos una instrucción');
       return;
     }
@@ -791,13 +927,16 @@ const AddRecipeScreen = ({ navigation, route }) => {
         unit: ing.unit || 'unidad',
         preparation: ''
       })),
-      instructions: instructions.filter(inst => inst.trim()).map((inst, index) => ({
+      instructions: instructions.filter(inst => inst.text && inst.text.trim()).map((inst, index) => ({
         step: index + 1,
-        text: inst.trim()
+        text: inst.text.trim(),
+        image: inst.image || null
       }))
     };
 
-    console.log('Datos de receta formateados para guardar/actualizar:', JSON.stringify(recipeData, null, 2));
+          console.log('Datos de receta formateados para guardar/actualizar:', JSON.stringify(recipeData, null, 2));
+      console.log('Fotos adicionales:', recipeData.fotos);
+      console.log('Fotos de instrucciones:', recipeData.fotosInstrucciones);
 
     try {
       if (isEditing && editingRecipe) {
@@ -916,6 +1055,8 @@ const AddRecipeScreen = ({ navigation, route }) => {
               </View>
             )}
           </TouchableOpacity>
+
+
 
           <View style={styles.formSection}>
             <Input
@@ -1048,33 +1189,64 @@ const AddRecipeScreen = ({ navigation, route }) => {
             </View>
 
             {instructions.map((instruction, index) => (
-              <View key={`instruction-${index}`} style={styles.instructionRow}>
-                <View style={styles.instructionNumber}>
-                  <Text style={styles.instructionNumberText}>{index + 1}</Text>
-                </View>
-                <TextInput
-                  style={styles.instructionInput}
-                  value={instruction}
-                  onChangeText={(text) => handleUpdateInstruction(text, index)}
-                  placeholder={`Paso ${index + 1}`}
-                  placeholderTextColor={Colors.textLight}
-                  multiline
-                />
-                <TouchableOpacity
-                  style={styles.removeButton}
-                  onPress={() => handleRemoveInstruction(index)}
-                  disabled={instructions.length === 1}
-                >
-                  <Icon
-                    name="x"
-                    size={18}
-                    color={
-                      instructions.length === 1
-                        ? Colors.textLight
-                        : Colors.textDark
-                    }
+              <View key={`instruction-${index}`} style={styles.instructionContainer}>
+                <View style={styles.instructionRow}>
+                  <View style={styles.instructionNumber}>
+                    <Text style={styles.instructionNumberText}>{index + 1}</Text>
+                  </View>
+                  <TextInput
+                    style={styles.instructionInput}
+                    value={instruction.text}
+                    onChangeText={(text) => handleUpdateInstruction(text, index)}
+                    placeholder={`Paso ${index + 1}`}
+                    placeholderTextColor={Colors.textLight}
+                    multiline
                   />
-                </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.removeButton}
+                    onPress={() => handleRemoveInstruction(index)}
+                    disabled={instructions.length === 1}
+                  >
+                    <Icon
+                      name="x"
+                      size={18}
+                      color={
+                        instructions.length === 1
+                          ? Colors.textLight
+                          : Colors.textDark
+                      }
+                    />
+                  </TouchableOpacity>
+                </View>
+
+                {/* Controles de imagen para el paso */}
+                <View style={styles.instructionImageControls}>
+                  {instruction.image ? (
+                    <View style={styles.instructionImagePreview}>
+                      <Image
+                        source={{ uri: instruction.image }}
+                        style={styles.instructionImage}
+                        resizeMode="cover"
+                      />
+                      <TouchableOpacity
+                        style={styles.removeInstructionImageButton}
+                        onPress={() => handleRemoveInstructionImage(index)}
+                      >
+                        <Icon name="x" size={16} color={Colors.card} />
+                      </TouchableOpacity>
+                    </View>
+                  ) : (
+                    <TouchableOpacity
+                      style={styles.addInstructionImageButton}
+                      onPress={() => handleSelectInstructionImage(index)}
+                    >
+                      <Icon name="camera" size={20} color={Colors.primary} />
+                      <Text style={styles.addInstructionImageText}>
+                        Agregar foto al paso
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
               </View>
             ))}
 
@@ -1284,6 +1456,9 @@ const styles = StyleSheet.create({
   ingredientContainer: {
     marginBottom: Metrics.baseSpacing,
   },
+  instructionContainer: {
+    marginBottom: Metrics.mediumSpacing,
+  },
   ingredientRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1332,7 +1507,7 @@ const styles = StyleSheet.create({
   instructionRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    marginBottom: Metrics.mediumSpacing,
+    marginBottom: Metrics.baseSpacing,
   },
   instructionNumber: {
     width: 24,
@@ -1435,6 +1610,48 @@ const styles = StyleSheet.create({
   highlightText: {
     fontWeight: '600',
     color: Colors.primary,
+  },
+
+    instructionImageControls: {
+    marginTop: Metrics.baseSpacing,
+    marginLeft: 34, // Alinear con el texto de la instrucción
+  },
+  instructionImagePreview: {
+    position: 'relative',
+    alignSelf: 'flex-start',
+  },
+  instructionImage: {
+    width: 120,
+    height: 80,
+    borderRadius: Metrics.baseBorderRadius,
+  },
+  removeInstructionImageButton: {
+    position: 'absolute',
+    top: -5,
+    right: -5,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: Colors.error,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  addInstructionImageButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.background,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderStyle: 'dashed',
+    borderRadius: Metrics.baseBorderRadius,
+    paddingVertical: Metrics.baseSpacing,
+    paddingHorizontal: Metrics.mediumSpacing,
+    alignSelf: 'flex-start',
+  },
+  addInstructionImageText: {
+    fontSize: Metrics.smallFontSize,
+    color: Colors.primary,
+    marginLeft: Metrics.baseSpacing,
   },
 });
 

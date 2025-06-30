@@ -25,11 +25,20 @@ export function mapBackendRecipe(receta) {
       preparation: ''
     })) : [],
     ingredientes: receta.ingredientes || [],
-    instructions: Array.isArray(receta.instrucciones) ? receta.instrucciones : 
+    instructions: Array.isArray(receta.pasos) && receta.pasos.length > 0 ? 
+                  receta.pasos.map((paso, index) => ({
+                    step: paso.nroPaso || index + 1,
+                    text: paso.texto || paso.text || paso.toString(),
+                    hasImage: !!paso.imagen,
+                    imageUrl: paso.imagen || null
+                  })) :
+                  Array.isArray(receta.instrucciones) ? receta.instrucciones : 
                   typeof receta.instrucciones === 'string' ? 
                   receta.instrucciones.split('\n').map((step, index) => ({
                     step: index + 1,
-                    text: step.trim()
+                    text: step.trim(),
+                    hasImage: false,
+                    imageUrl: null
                   })) : [],
     instrucciones: receta.instrucciones || [],
     pasos: receta.pasos || [],
@@ -61,7 +70,12 @@ export function mapBackendRecipe(receta) {
     completedDate: receta.fechaCompletada,
     fechaCompletada: receta.fechaCompletada,
     addedDate: receta.fechaAgregada,
-    fechaAgregada: receta.fechaAgregada
+    fechaAgregada: receta.fechaAgregada,
+    // Fotos adicionales de la receta
+    additionalImages: Array.isArray(receta.multimedia) ? 
+                     receta.multimedia.filter(media => media.tipo === 'foto_receta').map(media => media.url) : 
+                     [],
+    multimedia: receta.multimedia || []
   };
 }
 
@@ -469,6 +483,13 @@ class DataService {
           fotoPrincipal: recipeData.imageUrl || recipeData.fotoPrincipal,
           porciones: parseInt(recipeData.servings || recipeData.porciones || 1),
           cantidadPersonas: parseInt(recipeData.servings || recipeData.cantidadPersonas || 1),
+          // Enviar pasos como array de objetos en lugar de string concatenado
+          pasos: Array.isArray(recipeData.instructions) 
+            ? recipeData.instructions.map((inst, index) => ({
+                texto: inst.text || inst.toString()
+              }))
+            : [],
+          // Mantener instrucciones para compatibilidad hacia atrás
           instrucciones: Array.isArray(recipeData.instructions) 
             ? recipeData.instructions.map(i => i.text || i).join('\n')
             : (recipeData.instructions || recipeData.instrucciones || ''),
@@ -941,6 +962,13 @@ class DataService {
         fotoPrincipal: recipeData.imageUrl || recipeData.fotoPrincipal,
         porciones: parseInt(recipeData.servings || recipeData.porciones || 1),
         cantidadPersonas: parseInt(recipeData.servings || recipeData.cantidadPersonas || 1),
+        // Enviar pasos como array de objetos
+        pasos: Array.isArray(recipeData.instructions) 
+          ? recipeData.instructions.map((inst, index) => ({
+              texto: inst.text || inst.toString()
+            }))
+          : [],
+        // Mantener instrucciones para compatibilidad
         instrucciones: Array.isArray(recipeData.instructions) 
           ? recipeData.instructions.map(i => i.text || i).join('\n')
           : (recipeData.instructions || recipeData.instrucciones || ''),
@@ -948,7 +976,11 @@ class DataService {
           idUsuario: userId
         },
         idTipo: recipeData.tipoReceta || recipeData.idTipo || { idTipo: 1 },
-        ingredientes: []
+        ingredientes: [],
+        // Agregar fotos adicionales de la receta
+        fotos: recipeData.fotos || [],
+        // Agregar fotos de pasos específicos  
+        fotosInstrucciones: recipeData.fotosInstrucciones || []
       };
 
       // Procesar ingredientes con un formato consistente
@@ -999,7 +1031,7 @@ class DataService {
       }
       
       console.log('Datos formateados para actualización:', JSON.stringify(formattedData, null, 2));
-      const result = await api.recipes.update(recipeId, formattedData);
+      const result = await api.recipes.updateWithSteps(recipeId, formattedData);
       console.log('Recipe updated successfully:', result);
       return { success: true, data: result.data || 'Receta actualizada correctamente' };
     } catch (error) {
