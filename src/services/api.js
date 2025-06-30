@@ -616,6 +616,12 @@ export const api = {
     // todavia no esta implementado del todo. 
   },
 
+  // Endpoints de alumnos
+  alumnos: {
+    getById: (id) => apiService.get(`/alumnoInfo/${id}`),
+    getCourses: (id) => apiService.get(`/alumno/${id}`),
+  },
+
 
   // Endpoints de calificaciones
   ratings: {

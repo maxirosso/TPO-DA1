@@ -104,6 +104,7 @@ function mapBackendCourse(curso) {
     duracion: curso.duracion && curso.duracion > 0 ? curso.duracion : '-',
     precio: curso.precio !== null && curso.precio !== undefined ? curso.precio : '-',
     modalidad: curso.modalidad || 'No especificado',
+    insumos: curso.insumos, // 1 = alumno trae insumos, 0 = empresa brinda insumos
     imageUrl: 'https://via.placeholder.com/300x200?text=Curso',
     availableSeats: curso.vacantesDisponibles || 0,
     startDate: curso.fechaInicio || '',
@@ -154,8 +155,13 @@ function mapBackendAlumno(alumno) {
     dniBack: alumno.dniFondo,
     tramite: alumno.tramite,
     accountBalance: alumno.cuentaCorriente,
+    cuentaCorriente: alumno.cuentaCorriente, // Agregar el campo original también
     idCronograma: alumno.idCronograma,
-    
+    // Información adicional del usuario
+    mail: alumno.mail,
+    nombre: alumno.nombre,
+    nickname: alumno.nickname,
+    tipo: alumno.tipo,
   };
 }
 

@@ -93,6 +93,8 @@ const ProfileStackScreen = () => (
     <Stack.Screen name="ProfileHome" component={ProfileScreen} />
     <Stack.Screen name="MyRecipes" component={MyRecipesScreen} />
     <Stack.Screen name="MyCourses" component={MyCoursesScreen} />
+    <Stack.Screen name="CourseDetail" component={CourseDetailScreen} />
+    <Stack.Screen name="QRScannerScreen" component={QRScannerScreen} />
     <Stack.Screen name="SavedScaledRecipes" component={SavedScaledRecipesScreen} />
     <Stack.Screen name="PendingRecipes" component={PendingRecipesScreen} />
     <Stack.Screen name="ShoppingList" component={ShoppingListScreen} />

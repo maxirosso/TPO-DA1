@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useContext } from 'react';
 import {
   View,
   Text,
@@ -18,14 +18,17 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import Button from '../../components/common/Button';
 import Colors from '../../themes/colors';
 import Metrics from '../../themes/metrics';
+import { AuthContext } from '../../context/AuthContext';
 import dataService from '../../services/dataService';
 
 const MyCoursesScreen = ({ navigation }) => {
+  const { user } = useContext(AuthContext);
   const [activeTab, setActiveTab] = useState('active');
   const [enrolledCourses, setEnrolledCourses] = useState([]);
   const [upcomingCourses, setUpcomingCourses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [accountBalance, setAccountBalance] = useState(0);
 
   // 🔄 Se ejecuta cada vez que la pantalla gana el foco (cuando entras a la vista)
   useFocusEffect(
@@ -34,6 +37,26 @@ const MyCoursesScreen = ({ navigation }) => {
       loadCourses(false); // false = no mostrar loading screen
     }, [])
   );
+
+  // Función para cargar la cuenta corriente del usuario
+  const loadUserAccountBalance = async (userId) => {
+    try {
+      console.log('🏦 Cargando cuenta corriente para usuario:', userId);
+      const alumnoData = await dataService.getAlumnoById(userId);
+      
+      if (alumnoData && (alumnoData.accountBalance !== undefined || alumnoData.cuentaCorriente !== undefined)) {
+        const balance = alumnoData.accountBalance !== undefined ? alumnoData.accountBalance : alumnoData.cuentaCorriente;
+        console.log('✅ Cuenta corriente cargada desde backend:', balance);
+        setAccountBalance(Number(balance) || 0);
+      } else {
+        console.log('⚠️ No se encontró información de cuenta corriente');
+        setAccountBalance(0);
+      }
+    } catch (error) {
+      console.error('❌ Error cargando cuenta corriente:', error);
+      setAccountBalance(0);
+    }
+  };
 
   const loadCourses = async (showLoading = true) => {
     console.log('📚 Iniciando carga de mis cursos...');
@@ -245,9 +268,15 @@ const MyCoursesScreen = ({ navigation }) => {
               } else if (refundPercentage === 0) {
                 confirmationMessage = `Has cancelado tu inscripción al curso "${course.title}".\n\nNo se procesará reembolso debido a la proximidad de la fecha de inicio.`;
               } else {
-                confirmationMessage = `Has cancelado tu inscripción al curso "${course.title}".\n\nSe ha iniciado el proceso de reembolso del ${refundPercentage}% del valor del curso.`;
+                confirmationMessage = `Has cancelado tu inscripción al curso "${course.title}".\n\nSe ha iniciado el proceso de reembolso del ${refundPercentage}% del valor del curso. El reintegro ha sido acreditado automáticamente en tu cuenta corriente.`;
               }
               
+              // Refrescar el saldo desde el backend si el usuario está disponible
+              const userId = user?.id || user?.idUsuario;
+              if (userId && refundPercentage > 0) {
+                await loadUserAccountBalance(parseInt(userId, 10));
+              }
+
               Alert.alert(
                 'Inscripción Cancelada',
                 confirmationMessage,
@@ -452,9 +481,23 @@ const MyCoursesScreen = ({ navigation }) => {
           
           <View style={styles.actionsContainer}>
             <Button
+              title="Ver Detalles"
+              onPress={() => navigation.navigate('CourseDetail', { 
+                course: item,
+                courseId: item.id || item.idCurso || item.idCronograma,
+                isEnrolled: true,
+                userType: 'student'
+              })}
+              type="primary"
+              size="small"
+              iconName="info"
+              style={styles.detailsButton}
+            />
+            
+            <Button
               title="Ver Certificado"
               onPress={() => Alert.alert('Certificado', 'Función para ver e imprimir el certificado del curso.')}
-              type="primary"
+              type="secondary"
               size="small"
               iconName="award"
               style={styles.certificateButton}
@@ -503,7 +546,12 @@ const MyCoursesScreen = ({ navigation }) => {
           <View style={styles.actionsContainer}>
             <Button
               title="Ver Detalles"
-              onPress={() => navigation.navigate('CourseDetail', { courseId: item.id })}
+              onPress={() => navigation.navigate('CourseDetail', { 
+                course: item,
+                courseId: item.id || item.idCurso || item.idCronograma,
+                isEnrolled: true,
+                userType: 'student'
+              })}
               type="primary"
               size="small"
               iconName="info"
@@ -886,21 +934,19 @@ const styles = StyleSheet.create({
   actionsContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    gap: Metrics.baseSpacing / 2,
   },
   attendanceButton: {
     flex: 1,
-    marginRight: Metrics.baseSpacing / 2,
   },
   cancelButton: {
     flex: 1,
-    marginLeft: Metrics.baseSpacing / 2,
   },
   certificateButton: {
     flex: 1,
   },
   detailsButton: {
     flex: 1,
-    marginRight: Metrics.baseSpacing / 2,
   },
   emptyContainer: {
     alignItems: 'center',

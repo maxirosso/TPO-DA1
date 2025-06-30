@@ -23,18 +23,19 @@ import { AuthContext } from '../../context/AuthContext';
 import dataService from '../../services/dataService';
 
 const CourseScreen = ({ navigation }) => {
-  const [selectedCategory, setSelectedCategory] = useState('Todos los cursos');
+  const [selectedCategory, setSelectedCategory] = useState('Todas las sedes');
   const [allCourses, setAllCourses] = useState([]);
   const [filteredCourses, setFilteredCourses] = useState([]);
   const [enrolledCourses, setEnrolledCourses] = useState([]);
-  const [categories, setCategories] = useState(['Todos los cursos']);
+  const [categories, setCategories] = useState(['Todas las sedes']);
   const [cancelModalVisible, setCancelModalVisible] = useState(false);
   const [selectedCourseToCancel, setSelectedCourseToCancel] = useState(null);
   const [locationModalVisible, setLocationModalVisible] = useState(false);
   const [selectedCourse, setSelectedCourse] = useState(null);
   const { user } = useContext(AuthContext);
   const [userType, setUserType] = useState('student'); // 'visitor', 'user', 'student'
-  const [accountBalance, setAccountBalance] = useState(15000);
+  const [accountBalance, setAccountBalance] = useState(0);
+  const [isLoadingBalance, setIsLoadingBalance] = useState(false); // Nuevo estado para carga de saldo
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -60,20 +61,28 @@ const CourseScreen = ({ navigation }) => {
       }
       // Si no hay userId, usar 1 por defecto
       const numericUserId = userId ? parseInt(userId, 10) : 1;
+      
       // Load available courses
       const courses = await dataService.getAllCourses(numericUserId);
       setAllCourses(courses);
-      // Extract unique categories from course modalities
+      
+      // Extract unique categories from sede names
       const uniqueCategories = [
-        'Todos los cursos',
-        ...Array.from(new Set(courses.map(c => c.modalidad || 'Otros')))
+        'Todas las sedes',
+        ...Array.from(new Set(
+          courses
+            .filter(c => c.sede && (c.sede.nombre || c.sede.nombreSede))
+            .map(c => c.sede.nombre || c.sede.nombreSede)
+        ))
       ];
       setCategories(uniqueCategories);
+      
       // Load enrolled courses si userId es válido
       if (userId) {
         const enrolled = await dataService.getUserCourses(numericUserId);
         setEnrolledCourses(enrolled);
       }
+      
       // Set user type based on user data
       if (user) {
         // Map backend types to frontend types
@@ -89,6 +98,11 @@ const CourseScreen = ({ navigation }) => {
         }
         
         setUserType(mappedType);
+        
+        // Cargar la cuenta corriente del usuario si es alumno
+        if (mappedType === 'student' && userId) {
+          await loadUserAccountBalance(numericUserId);
+        }
       }
     } catch (err) {
       setError('No se pudieron cargar los cursos. Intenta nuevamente.');
@@ -98,11 +112,82 @@ const CourseScreen = ({ navigation }) => {
     }
   };
 
+  // Nueva función para cargar la cuenta corriente del usuario
+  const loadUserAccountBalance = async (userId) => {
+    setIsLoadingBalance(true);
+    try {
+      console.log('🏦 Cargando cuenta corriente para usuario:', userId);
+      
+      // Intentar obtener los datos del alumno desde el backend
+      const alumnoData = await dataService.getAlumnoById(userId);
+      console.log('📊 Datos del alumno recibidos:', alumnoData);
+      
+      if (alumnoData && (alumnoData.accountBalance !== undefined || alumnoData.cuentaCorriente !== undefined)) {
+        const balance = alumnoData.accountBalance !== undefined ? alumnoData.accountBalance : alumnoData.cuentaCorriente;
+        console.log('✅ Cuenta corriente cargada desde backend:', balance);
+        setAccountBalance(Number(balance) || 0);
+        return;
+      } 
+      
+      // Fallback: verificar si hay datos de alumno en AsyncStorage
+      console.log('📱 Intentando cargar desde AsyncStorage...');
+      const userData = await AsyncStorage.getItem('user_data');
+      if (userData) {
+        const parsed = JSON.parse(userData);
+        console.log('👤 Datos de usuario en AsyncStorage:', parsed);
+        
+        if (parsed.studentInfo && parsed.studentInfo.accountBalance !== undefined) {
+          console.log('✅ Cuenta corriente desde AsyncStorage (accountBalance):', parsed.studentInfo.accountBalance);
+          setAccountBalance(Number(parsed.studentInfo.accountBalance) || 0);
+        } else if (parsed.studentInfo && parsed.studentInfo.cuentaCorriente !== undefined) {
+          console.log('✅ Cuenta corriente desde AsyncStorage (cuentaCorriente):', parsed.studentInfo.cuentaCorriente);
+          setAccountBalance(Number(parsed.studentInfo.cuentaCorriente) || 0);
+        } else {
+          console.log('⚠️ No se encontró información de cuenta corriente en AsyncStorage');
+          console.log('📋 Estructura de parsed:', JSON.stringify(parsed, null, 2));
+          setAccountBalance(0);
+        }
+      } else {
+        console.log('⚠️ No hay datos de usuario en AsyncStorage');
+        setAccountBalance(0);
+      }
+    } catch (error) {
+      console.error('❌ Error cargando cuenta corriente:', error);
+      console.error('❌ Stack del error:', error.stack);
+      setAccountBalance(0);
+    } finally {
+      setIsLoadingBalance(false);
+    }
+  };
+
+  // Nueva función para actualizar la cuenta corriente después de una inscripción
+  const updateAccountBalanceAfterEnrollment = async (coursePrice) => {
+    try {
+      const newBalance = accountBalance - coursePrice;
+      setAccountBalance(newBalance);
+      
+      // También actualizar en AsyncStorage si existe información del usuario
+      const userData = await AsyncStorage.getItem('user_data');
+      if (userData) {
+        const parsed = JSON.parse(userData);
+        if (parsed.studentInfo) {
+          parsed.studentInfo.accountBalance = newBalance;
+          parsed.studentInfo.cuentaCorriente = newBalance;
+          await AsyncStorage.setItem('user_data', JSON.stringify(parsed));
+        }
+      }
+      
+      console.log('💰 Cuenta corriente actualizada. Nuevo saldo:', newBalance);
+    } catch (error) {
+      console.error('❌ Error actualizando cuenta corriente local:', error);
+    }
+  };
+
   const filterCourses = () => {
     let filtered = [...allCourses];
-    if (selectedCategory !== 'Todos los cursos') {
+    if (selectedCategory !== 'Todas las sedes') {
       filtered = allCourses.filter(course => 
-        course.modalidad === selectedCategory
+        course.sede && (course.sede.nombre === selectedCategory || course.sede.nombreSede === selectedCategory)
       );
     }
     setFilteredCourses(filtered);
@@ -115,6 +200,22 @@ const CourseScreen = ({ navigation }) => {
       minimumFractionDigits: 0,
     }).format(price);
   };
+
+  const formatDate = (dateString) => {
+    if (!dateString) return 'No especificado';
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('es-AR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+      });
+    } catch (error) {
+      return 'Fecha inválida';
+    }
+  };
+
+
 
   const calculateRefundPercentage = (startDate) => {
     const today = new Date();
@@ -155,6 +256,8 @@ const CourseScreen = ({ navigation }) => {
     console.log('UserType:', userType);
     console.log('Course:', course);
     console.log('Sede:', sede);
+    console.log('Account Balance:', accountBalance);
+    console.log('Course Price:', course.precio);
     
     if (!user || userType !== 'student') {
       Alert.alert(
@@ -164,6 +267,22 @@ const CourseScreen = ({ navigation }) => {
           { text: 'Cancelar', style: 'cancel' },
           { 
             text: 'Ir a Perfil', 
+            onPress: () => navigation.navigate('Profile')
+          }
+        ]
+      );
+      return;
+    }
+
+    // Verificar si el usuario tiene fondos suficientes
+    if (course.precio && accountBalance < course.precio) {
+      Alert.alert(
+        'Fondos Insuficientes',
+        `No tienes suficiente crédito para inscribirte a este curso.\n\nCosto del curso: ${formatPrice(course.precio)}\nTu crédito actual: ${formatPrice(accountBalance)}\n\nNecesitas agregar ${formatPrice(course.precio - accountBalance)} más a tu cuenta.`,
+        [
+          { text: 'Entendido', style: 'cancel' },
+          { 
+            text: 'Agregar Fondos', 
             onPress: () => navigation.navigate('Profile')
           }
         ]
@@ -186,10 +305,14 @@ const CourseScreen = ({ navigation }) => {
       console.log('Result:', result);
       
       if (result) {
+        // Refrescar automáticamente el saldo desde el backend
+        const userId = parseInt(user.id || user.idUsuario, 10);
+        await loadUserAccountBalance(userId);
+        
         const sedeInfo = sede ? ` en ${sede.nombre}` : '';
         Alert.alert(
           'Inscripción Exitosa',
-          `Te has inscrito exitosamente al curso "${course.title}"${sedeInfo}.\n\nRecibirás un email con:\n• Detalles del curso\n• Requisitos e instrucciones\n• Factura de pago\n• Información de la sede`,
+          `Te has inscrito exitosamente al curso "${course.title}"${sedeInfo}.\n\nSe ha descontado ${formatPrice(course.precio)} de tu cuenta corriente.\nNuevo saldo: ${formatPrice(accountBalance - course.precio)}\n\nRecibirás un email con:\n• Detalles del curso\n• Requisitos e instrucciones\n• Factura de pago\n• Información de la sede`,
           [{ text: 'OK' }]
         );
         
@@ -202,11 +325,23 @@ const CourseScreen = ({ navigation }) => {
       console.log('Error message:', error.message);
       console.log('Error stack:', error.stack);
       
-      Alert.alert(
-        'Error',
-        'No se pudo procesar tu inscripción. Por favor, intenta nuevamente.',
-        [{ text: 'OK' }]
-      );
+      // Manejar errores específicos del backend
+      let errorMessage = 'No se pudo procesar tu inscripción. Por favor, intenta nuevamente.';
+      
+      if (error.response && error.response.data) {
+        const backendError = error.response.data;
+        if (typeof backendError === 'string') {
+          if (backendError.includes('Fondos insuficientes')) {
+            errorMessage = 'No tienes suficiente crédito en tu cuenta corriente para inscribirte a este curso.';
+          } else if (backendError.includes('vacantes')) {
+            errorMessage = 'No hay vacantes disponibles para este curso.';
+          } else {
+            errorMessage = backendError;
+          }
+        }
+      }
+      
+      Alert.alert('Error', errorMessage, [{ text: 'OK' }]);
     }
   };
 
@@ -277,7 +412,19 @@ const CourseScreen = ({ navigation }) => {
             <Text style={styles.detailText}>{course.duracion || 'No especificado'} horas</Text>
           </View>
           <View style={styles.detailItem}>
+            <Icon name="calendar" size={16} color={Colors.textSecondary} />
+            <Text style={styles.detailText}>
+              Inicia: {formatDate(course.startDate || course.fechaInicio)}
+            </Text>
+          </View>
+          <View style={styles.detailItem}>
             <Icon name="map-pin" size={16} color={Colors.textSecondary} />
+            <Text style={styles.detailText}>
+              {course.sede ? (course.sede.nombre || course.sede.nombreSede) : 'Sede no especificada'}
+            </Text>
+          </View>
+          <View style={styles.detailItem}>
+            <Icon name="monitor" size={16} color={Colors.textSecondary} />
             <Text style={styles.detailText}>{course.modalidad || 'No especificado'}</Text>
           </View>
         </View>
@@ -447,12 +594,17 @@ const CourseScreen = ({ navigation }) => {
             <Text style={styles.headerTitle}>Cursos de Cocina</Text>
           </View>
           
-          {userType === 'student' && accountBalance > 0 && (
+          {userType === 'student' && (
             <View style={styles.balanceInfo}>
-              <Icon name="credit-card" size={16} color={Colors.success} />
-              <Text style={styles.balanceText}>
-                Crédito disponible: {formatPrice(accountBalance)}
+              <Icon name="credit-card" size={16} color={accountBalance > 0 ? Colors.success : Colors.warning} />
+              <Text style={[styles.balanceText, { color: accountBalance > 0 ? Colors.success : Colors.warning }]}>
+                {isLoadingBalance ? 'Cargando saldo...' : `Crédito disponible: ${formatPrice(accountBalance)}`}
               </Text>
+              {accountBalance === 0 && !isLoadingBalance && (
+                <Text style={[styles.balanceText, { color: Colors.warning, fontSize: 12, marginLeft: 8 }]}>
+                  (Sin fondos)
+                </Text>
+              )}
             </View>
           )}
           
@@ -501,7 +653,9 @@ const CourseScreen = ({ navigation }) => {
             <Text style={styles.emptyText}>
               {selectedCategory === 'Mis Cursos'
                 ? 'Explora nuestros cursos disponibles y encuentra el perfecto para ti.'
-                : 'No se encontraron cursos en esta categoría.'
+                : selectedCategory === 'Todas las sedes' 
+                  ? 'No se encontraron cursos disponibles.'
+                  : `No se encontraron cursos en la sede ${selectedCategory}.`
               }
             </Text>
           </View>
@@ -625,13 +779,15 @@ const styles = StyleSheet.create({
   },
   courseDetails: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     alignItems: 'center',
     marginBottom: Metrics.mediumSpacing,
   },
   detailItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginRight: Metrics.baseSpacing,
+    marginRight: Metrics.mediumSpacing,
+    marginBottom: Metrics.smallSpacing,
   },
   detailText: {
     fontSize: Metrics.smallFontSize,

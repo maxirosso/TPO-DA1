@@ -65,6 +65,7 @@ const CourseDetailScreen = ({ navigation, route }) => {
             price: courseData.precio,
             modalidad: courseData.modalidad,
             category: courseData.modalidad,
+            insumos: courseData.insumos, // Agregar campo de insumos
             imageUrl: 'https://via.placeholder.com/300x200?text=Curso+Culinario',
             startDate: courseData.fechaInicio,
             endDate: courseData.fechaFin,
@@ -73,7 +74,8 @@ const CourseDetailScreen = ({ navigation, route }) => {
             status: 'active',
             nextSession: courseData.fechaInicio,
             totalHours: courseData.duracion,
-            topics: courseData.contenidos ? courseData.contenidos.split(',') : []
+            topics: courseData.contenidos ? courseData.contenidos.split(',') : [],
+            sede: courseData.sede // También asegurar que sede esté disponible
           });
         } else {
           setError('No se encontró información del curso.');
@@ -411,6 +413,19 @@ const CourseDetailScreen = ({ navigation, route }) => {
                   </View>
                 </>
               )}
+
+              <Text style={styles.requirementsTitle}>Insumos del Curso</Text>
+              <View style={styles.insumosContainer}>
+                <View style={styles.insumosItem}>
+                  <Icon name="package" size={16} color={Colors.primary} />
+                  <Text style={styles.insumosText}>
+                    {course?.insumos === 1 
+                      ? 'Debes traer tus propios insumos para el curso'
+                      : 'La empresa brinda todos los insumos necesarios'
+                    }
+                  </Text>
+                </View>
+              </View>
 
               <Text style={styles.requirementsTitle}>Requisitos</Text>
               {course?.requerimientos ? (
@@ -764,6 +779,23 @@ const styles = StyleSheet.create({
     color: Colors.textDark,
     marginLeft: Metrics.baseSpacing,
     flex: 1,
+  },
+  insumosContainer: {
+    backgroundColor: Colors.background,
+    borderRadius: Metrics.baseBorderRadius,
+    padding: Metrics.mediumSpacing,
+    marginBottom: Metrics.mediumSpacing,
+  },
+  insumosItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  insumosText: {
+    fontSize: Metrics.baseFontSize,
+    color: Colors.textDark,
+    marginLeft: Metrics.baseSpacing,
+    flex: 1,
+    lineHeight: Metrics.mediumLineHeight,
   },
   topicsTitle: {
     fontSize: Metrics.mediumFontSize,
