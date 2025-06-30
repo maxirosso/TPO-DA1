@@ -51,23 +51,64 @@ const AddRecipeScreen = ({ navigation, route }) => {
     }
   }, [isVisitor, navigation]);
   
-  // Limpiar campos cuando se abre la pantalla (no cuando se está editando)
+     // Función para limpiar completamente el formulario
+   const clearAllFields = () => {
+     console.log('Limpiando todos los campos del formulario');
+     
+     setTitle('');
+     setDescription('');
+     setServings('');
+     setRecipeImage(null);
+     setIngredients([{ quantity: '', name: '', unit: 'gramos' }]);
+     setInstructions(['']);
+     setIsLoading(false);
+     setCurrentEditingIngredient(null);
+     setShowUnitSelector(false);
+     setIsTitleValid(true);
+     setTitleError('');
+     
+     // Establecer tipo por defecto si hay tipos disponibles
+     if (recipeTypes.length > 0) {
+       setSelectedRecipeType(recipeTypes[0]);
+     } else {
+       setSelectedRecipeType(null);
+     }
+   };
+
+   // Función para manejar el botón de atrás
+   const handleBackPress = () => {
+     if (isEditing) {
+       console.log('Saliendo del modo edición hacia AddTab limpio');
+       // Si estamos editando, ir a AddTab con campos limpios
+       navigation.navigate('AddTab', {
+         editingRecipe: undefined,
+         isEditing: false,
+         onRecipeUpdated: undefined
+       });
+     } else {
+       // Si no estamos editando, comportamiento normal
+       navigation.goBack();
+     }
+   };
+
+  // Limpiar campos cada vez que se entra en la vista
   useFocusEffect(
     React.useCallback(() => {
+      // Solo limpiar si no estamos en modo edición
       if (!isEditing) {
-        // Resetear todos los campos a sus valores iniciales
-        setTitle('');
-        setDescription('');
-        setServings('');
-        setRecipeImage(null);
-        setIngredients([{ quantity: '', name: '', unit: 'gramos' }]);
-        setInstructions(['']);
-        // Si hay un tipo de receta seleccionado por defecto, mantenerlo
-        if (recipeTypes.length > 0) {
-          setSelectedRecipeType(recipeTypes[0]);
+        console.log('Limpiando campos de AddRecipeScreen al entrar en la vista');
+        clearAllFields();
+        
+        // Limpiar parámetros de navegación para evitar persistencia
+        if (route.params && (route.params.editingRecipe || route.params.isEditing)) {
+          navigation.setParams({
+            editingRecipe: undefined,
+            isEditing: undefined,
+            onRecipeUpdated: undefined
+          });
         }
       }
-    }, [isEditing, recipeTypes])
+    }, [isEditing, recipeTypes, navigation, route.params])
   );
 
   // Si es visitante, no renderizar el contenido de la pantalla
@@ -108,6 +149,21 @@ const AddRecipeScreen = ({ navigation, route }) => {
   useEffect(() => {
     loadRecipeTypes();
   }, []);
+
+  // Detectar cuando se regresa del modo edición y limpiar campos
+  useEffect(() => {
+    if (!isEditing && route.params?.isEditing === false) {
+      console.log('Regresando del modo edición, limpiando campos...');
+      clearAllFields();
+      
+      // Limpiar parámetros de navegación
+      navigation.setParams({
+        editingRecipe: undefined,
+        isEditing: undefined,
+        onRecipeUpdated: undefined
+      });
+    }
+  }, [isEditing, route.params?.isEditing]);
 
   const loadRecipeTypes = async () => {
     try {
@@ -460,6 +516,9 @@ const AddRecipeScreen = ({ navigation, route }) => {
       recipes.push(newRecipe);
       await AsyncStorage.setItem('pendingRecipes', JSON.stringify(recipes));
       
+      // Limpiar campos después de guardar localmente
+      clearAllFields();
+      
       Alert.alert(
         'Receta Guardada',
         'Tu receta se ha guardado localmente y se subirá automáticamente cuando tengas conexión WiFi.',
@@ -477,18 +536,6 @@ const AddRecipeScreen = ({ navigation, route }) => {
       
       if (!currentUser || !currentUser.idUsuario) {
         Alert.alert('Error', 'No se pudo identificar al usuario. Inicia sesión nuevamente.');
-        return;
-      }
-
-      // Verificar si el nombre ya existe
-      const recipeExists = await checkRecipeTitleExists(recipeData.title);
-      if (recipeExists) {
-        Alert.alert(
-          'Nombre Duplicado',
-          'Ya tienes una receta con el nombre "' + recipeData.title + '". Por favor elige otro título.',
-          [{ text: 'Entendido', style: 'default' }]
-        );
-        setIsLoading(false);
         return;
       }
 
@@ -545,6 +592,9 @@ const AddRecipeScreen = ({ navigation, route }) => {
       }
 
       if (response.success || response.data) {
+        // Limpiar campos después de guardar exitosamente
+        clearAllFields();
+        
         Alert.alert(
           'Receta Enviada',
           'Tu receta ha sido enviada y está pendiente de aprobación. Una vez aprobada por nuestro equipo, será visible para otros usuarios.',
@@ -559,11 +609,7 @@ const AddRecipeScreen = ({ navigation, route }) => {
       let errorMessage = 'No se pudo subir la receta.';
       
       // Proporcionar mensajes de error más específicos
-      if (error.message.includes('Ya existe una receta con este nombre')) {
-        errorMessage = 'Ya tienes una receta con este nombre. Por favor elige un título diferente.';
-        Alert.alert('Receta Duplicada', errorMessage);
-        return; // No guardar localmente para duplicados
-      } else if (error.message.includes('400')) {
+      if (error.message.includes('400')) {
         errorMessage = 'Datos de receta inválidos. Verifica que todos los campos estén completos.';
       } else if (error.message.includes('401')) {
         errorMessage = 'No tienes autorización para crear recetas. Inicia sesión nuevamente.';
@@ -578,14 +624,14 @@ const AddRecipeScreen = ({ navigation, route }) => {
     }
   };
 
-  // Verificar si el nombre de la receta ya existe
+  // Verificar si el nombre de la receta ya existe y retornar la receta existente
   const checkRecipeTitleExists = async (title) => {
     try {
-      if (!title.trim() || isEditing) return false;
+      if (!title.trim() || isEditing) return null;
       
       // Obtener el usuario actual
       const currentUser = user || await getCurrentUser();
-      if (!currentUser || !currentUser.idUsuario) return false;
+      if (!currentUser || !currentUser.idUsuario) return null;
 
       try {
         // Buscar recetas con nombre similar
@@ -598,18 +644,18 @@ const AddRecipeScreen = ({ navigation, route }) => {
           r.nombreReceta.toLowerCase() === title.trim().toLowerCase()
         ) : [];
 
-        return matchingRecipes.length > 0;
+        return matchingRecipes.length > 0 ? matchingRecipes[0] : null;
       } catch (error) {
         // Si es un error 404, significa que no hay recetas con ese nombre
         if (error.message && error.message.includes('404')) {
-          return false;
+          return null;
         }
         // Para otros errores, lanzamos el error para manejarlo en el catch externo
         throw error;
       }
     } catch (error) {
       console.error('Error verificando nombre de receta:', error);
-      return false;
+      return null;
     }
   };
 
@@ -620,10 +666,10 @@ const AddRecipeScreen = ({ navigation, route }) => {
     if (newTitle.trim().length > 0) {
       // Verificar después de un breve retraso para evitar demasiadas consultas
       setTimeout(async () => {
-        const exists = await checkRecipeTitleExists(newTitle);
-        setIsTitleValid(!exists);
-        if (exists) {
-          setTitleError('Ya tienes una receta con este nombre. Por favor elige otro título.');
+        const existingRecipe = await checkRecipeTitleExists(newTitle);
+        setIsTitleValid(!existingRecipe);
+        if (existingRecipe) {
+          setTitleError('Ya tienes una receta con este nombre. Se te dará la opción de reemplazar o editar al guardar.');
         } else {
           setTitleError('');
         }
@@ -634,15 +680,83 @@ const AddRecipeScreen = ({ navigation, route }) => {
     }
   };
 
+  // Función para reemplazar receta existente
+  const replaceExistingRecipe = async (existingRecipe, newRecipeData) => {
+    try {
+      const currentUser = user || await getCurrentUser();
+      
+      if (!currentUser || !currentUser.idUsuario) {
+        Alert.alert('Error', 'No se pudo identificar al usuario. Inicia sesión nuevamente.');
+        return;
+      }
+
+      // Primero eliminar la receta existente
+      console.log('Eliminando receta existente:', existingRecipe.idReceta);
+      const deleteResult = await dataService.deleteUserRecipe(existingRecipe.idReceta, currentUser.idUsuario);
+      
+      if (!deleteResult.success) {
+        Alert.alert('Error', 'No se pudo eliminar la receta existente: ' + deleteResult.message);
+        return;
+      }
+
+             // Luego crear la nueva receta
+       console.log('Creando nueva receta para reemplazar...');
+       await uploadRecipe(newRecipeData);
+       
+       // Limpiar campos después de reemplazar exitosamente
+       clearAllFields();
+       
+     } catch (error) {
+       console.error('Error al reemplazar receta:', error);
+       Alert.alert('Error', 'No se pudo reemplazar la receta. Intenta nuevamente.');
+     }
+   };
+
+  // Función para editar receta existente
+  const editExistingRecipe = (existingRecipe) => {
+    // Mapear la receta del backend al formato del frontend
+    const mappedRecipe = {
+      id: existingRecipe.idReceta,
+      idReceta: existingRecipe.idReceta,
+      title: existingRecipe.nombreReceta,
+      nombreReceta: existingRecipe.nombreReceta,
+      description: existingRecipe.descripcionReceta,
+      descripcionReceta: existingRecipe.descripcionReceta,
+      imageUrl: existingRecipe.fotoPrincipal,
+      fotoPrincipal: existingRecipe.fotoPrincipal,
+      servings: existingRecipe.porciones,
+      porciones: existingRecipe.porciones,
+      instructions: typeof existingRecipe.instrucciones === 'string' ? 
+        existingRecipe.instrucciones.split('\n').filter(step => step.trim()) : 
+        existingRecipe.instrucciones || [],
+      instrucciones: existingRecipe.instrucciones,
+      ingredients: existingRecipe.ingredientes ? existingRecipe.ingredientes.map(ing => ({
+        name: ing.nombre,
+        amount: `${ing.cantidad} ${ing.unidadMedida}`.trim(),
+        quantity: ing.cantidad.toString(),
+        unit: ing.unidadMedida
+      })) : [],
+      ingredientes: existingRecipe.ingredientes,
+      tipo: existingRecipe.tipo || existingRecipe.idTipo,
+      tipoReceta: existingRecipe.tipo || existingRecipe.idTipo,
+      usuario: existingRecipe.usuario
+    };
+
+    // Navegar a la pantalla de edición
+    navigation.navigate('AddTab', {
+      editingRecipe: mappedRecipe,
+      isEditing: true,
+      onRecipeUpdated: () => {
+        // Callback para recargar datos si es necesario
+        navigation.navigate('HomeTab');
+      }
+    });
+  };
+
   const handleSaveRecipe = async () => {
     // Validación
     if (!title.trim()) {
       Alert.alert('Error', 'El título de la receta es obligatorio');
-      return;
-    }
-
-    if (!isTitleValid) {
-      Alert.alert('Error', titleError);
       return;
     }
 
@@ -690,7 +804,43 @@ const AddRecipeScreen = ({ navigation, route }) => {
         // Actualizar receta existente
         await updateRecipe(recipeData);
       } else {
-        // Crear nueva receta (lógica existente)
+        // Verificar si el nombre ya existe antes de crear nueva receta
+        const existingRecipe = await checkRecipeTitleExists(recipeData.title);
+        
+        if (existingRecipe) {
+          setIsLoading(false);
+          
+          // Mostrar diálogo con opciones
+          Alert.alert(
+            'Receta Existente',
+            `Ya tienes una receta llamada "${recipeData.title}". ¿Qué deseas hacer?`,
+            [
+              {
+                text: 'Cancelar',
+                style: 'cancel'
+              },
+              {
+                text: 'Reemplazar',
+                style: 'destructive',
+                onPress: async () => {
+                  setIsLoading(true);
+                  await replaceExistingRecipe(existingRecipe, recipeData);
+                  setIsLoading(false);
+                }
+              },
+              {
+                text: 'Editar Existente',
+                onPress: () => {
+                  editExistingRecipe(existingRecipe);
+                }
+              }
+            ],
+            { cancelable: true }
+          );
+          return;
+        }
+
+        // Si no existe receta con ese nombre, continuar con el flujo normal
         const networkStatus = await checkNetworkCost();
 
         switch (networkStatus) {
@@ -729,7 +879,7 @@ const AddRecipeScreen = ({ navigation, route }) => {
           <View style={styles.headerContent}>
             <TouchableOpacity
               style={styles.backButton}
-              onPress={() => navigation.goBack()}
+              onPress={handleBackPress}
             >
               <Icon name="chevron-left" size={24} color={Colors.textDark} />
             </TouchableOpacity>
