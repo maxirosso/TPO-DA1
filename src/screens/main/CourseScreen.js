@@ -1,4 +1,4 @@
-import React, { useState, useContext, useEffect, useCallback } from 'react';
+import React, { useState, useContext, useEffect } from 'react';
 import {
   View,
   Text,
@@ -12,7 +12,6 @@ import {
   Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useFocusEffect } from '@react-navigation/native';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/Feather';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -39,23 +38,16 @@ const CourseScreen = ({ navigation }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // 🔄 Se ejecuta cada vez que la pantalla gana el foco (cuando entras a la vista)
-  useFocusEffect(
-    useCallback(() => {
-      console.log('🔄 CourseScreen focused - Recargando cursos...');
-      loadCourses(false); // false = no mostrar loading screen
-    }, [])
-  );
+  useEffect(() => {
+    loadCourses();
+  }, []);
 
   useEffect(() => {
     filterCourses();
   }, [selectedCategory, allCourses, enrolledCourses]);
 
-  const loadCourses = async (showLoading = true) => {
-    console.log('📚 Iniciando carga de cursos...');
-    if (showLoading) {
-      setIsLoading(true);
-    }
+  const loadCourses = async () => {
+    setIsLoading(true);
     setError(null);
     try {
       let userId = user?.id || user?.idUsuario;
@@ -66,33 +58,22 @@ const CourseScreen = ({ navigation }) => {
           userId = parsed.id || parsed.idUsuario;
         }
       }
-      
       // Si no hay userId, usar 1 por defecto
       const numericUserId = userId ? parseInt(userId, 10) : 1;
-      console.log('👤 Usuario ID para cargar cursos:', numericUserId);
-      
       // Load available courses
-      console.log('📋 Cargando cursos disponibles...');
       const courses = await dataService.getAllCourses(numericUserId);
-      console.log('✅ Cursos cargados:', courses.length);
       setAllCourses(courses);
-      
       // Extract unique categories from course modalities
       const uniqueCategories = [
         'Todos los cursos',
         ...Array.from(new Set(courses.map(c => c.modalidad || 'Otros')))
       ];
       setCategories(uniqueCategories);
-      console.log('📁 Categorías disponibles:', uniqueCategories);
-      
       // Load enrolled courses si userId es válido
       if (userId) {
-        console.log('🎓 Cargando cursos inscritos...');
         const enrolled = await dataService.getUserCourses(numericUserId);
-        console.log('✅ Cursos inscritos cargados:', enrolled.length);
         setEnrolledCourses(enrolled);
       }
-      
       // Set user type based on user data
       if (user) {
         // Map backend types to frontend types
@@ -107,18 +88,13 @@ const CourseScreen = ({ navigation }) => {
           mappedType = 'user';
         }
         
-        console.log('👤 Tipo de usuario:', backendType, '->', mappedType);
         setUserType(mappedType);
       }
-      
-      console.log('🎉 Carga de cursos completada exitosamente');
     } catch (err) {
-      console.error('❌ Error cargando cursos:', err);
       setError('No se pudieron cargar los cursos. Intenta nuevamente.');
+      console.error('Error loading courses:', err);
     } finally {
-      if (showLoading) {
-        setIsLoading(false);
-      }
+      setIsLoading(false);
     }
   };
 
@@ -218,7 +194,7 @@ const CourseScreen = ({ navigation }) => {
         );
         
         // Refresh course list
-        loadCourses(false); // Recarga silenciosa después de inscribirse
+        loadCourses();
       }
     } catch (error) {
       console.log('=== ENROLLMENT ERROR ===');
@@ -252,7 +228,7 @@ const CourseScreen = ({ navigation }) => {
             try {
               await dataService.cancelEnrollment(enrollment.idInscripcion, true);
               Alert.alert('Inscripción Cancelada', 'Tu inscripción ha sido cancelada exitosamente.');
-              loadCourses(false); // Recarga silenciosa después de cancelar
+              loadCourses();
             } catch (error) {
               Alert.alert('Error', 'No se pudo cancelar la inscripción. Por favor, intenta nuevamente.');
             }
@@ -507,23 +483,7 @@ const CourseScreen = ({ navigation }) => {
         style={styles.content} 
         showsVerticalScrollIndicator={false}
       >
-        {isLoading ? (
-          <View style={styles.loadingContainer}>
-            <Icon name="loader" size={32} color={Colors.primary} />
-            <Text style={styles.loadingText}>Cargando cursos...</Text>
-          </View>
-        ) : error ? (
-          <View style={styles.errorContainer}>
-            <Icon name="alert-circle" size={48} color={Colors.error} />
-            <Text style={styles.errorTitle}>Error al cargar</Text>
-            <Text style={styles.errorText}>{error}</Text>
-            <Button
-              title="Reintentar"
-              onPress={() => loadCourses(true)}
-              style={styles.retryButton}
-            />
-          </View>
-        ) : filteredCourses.length > 0 ? (
+        {filteredCourses.length > 0 ? (
           filteredCourses.map((course, index) => (
             <View key={`course-${course.id || course.idCurso || course.idCronograma || index}-${index}`}>
               {renderCourseCard({ item: course })}
@@ -544,11 +504,6 @@ const CourseScreen = ({ navigation }) => {
                 : 'No se encontraron cursos en esta categoría.'
               }
             </Text>
-            <Button
-              title="Recargar Cursos"
-              onPress={() => loadCourses(true)}
-              style={styles.reloadButton}
-            />
           </View>
         )}
         
@@ -696,40 +651,6 @@ const styles = StyleSheet.create({
     fontSize: Metrics.smallFontSize,
     color: Colors.textMedium,
   },
-  loadingContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: Metrics.xLargeSpacing,
-    minHeight: 200,
-  },
-  loadingText: {
-    fontSize: Metrics.baseFontSize,
-    color: Colors.textMedium,
-    marginTop: Metrics.mediumSpacing,
-  },
-  errorContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: Metrics.xLargeSpacing,
-  },
-  errorTitle: {
-    fontSize: Metrics.mediumFontSize,
-    fontWeight: '600',
-    color: Colors.error,
-    marginTop: Metrics.mediumSpacing,
-    marginBottom: Metrics.baseSpacing,
-  },
-  errorText: {
-    fontSize: Metrics.baseFontSize,
-    color: Colors.textMedium,
-    textAlign: 'center',
-    lineHeight: Metrics.mediumLineHeight,
-    marginBottom: Metrics.mediumSpacing,
-  },
-  retryButton: {
-    backgroundColor: Colors.error,
-    marginTop: Metrics.baseSpacing,
-  },
   emptyContainer: {
     alignItems: 'center',
     justifyContent: 'center',
@@ -747,10 +668,6 @@ const styles = StyleSheet.create({
     color: Colors.textMedium,
     textAlign: 'center',
     lineHeight: Metrics.mediumLineHeight,
-    marginBottom: Metrics.mediumSpacing,
-  },
-  reloadButton: {
-    marginTop: Metrics.baseSpacing,
   },
   bottomPadding: {
     height: Metrics.xxLargeSpacing,
