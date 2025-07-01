@@ -191,6 +191,26 @@ class ApiService {
         return this.delete(endpoint);
       },
     };
+
+    //Endpoints de los métodos relacionados con asistencia
+    this.attendance = {
+      register: (attendanceData) => {
+        console.log(`[API] Registrando asistencia:`, attendanceData);
+        return this.post('/registrarAsistencia', attendanceData);
+      },
+      getByStudent: (idUsuario) => {
+        console.log(`[API] Obteniendo asistencias del alumno ${idUsuario}`);
+        return this.get(`/asistencias/${idUsuario}`);
+      },
+      getByCourse: (idCurso) => {
+        console.log(`[API] Obteniendo asistencias del curso ${idCurso}`);
+        return this.get(`/asistenciasCurso/${idCurso}`);
+      },
+      updateAttendance: (idAsistencia, attendanceData) => {
+        console.log(`[API] Actualizando asistencia ${idAsistencia}:`, attendanceData);
+        return this.put(`/actualizarAsistencia/${idAsistencia}`, attendanceData);
+      },
+    };
   }
 
   get baseURL() {

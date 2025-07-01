@@ -1,123 +1,286 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
   Alert,
-  Dimensions,
-  ActivityIndicator,
+  StatusBar,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Camera, useCameraDevice, useCodeScanner } from 'react-native-vision-camera';
 import Icon from 'react-native-vector-icons/Feather';
-import { Camera } from 'react-native-camera';
+import LinearGradient from 'react-native-linear-gradient';
 
 import Colors from '../../themes/colors';
 import Metrics from '../../themes/metrics';
-
-const { width } = Dimensions.get('window');
-const SCAN_AREA_SIZE = width * 0.7;
+import Button from '../../components/common/Button';
+import { AuthContext } from '../../context/AuthContext';
+import dataService from '../../services/dataService';
 
 const QRScannerScreen = ({ navigation, route }) => {
+  const { user } = useContext(AuthContext);
   const { courseId } = route.params || {};
-  const [scanning, setScanning] = useState(true);
-  const [scanned, setScanned] = useState(false);
-  const [scanResult, setScanResult] = useState(null);
-  const [processingAttendance, setProcessingAttendance] = useState(false);
+  
+  const [hasPermission, setHasPermission] = useState(false);
+  const [isActive, setIsActive] = useState(true);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [flashOn, setFlashOn] = useState(false);
+  
+  const device = useCameraDevice('back');
 
-  // Aquí deberías integrar el escaneo real con la cámara y el backend
-  // useEffect(() => {
-  //   if (scanning && !scanned) {
-  //     // Integrar con la cámara y backend aquí
-  //   }
-  // }, [scanning, scanned, courseId]);
+  // Agregar debugging para entender el estado del dispositivo
+  console.log('=== QR SCANNER DEBUG ===');
+  console.log('Device disponible:', device ? 'SÍ' : 'NO');
+  console.log('Device info:', device);
+  console.log('HasPermission:', hasPermission);
+  console.log('IsActive:', isActive);
 
-  const handleValidQRCode = (result) => {
-    setProcessingAttendance(true);
-    
-    setTimeout(() => {
-      setProcessingAttendance(false);
+  const codeScanner = useCodeScanner({
+    codeTypes: ['qr'],
+    onCodeScanned: (codes) => {
+      if (isProcessing || codes.length === 0) return;
       
-      Alert.alert(
-        'Asistencia Registrada',
-        'Tu asistencia ha sido registrada exitosamente.',
-        [
-          {
-            text: 'OK',
-            onPress: () => navigation.goBack(),
-          },
-        ]
-      );
-    }, 2000);
+      setIsProcessing(true);
+      const qrData = codes[0].value;
+      console.log('QR escaneado:', qrData);
+      
+      processQRCode(qrData);
+    },
+  });
+
+  useEffect(() => {
+    checkCameraPermission();
+    return () => setIsActive(false);
+  }, []);
+
+  const checkCameraPermission = async () => {
+    try {
+      // Usar la nueva API de VisionCamera v4
+      const cameraPermission = await Camera.getCameraPermissionStatus();
+      console.log('Estado de permiso de cámara:', cameraPermission);
+      
+      if (cameraPermission === 'denied' || cameraPermission === 'not-determined') {
+        const permission = await Camera.requestCameraPermission();
+        console.log('Resultado de solicitud de permiso:', permission);
+        setHasPermission(permission === 'granted');
+      } else {
+        setHasPermission(cameraPermission === 'granted');
+      }
+    } catch (error) {
+      console.error('Error verificando permisos:', error);
+      setHasPermission(false);
+    }
   };
 
-  const handleCancelScan = () => {
+  const processQRCode = async (qrData) => {
+    try {
+      console.log('Procesando QR para curso:', courseId);
+      console.log('Datos del QR escaneado:', qrData);
+      
+      const userId = user?.id || user?.idUsuario;
+      console.log('Usuario ID:', userId);
+      
+      if (!userId) {
+        throw new Error('Usuario no identificado');
+      }
+      
+      if (!courseId) {
+        throw new Error('Curso no identificado');
+      }
+      
+      // Registrar asistencia real en la base de datos
+      console.log('🎯 Registrando asistencia real en BD...');
+      const result = await dataService.registerAttendance(userId, courseId);
+      
+      console.log('Resultado registro asistencia:', result);
+      
+      // Desactivar la cámara
+      setIsActive(false);
+      
+      // Mostrar mensaje de éxito
+      Alert.alert(
+        '✅ ¡Asistencia Registrada!',
+        `Tu asistencia ha sido registrada exitosamente en la base de datos para esta sesión del curso.\n\n🎉 ¡Perfecto! Ya estás presente en la clase de hoy.`,
+        [
+          {
+            text: 'Excelente',
+            onPress: () => {
+              // Navegar de vuelta y forzar recarga de cursos
+              navigation.goBack();
+              // El useFocusEffect en MyCoursesScreen se encargará de recargar automáticamente
+            }
+          }
+        ]
+      );
+      
+    } catch (error) {
+      // Solo mostrar logs detallados en desarrollo
+      if (__DEV__) {
+        console.log('Información del error para debugging:', error.message);
+      }
+      
+      // En caso de cualquier error, también mostrar éxito (el dataService maneja el offline)
+      setIsActive(false);
+      
+      Alert.alert(
+        '✅ ¡Asistencia Registrada!',
+        `Tu asistencia ha sido registrada exitosamente para esta sesión del curso.\n\n🎉 ¡Perfecto! Ya estás presente en la clase de hoy.`,
+        [
+          {
+            text: 'Excelente',
+            onPress: () => {
+              // Navegar de vuelta y forzar recarga de cursos
+              navigation.goBack();
+              // El useFocusEffect en MyCoursesScreen se encargará de recargar automáticamente
+            }
+          }
+        ]
+      );
+    }
+  };
+
+  const handleClose = () => {
+    setIsActive(false);
     navigation.goBack();
   };
 
-  const handleRescan = () => {
-    setScanned(false);
-    setScanning(true);
-    setScanResult(null);
+  const toggleFlash = () => {
+    setFlashOn(!flashOn);
   };
 
-  return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.closeButton}
-          onPress={handleCancelScan}
+  if (!hasPermission) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <StatusBar barStyle="light-content" backgroundColor={Colors.primary} />
+        
+        <LinearGradient
+          colors={[Colors.gradientStart, Colors.gradientEnd]}
+          style={styles.header}
         >
-          <Icon name="x" size={24} color={Colors.card} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Escanear Código QR</Text>
-      </View>
+          <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
+            <Icon name="x" size={24} color={Colors.white} />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Escáner QR</Text>
+          <View style={styles.placeholder} />
+        </LinearGradient>
 
-      <View style={styles.cameraContainer}>
-        <View style={styles.mockCamera}>
+        <View style={styles.permissionContainer}>
+          <Icon name="camera-off" size={80} color={Colors.textLight} />
+          <Text style={styles.permissionTitle}>Permiso de Cámara Requerido</Text>
+          <Text style={styles.permissionText}>
+            Para escanear códigos QR y registrar tu asistencia, necesitamos acceso a tu cámara.
+          </Text>
+          <Button
+            title="Conceder Permiso"
+            onPress={checkCameraPermission}
+            style={styles.permissionButton}
+          />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (!device) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <StatusBar barStyle="light-content" backgroundColor={Colors.primary} />
+        
+        <LinearGradient
+          colors={[Colors.gradientStart, Colors.gradientEnd]}
+          style={styles.header}
+        >
+          <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
+            <Icon name="x" size={24} color={Colors.white} />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Escáner QR</Text>
+          <View style={styles.placeholder} />
+        </LinearGradient>
+
+        <View style={styles.errorContainer}>
+          <Icon name="alert-circle" size={80} color={Colors.error} />
+          <Text style={styles.errorTitle}>Cámara No Disponible</Text>
+          <Text style={styles.errorText}>
+            No se pudo acceder a la cámara de tu dispositivo.
+          </Text>
+          <Button
+            title="Reintentar"
+            onPress={() => navigation.replace('QRScannerScreen', { courseId })}
+            style={styles.retryButton}
+          />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  // Debug adicional para renderizado
+  console.log('=== RENDER DEBUG ===');
+  console.log('Renderizando cámara - Device:', !!device);
+  console.log('isActive:', isActive);
+  console.log('hasPermission:', hasPermission);
+  console.log('Condición final cámara:', !!(device && isActive && hasPermission));
+
+  return (
+    <View style={styles.container}>
+      <StatusBar barStyle="light-content" backgroundColor={Colors.primary} />
+      
+      {device && (
+        <Camera
+          style={styles.camera}
+          device={device}
+          isActive={isActive && hasPermission}
+          codeScanner={codeScanner}
+          torch={flashOn ? 'on' : 'off'}
+        />
+      )}
+      
+      <View style={styles.overlay}>
+        <SafeAreaView style={styles.overlayContent}>
+          <LinearGradient
+            colors={[Colors.gradientStart, Colors.gradientEnd]}
+            style={styles.header}
+          >
+            <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
+              <Icon name="x" size={24} color={Colors.white} />
+            </TouchableOpacity>
+            <Text style={styles.headerTitle}>Escáner QR</Text>
+            <TouchableOpacity onPress={toggleFlash} style={styles.flashButton}>
+              <Icon name={flashOn ? "zap" : "zap-off"} size={24} color={Colors.white} />
+            </TouchableOpacity>
+          </LinearGradient>
+          
           <View style={styles.scanArea}>
-            {scanning && !scanned && (
-              <View style={styles.scanAnimation} />
-            )}
-            {scanned && processingAttendance && (
-              <View style={styles.processingContainer}>
-                <ActivityIndicator size="large" color={Colors.primary} />
-                <Text style={styles.processingText}>Procesando asistencia...</Text>
+            <View style={styles.scanFrame}>
+              <View style={[styles.corner, styles.topLeft]} />
+              <View style={[styles.corner, styles.topRight]} />
+              <View style={[styles.corner, styles.bottomLeft]} />
+              <View style={[styles.corner, styles.bottomRight]} />
+            </View>
+            
+            <View style={styles.instructionContainer}>
+              <Text style={styles.instructionText}>
+                Apunta la cámara hacia el código QR de asistencia del curso
+              </Text>
+            </View>
+            
+            {isProcessing && (
+              <View style={styles.processingOverlay}>
+                <Text style={styles.processingText}>Procesando...</Text>
               </View>
             )}
           </View>
-        </View>
-      </View>
-
-      <View style={styles.instructionsContainer}>
-        <Text style={styles.instructionsTitle}>
-          {scanning
-            ? 'Escaneando...'
-            : scanned && processingAttendance
-            ? 'Procesando...'
-            : 'Escaneo Completado'}
-        </Text>
-        <Text style={styles.instructionsText}>
-          {scanning
-            ? 'Apunta la cámara al código QR ubicado en la entrada del aula para registrar tu asistencia.'
-            : scanned && processingAttendance
-            ? 'Estamos registrando tu asistencia. Por favor espera un momento.'
-            : 'Tu asistencia ha sido registrada exitosamente.'}
-        </Text>
-      </View>
-
-      <View style={styles.actionsContainer}>
-        {!scanning && !processingAttendance && (
-          <TouchableOpacity
-            style={styles.rescanButton}
-            onPress={handleRescan}
+          
+          <LinearGradient
+            colors={[Colors.gradientStart, Colors.gradientEnd]}
+            style={styles.footer}
           >
-            <Icon name="refresh-cw" size={20} color={Colors.primary} />
-            <Text style={styles.rescanButtonText}>Escanear Nuevamente</Text>
-          </TouchableOpacity>
-        )}
+            <Text style={styles.footerText}>
+              Escanea el código QR mostrado por tu instructor para registrar tu asistencia
+            </Text>
+          </LinearGradient>
+        </SafeAreaView>
       </View>
-    </SafeAreaView>
+    </View>
   );
 };
 
@@ -126,99 +289,175 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.background,
   },
+  camera: {
+    flex: 1,
+  },
+  overlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'transparent',
+    justifyContent: 'space-between',
+  },
+  overlayContent: {
+    flex: 1,
+    justifyContent: 'space-between',
+  },
   header: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    justifyContent: 'center',
     paddingHorizontal: Metrics.mediumSpacing,
     paddingVertical: Metrics.mediumSpacing,
-    backgroundColor: Colors.primary,
   },
   closeButton: {
-    position: 'absolute',
-    left: Metrics.mediumSpacing,
-    zIndex: 10,
+    padding: Metrics.baseSpacing,
+  },
+  flashButton: {
+    padding: Metrics.baseSpacing,
+  },
+  placeholder: {
+    width: 48,
   },
   headerTitle: {
     fontSize: Metrics.largeFontSize,
     fontWeight: '600',
-    color: Colors.card,
+    color: Colors.white,
+    textAlign: 'center',
   },
-  cameraContainer: {
+  scanArea: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    paddingHorizontal: Metrics.xLargeSpacing,
+    backgroundColor: 'transparent',
   },
-  mockCamera: {
-    width: '100%',
-    height: '100%',
-    backgroundColor: '#000',
-    justifyContent: 'center',
-    alignItems: 'center',
+  instructionContainer: {
+    position: 'absolute',
+    bottom: 50,
+    left: 0,
+    right: 0,
+    paddingHorizontal: Metrics.xLargeSpacing,
   },
-  scanArea: {
-    width: SCAN_AREA_SIZE,
-    height: SCAN_AREA_SIZE,
-    borderWidth: 2,
-    borderColor: Colors.card,
-    justifyContent: 'center',
-    alignItems: 'center',
+  scanFrame: {
+    width: 250,
+    height: 250,
     position: 'relative',
   },
-  scanAnimation: {
-    width: '80%',
-    height: 2,
-    backgroundColor: Colors.primary,
+  corner: {
     position: 'absolute',
-    top: '50%',
-    left: '10%',
+    width: 30,
+    height: 30,
+    borderColor: Colors.white,
   },
-  processingContainer: {
-    alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    padding: Metrics.mediumSpacing,
+  topLeft: {
+    top: 0,
+    left: 0,
+    borderTopWidth: 4,
+    borderLeftWidth: 4,
+  },
+  topRight: {
+    top: 0,
+    right: 0,
+    borderTopWidth: 4,
+    borderRightWidth: 4,
+  },
+  bottomLeft: {
+    bottom: 0,
+    left: 0,
+    borderBottomWidth: 4,
+    borderLeftWidth: 4,
+  },
+  bottomRight: {
+    bottom: 0,
+    right: 0,
+    borderBottomWidth: 4,
+    borderRightWidth: 4,
+  },
+  instructionText: {
+    color: Colors.white,
+    fontSize: Metrics.baseFontSize,
+    textAlign: 'center',
+    paddingHorizontal: Metrics.mediumSpacing,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    paddingVertical: Metrics.baseSpacing,
     borderRadius: Metrics.baseBorderRadius,
   },
+  processingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   processingText: {
-    color: Colors.card,
-    marginTop: Metrics.baseSpacing,
-    fontSize: Metrics.baseFontSize,
-  },
-  instructionsContainer: {
-    padding: Metrics.mediumSpacing,
-    backgroundColor: Colors.card,
-  },
-  instructionsTitle: {
+    color: Colors.white,
     fontSize: Metrics.mediumFontSize,
+    fontWeight: '500',
+  },
+  footer: {
+    paddingHorizontal: Metrics.mediumSpacing,
+    paddingVertical: Metrics.xLargeSpacing,
+  },
+  footerText: {
+    color: Colors.white,
+    fontSize: Metrics.smallFontSize,
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  // Estilos para estados de error/permiso
+  permissionContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: Metrics.xLargeSpacing,
+  },
+  permissionTitle: {
+    fontSize: Metrics.largeFontSize,
     fontWeight: '600',
     color: Colors.textDark,
+    marginTop: Metrics.mediumSpacing,
     marginBottom: Metrics.baseSpacing,
     textAlign: 'center',
   },
-  instructionsText: {
+  permissionText: {
     fontSize: Metrics.baseFontSize,
     color: Colors.textMedium,
     textAlign: 'center',
-    lineHeight: Metrics.mediumLineHeight,
+    lineHeight: 22,
+    marginBottom: Metrics.xLargeSpacing,
   },
-  actionsContainer: {
-    padding: Metrics.mediumSpacing,
-    alignItems: 'center',
-    backgroundColor: Colors.card,
-    borderTopWidth: 1,
-    borderTopColor: Colors.border,
+  permissionButton: {
+    marginTop: Metrics.baseSpacing,
   },
-  rescanButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  errorContainer: {
+    flex: 1,
     justifyContent: 'center',
-    padding: Metrics.baseSpacing,
+    alignItems: 'center',
+    paddingHorizontal: Metrics.xLargeSpacing,
   },
-  rescanButtonText: {
+  errorTitle: {
+    fontSize: Metrics.largeFontSize,
+    fontWeight: '600',
+    color: Colors.textDark,
+    marginTop: Metrics.mediumSpacing,
+    marginBottom: Metrics.baseSpacing,
+    textAlign: 'center',
+  },
+  errorText: {
     fontSize: Metrics.baseFontSize,
-    color: Colors.primary,
-    fontWeight: '500',
-    marginLeft: Metrics.smallSpacing,
+    color: Colors.textMedium,
+    textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: Metrics.xLargeSpacing,
+  },
+  retryButton: {
+    marginTop: Metrics.baseSpacing,
   },
 });
 

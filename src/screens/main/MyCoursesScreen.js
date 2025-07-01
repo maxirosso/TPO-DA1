@@ -32,7 +32,7 @@ const MyCoursesScreen = ({ navigation }) => {
 
   useFocusEffect(
     useCallback(() => {
-      console.log('🔄 MyCoursesScreen focused - Recargando cursos...');
+      console.log('MyCoursesScreen focused - Recargando cursos...');
       loadCourses(false); // false = no mostrar loading screen
     }, [])
   );
@@ -57,7 +57,7 @@ const MyCoursesScreen = ({ navigation }) => {
   };
 
   const loadCourses = async (showLoading = true) => {
-    console.log('📚 Iniciando carga de mis cursos...');
+    console.log('Iniciando carga de mis cursos...');
     if (showLoading) {
       setLoading(true);
     }

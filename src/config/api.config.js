@@ -81,4 +81,4 @@ export const initializeApiUrl = async () => {
   await initializeApiUrl();
 })();
 
-export default apiConfig; 
+export default apiConfig;

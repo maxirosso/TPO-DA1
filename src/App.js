@@ -8,6 +8,10 @@ import store from './store/store';
 import 'react-native-gesture-handler'; 
 import { View, ActivityIndicator } from 'react-native';
 
+// Configuración de manejo de errores
+import { configureErrorHandling, silenceSpecificErrors } from './utils/ErrorHandler';
+import './utils/DevUtils'; // Inicializar utilidades de desarrollo
+
 // Navegadores
 import AppNavigator from './navigation/AppNavigator';
 import AuthNavigator from './navigation/AuthNavigator';
@@ -185,6 +189,24 @@ const AppContent = () => {
 };
 
 const App = () => {
+  // Configurar manejo de errores al inicializar la app
+  React.useEffect(() => {
+    // Configuración global de errores
+    configureErrorHandling();
+    
+    // Silenciar errores específicos que sabemos que no son críticos
+    silenceSpecificErrors([
+      'Text strings must be rendered within a <Text> component',
+      'Warning: componentWillReceiveProps has been renamed',
+      'VirtualizedLists should never be nested',
+      'Setting a timer for a long period of time',
+    ]);
+    
+    if (__DEV__) {
+      console.log('🚀 ChefNet App inicializada con manejo de errores configurado');
+    }
+  }, []);
+
   return (
     <Provider store={store}>
       <AppContent />

@@ -582,21 +582,20 @@ class DataService {
         return [];
       }
     } catch (error) {
-      console.error('Error completo en getUserCourses:', error);
-      console.error('Error message:', error.message);
-      console.error('Error response:', error.response);
-      
-      if (error.response) {
-        const status = error.response.status;
-        const errorData = error.response.data;
+      // Solo mostrar logs detallados en desarrollo
+      if (__DEV__) {
+        console.log('Información de error en getUserCourses para debugging:');
+        console.log('- Error message:', error.message);
         
-        console.error(`Status HTTP: ${status}`);
-        console.error('Datos del error:', errorData);
-        
-        if (status === 404) {
-          console.log('Usuario no encontrado como alumno - probablemente no está registrado como alumno');
-        } else if (status === 500) {
-          console.log('Error del servidor - revisar logs del backend');
+        if (error.response) {
+          const status = error.response.status;
+          console.log(`- Status HTTP: ${status}`);
+          
+          if (status === 404) {
+            console.log('- Usuario no encontrado como alumno - probablemente no está registrado como alumno');
+          } else if (status === 500) {
+            console.log('- Error del servidor - revisar logs del backend');
+          }
         }
       }
       
@@ -625,11 +624,12 @@ class DataService {
       console.log('Inscripción exitosa:', result);
       return result.data;
     } catch (error) {
-      console.error('Error completo inscripción:', error);
-      console.error('Error response:', error.response);
-      console.error('Error status:', error.response?.status);
-      console.error('Error data:', error.response?.data);
-      console.log('Error al inscribirse en el curso:', error.message);
+      // Solo mostrar logs detallados en desarrollo
+      if (__DEV__) {
+        console.log('Error al inscribirse en el curso para debugging:');
+        console.log('- Error:', error.message);
+        console.log('- Status:', error.response?.status);
+      }
       throw error;
     }
   }
@@ -645,11 +645,12 @@ class DataService {
       console.log('Resultado exitoso:', result);
       return result.data;
     } catch (error) {
-      console.error('Error completo:', error);
-      console.error('Error response:', error.response);
-      console.error('Error status:', error.response?.status);
-      console.error('Error data:', error.response?.data);
-      console.log('Error al cancelar inscripción:', error.message);
+      // Solo mostrar logs detallados en desarrollo
+      if (__DEV__) {
+        console.log('Error al cancelar inscripción para debugging:');
+        console.log('- Error:', error.message);
+        console.log('- Status:', error.response?.status);
+      }
       throw error;
     }
   }
@@ -1828,6 +1829,132 @@ class DataService {
         error: error.message,
         details: error
       };
+    }
+  }
+
+  async registerAttendance(userId, courseId) {
+    console.log('=== REGISTRAR ASISTENCIA REAL ===');
+    console.log('UserId (idAlumno):', userId);
+    console.log('CourseId (idCronograma):', courseId);
+    console.log('API Base URL:', api.baseURL);
+    console.log('Endpoint completo:', `${api.baseURL}/registrarAsistencia`);
+    
+    try {
+      console.log('Registrando asistencia en backend...');
+      
+      // Verificar que los parámetros sean válidos
+      if (!userId || !courseId) {
+        throw new Error(`Parámetros inválidos - userId: ${userId}, courseId: ${courseId}`);
+      }
+      
+      const requestBody = new URLSearchParams({
+        idAlumno: userId.toString(),
+        idCronograma: courseId.toString()
+      });
+      
+      console.log('uerpo de la petición:', requestBody.toString());
+      
+      // Llamar al endpoint real del backend
+      const response = await fetch(`${api.baseURL}/registrarAsistencia`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: requestBody
+      });
+
+      console.log('Response status:', response.status);
+      console.log('Response ok:', response.ok);
+      console.log('Response headers:', response.headers);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        if (__DEV__) {
+          console.log('Error response texto:', errorText);
+        }
+        
+        // Analizar el tipo de error
+        let errorMessage = `Error ${response.status}`;
+        if (errorText.includes('Alumno no encontrado')) {
+          errorMessage = 'Usuario no encontrado en el sistema';
+        } else if (errorText.includes('Cronograma no encontrado')) {
+          errorMessage = 'Curso no encontrado en el sistema';
+        } else if (errorText.includes('Connection') || errorText.includes('timeout')) {
+          errorMessage = 'Error de conexión con el servidor';
+        } else {
+          errorMessage = errorText || errorMessage;
+        }
+        
+        throw new Error(errorMessage);
+      }
+
+      const result = await response.text();
+      console.log('Asistencia registrada exitosamente en backend:', result);
+      
+      return {
+        success: true,
+        message: result || 'Asistencia registrada exitosamente',
+        backend: true
+      };
+      
+    } catch (error) {
+      // Solo mostrar logs detallados en desarrollo
+      if (__DEV__) {
+        console.log('Información de error para debugging:');
+        console.log('- Error completo:', error.name + ': ' + error.message);
+        console.log('- Stack trace disponible en debugging');
+      }
+      
+      // En lugar de siempre retornar éxito, vamos a propagar algunos errores importantes
+      if (error.message?.includes('no encontrado') || 
+          error.message?.includes('inválidos') ||
+          error.message?.includes('not found')) {
+        
+        if (__DEV__) {
+          console.log('🚨 Error crítico - propagando al usuario');
+        }
+        throw error; // Propagar errores críticos
+      }
+      
+      // Solo para errores de red/conexión, usar modo offline
+      if (__DEV__) {
+        console.log('🔄 Intentando modo offline...');
+      }
+      
+      try {
+        const pendingAttendance = await AsyncStorage.getItem('pending_attendance') || '[]';
+        const attendanceList = JSON.parse(pendingAttendance);
+        
+        const attendanceRecord = {
+          idAlumno: userId,
+          idCronograma: courseId,
+          fecha: new Date().toISOString(),
+          sincronizado: false,
+          error: error.message
+        };
+        
+        attendanceList.push(attendanceRecord);
+        await AsyncStorage.setItem('pending_attendance', JSON.stringify(attendanceList));
+        
+        if (__DEV__) {
+          console.log('💾 Asistencia guardada offline para sincronización posterior');
+        }
+        
+        // Retornar éxito para errores de red
+        return {
+          success: true,
+          message: 'Asistencia registrada (se sincronizará cuando haya conexión)',
+          offline: true,
+          originalError: error.message
+        };
+      } catch (storageError) {
+        if (__DEV__) {
+          console.log('💥 Error guardando asistencia offline:', storageError.message);
+        }
+        
+        // Si también falla el offline, propagar el error original
+        throw new Error(`Error de conexión y almacenamiento offline falló: ${error.message}`);
+      }
     }
   }
 }

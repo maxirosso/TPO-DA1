@@ -77,6 +77,11 @@ project.ext.vectoricons = [
     iconFontNames: ['Feather.ttf']
 ]
 
+// VisionCamera configuration for v4.x
+project.ext.react = project.ext.react ?: [:]
+project.ext.react.VisionCamera_enableCodeScanner = true
+project.ext.react.VisionCamera_enableFrameProcessors = false
+
 android {
     ndkVersion rootProject.ext.ndkVersion
     buildToolsVersion rootProject.ext.buildToolsVersion
