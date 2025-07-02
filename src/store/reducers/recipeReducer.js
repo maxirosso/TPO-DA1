@@ -17,7 +17,7 @@ import {
     try {
       await AsyncStorage.setItem(FAVORITES_STORAGE_KEY, JSON.stringify(favorites));
     } catch (error) {
-      console.error('Error saving favorites to storage:', error);
+      console.error('Error al guardar los favoritos en el almacenamiento:', error);
     }
   };
 
@@ -26,7 +26,7 @@ import {
       const favoritesJson = await AsyncStorage.getItem(FAVORITES_STORAGE_KEY);
       return favoritesJson ? JSON.parse(favoritesJson) : [];
     } catch (error) {
-      console.error('Error loading favorites from storage:', error);
+      console.error('Error al cargar los favoritos en el almacenamiento:', error);
       return [];
     }
   };

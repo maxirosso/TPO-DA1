@@ -59,7 +59,7 @@ export const saveRecipe = (recipeData) => async (dispatch) => {
     });
     return savedRecipe;
   } catch (error) {
-    console.error('Save recipe error:', error);
+    console.error('Error al guardar la receta:', error);
     throw error;
   }
 };
@@ -103,7 +103,7 @@ export const loadFavorites = () => async (dispatch) => {
     });
     return favorites;
   } catch (error) {
-    console.error('Load favorites error:', error);
+    console.error('Error al cargar los favoritos:', error);
     return [];
   }
 };

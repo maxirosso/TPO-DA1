@@ -73,20 +73,22 @@ const HomeScreen = ({ navigation }) => {
   };
 
   const handleUpgradeToStudent = () => {
-    console.log('🔍 Debug - contextUser:', contextUser);
-    console.log('🔍 Debug - currentUser:', currentUser);
+    
     let userId = contextUser?.idUsuario || contextUser?.id || currentUser?.idUsuario || currentUser?.id;
     
     if (!userId || userId === 'undefined' || userId === null) {
       userId = contextUser?.mail || contextUser?.email || currentUser?.mail || currentUser?.email || 'temp_' + Date.now();
     }
     
-    console.log('🔍 Debug - final userId to send:', userId);
+    
     navigation.navigate('UpgradeToStudent', { 
       userId: userId,
       userEmail: contextUser?.mail || contextUser?.email || currentUser?.mail || currentUser?.email
     });
   };
+
+ 
+ 
 
   const initializeData = async () => {
     setIsLoading(true);

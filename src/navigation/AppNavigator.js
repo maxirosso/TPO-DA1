@@ -4,7 +4,6 @@ import { createStackNavigator } from '@react-navigation/stack';
 import Icon from 'react-native-vector-icons/Feather';
 import { AuthContext } from '../context/AuthContext';
 
-//Pantallas principales
 import HomeScreen from '../screens/main/HomeScreen';
 import CourseScreen from '../screens/main/CourseScreen';
 import AddRecipeScreen from '../screens/main/AddRecipeScreen';
@@ -14,13 +13,13 @@ import MyCoursesScreen from '../screens/main/MyCoursesScreen';
 import CourseDetailScreen from '../screens/main/CourseDetailScreen';
 import CourseEnrollmentScreen from '../screens/main/CourseEnrollmentScreen';
 import QRScannerScreen from '../screens/main/QRScannerScreen';
-import ServerConfigScreen from '../screens/main/ServerConfigScreen';
+
 import MyRecipesScreen from '../screens/main/MyRecipesScreen';
 import AccountSettingsScreen from '../screens/main/AccountSettingsScreen';
 import AppSettingsScreen from '../screens/main/AppSettingsScreen';
-import HelpSupportScreen from '../screens/main/HelpSupportScreen';
-import AboutScreen from '../screens/main/AboutScreen';
-import ShoppingListScreen from '../screens/main/ShoppingListScreen';
+
+
+
 import DatabaseTablesScreen from '../screens/main/DatabaseTablesScreen';
 import AdminPanelScreen from '../screens/main/AdminPanelScreen';
 import RecipeApprovalScreen from '../screens/main/RecipeApprovalScreen';
@@ -30,7 +29,6 @@ import SavedScaledRecipesScreen from '../screens/recipe/SavedScaledRecipesScreen
 import PendingRecipesScreen from '../screens/main/PendingRecipesScreen';
 import UpgradeToStudentScreen from '../screens/main/UpgradeToStudentScreen';
 
-//Theme
 import Colors from '../themes/colors';
 
 const Tab = createBottomTabNavigator();
@@ -97,12 +95,8 @@ const ProfileStackScreen = () => (
     <Stack.Screen name="QRScannerScreen" component={QRScannerScreen} />
     <Stack.Screen name="SavedScaledRecipes" component={SavedScaledRecipesScreen} />
     <Stack.Screen name="PendingRecipes" component={PendingRecipesScreen} />
-    <Stack.Screen name="ShoppingList" component={ShoppingListScreen} />
     <Stack.Screen name="AccountSettings" component={AccountSettingsScreen} />
     <Stack.Screen name="AppSettings" component={AppSettingsScreen} />
-    <Stack.Screen name="HelpSupport" component={HelpSupportScreen} />
-    <Stack.Screen name="About" component={AboutScreen} />
-    <Stack.Screen name="ServerConfig" component={ServerConfigScreen} />
     <Stack.Screen name="RecipeDetail" component={RecipeDetailScreen} />
     <Stack.Screen name="DatabaseTables" component={DatabaseTablesScreen} />
     <Stack.Screen name="UpgradeToStudent" component={UpgradeToStudentScreen} />
@@ -245,7 +239,6 @@ const UserNavigator = () => {
 const AppNavigator = () => {
   const { isVisitor, user, isAdmin } = useContext(AuthContext);
 
-  // Si es visitante, mostrar navegación de visitante
   if (isVisitor) {
     return (
       <Tab.Navigator
@@ -285,12 +278,10 @@ const AppNavigator = () => {
     );
   }
 
-  // Si es admin, mostrar navegación de admin
   if (user && (user.rol === 'admin' || user.tipo === 'empresa')) {
     return <AdminNavigator />;
   }
 
-  // Si es usuario regular, mostrar navegación normal
   return <UserNavigator />;
 };
 

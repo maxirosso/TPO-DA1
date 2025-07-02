@@ -21,19 +21,17 @@ const RecipeCard = ({
   tags = [],
   ingredients = [],
   onPress,
-  type = 'grid', // 'grid' or 'list'
+  type = 'grid', 
   style,
 }) => {
-  // Obtener el recuento de ingredientes, manejando ambos formatos (array de strings u objetos)
+
   const getIngredientsCount = () => {
     if (!ingredients) return 0;
     
-    // Si es un array, contar directamente
     if (Array.isArray(ingredients)) {
       return ingredients.length;
     }
     
-    // Si es un objeto, contar sus propiedades
     if (typeof ingredients === 'object') {
       return Object.keys(ingredients).length;
     }
@@ -43,12 +41,10 @@ const RecipeCard = ({
 
   const ingredientsCount = getIngredientsCount();
   
-  // Función para manejar el clic en la receta
   const handlePress = () => {
     if (onPress) {
-      // Asegurarse de que los datos básicos siempre estén presentes
       onPress({
-        id: id, // Asegurarse de pasar el ID correctamente
+        id: id, 
         title,
         imageUrl,
         category,
@@ -57,7 +53,6 @@ const RecipeCard = ({
     }
   };
 
-  // Función para renderizar las estrellas de rating
   const renderStars = (rating) => {
     if (!rating || rating === 0) return null;
     
@@ -103,14 +98,12 @@ const RecipeCard = ({
             {title}
           </Text>
           
-          {/* Mostrar autor si está disponible */}
           {author && (
             <Text style={styles.authorText} numberOfLines={1}>
               Por: {author}
             </Text>
           )}
           
-          {/* Mostrar categoría si está disponible */}
           {category && (
             <Text style={styles.categoryText} numberOfLines={1}>
               {category}
@@ -118,7 +111,6 @@ const RecipeCard = ({
           )}
           
           <View style={styles.metaContainer}>
-            {/* Mostrar rating si está disponible */}
             {rating && rating > 0 && (
               <View style={styles.ratingContainer}>
                 <View style={styles.starsContainer}>
@@ -155,14 +147,12 @@ const RecipeCard = ({
           {title}
         </Text>
         
-        {/* Mostrar autor si está disponible */}
         {author && (
           <Text style={styles.authorText} numberOfLines={1}>
             Por: {author}
           </Text>
         )}
         
-        {/* Mostrar categoría si está disponible */}
         {category && (
           <Text style={styles.categoryText} numberOfLines={1}>
             {category}
@@ -170,7 +160,6 @@ const RecipeCard = ({
         )}
         
         <View style={styles.metaContainer}>
-          {/* Mostrar rating si está disponible */}
           {rating && rating > 0 && (
             <View style={styles.ratingContainer}>
               <View style={styles.starsContainer}>

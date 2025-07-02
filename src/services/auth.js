@@ -140,72 +140,127 @@ export const authService = {
         throw new Error(validacion.errores[0]); 
       }
       
-      try {
-        const backendPayload = {
-          mail: userData.email.trim(),
-          password: userData.password,
-          nombre: userData.name || userData.username.trim(),
-          nickname: userData.username.trim(),
-          habilitado: 'No', // Por defecto no habilitado hasta verificar email
-          direccion: userData.direccion || '',
-          avatar: userData.avatar || '',
-          tipo: 'comun', // Tipo por defecto
-          medio_pago: userData.medioPago || '',
-          rol: 'user' // Rol por defecto
-        };
+      
+      const isRegularUserOrStudent = userData.userType === 'regular' || userData.userType === 'student';
+      
+      if (isRegularUserOrStudent) {
         
-        console.log('Enviando datos de registro al backend:', backendPayload);
+        console.log('Usando registro por etapas para:', userData.userType);
         
-        const response = await axios.post(`${apiConfig.API_BASE_URL}/registrarUsuario`, backendPayload);
-        
-        console.log('Respuesta del backend:', response);
-        
-        if (response.data && typeof response.data === 'string') {
-          if (response.data.includes('exitosamente')) {
-            return { success: true };
-          } else if (response.data.includes('Ya existe')) {
-            throw new Error('Email ya registrado');
-          } else if (response.data.includes('nickname')) {
-            throw new Error('El nombre de usuario (nickname) es obligatorio.');
-          } else {
-            throw new Error(response.data);
-          }
-        } else {
-          throw new Error(response.data?.message || 'Error durante el registro');
-        }
-        
-      } catch (error) {
-        console.error('Error de registro con el backend:', error);
-        
-        if (error.response) {
-          const status = error.response.status;
-          const data = error.response.data;
+        try {
+          const params = new URLSearchParams();
+          params.append('mail', userData.email.trim());
+          params.append('alias', userData.username.trim());
           
-          if (status === 400) {
-            if (typeof data === 'string') {
-              if (data.includes('Ya existe')) {
-                throw new Error('Email ya registrado');
-              } else if (data.includes('nickname')) {
-                throw new Error('El nombre de usuario (nickname) es obligatorio.');
-              } else {
-                throw new Error(data || 'Datos incorrectos');
-              }
-            } else {
-              throw new Error('Datos incorrectos. Verifica que todos los campos estén completos.');
-            }
-          } else if (status === 403) {
-            throw new Error('No tienes permisos para realizar esta acción.');
-          } else if (status === 409) {
-            throw new Error('El usuario ya existe en el sistema.');
-          } else if (status === 500) {
-            throw new Error('Error interno del servidor. Intenta nuevamente más tarde.');
+          console.log('Enviando datos al backend (etapa 1):', params.toString());
+          
+          const response = await axios.post(
+            `${apiConfig.API_BASE_URL}/registrarUsuarioEtapa1`,
+            params.toString(),
+            { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
+          );
+          
+          console.log('Respuesta del backend (etapa 1):', response.data);
+          
+          if (response.data && response.data.success) {
+            return { success: true, message: response.data.message };
           } else {
-            throw new Error(`Error del servidor (${status}): ${data || 'Error desconocido'}`);
+            throw new Error(response.data?.error || 'Error durante el registro');
           }
-        } else if (error.request) {
-          throw new Error('Sin conexión al servidor. Verifica tu conexión a internet.');
-        } else {
-          throw new Error(error.message || 'Error de red');
+          
+        } catch (error) {
+          console.error('Error de registro por etapas con el backend:', error);
+          
+          if (error.response) {
+            const status = error.response.status;
+            const data = error.response.data;
+            
+            if (status === 400 && data && data.error) {
+              throw new Error(data.error);
+            } else if (status === 400) {
+              throw new Error(data || 'Datos incorrectos');
+            } else if (status === 500) {
+              throw new Error('Error interno del servidor. Intenta nuevamente más tarde.');
+            } else {
+              throw new Error(`Error del servidor (${status}): ${data || 'Error desconocido'}`);
+            }
+          } else if (error.request) {
+            throw new Error('Sin conexión al servidor. Verifica tu conexión a internet.');
+          } else {
+            throw new Error(error.message || 'Error de red');
+          }
+        }
+      } else {
+        
+        console.log('Usando registro normal para otros tipos de usuario');
+        
+        try {
+          const backendPayload = {
+            mail: userData.email.trim(),
+            password: userData.password,
+            nombre: userData.name || userData.username.trim(),
+            nickname: userData.username.trim(),
+            habilitado: 'No', // Por defecto no habilitado hasta verificar email
+            direccion: userData.direccion || '',
+            avatar: userData.avatar || '',
+            tipo: 'comun', // Tipo por defecto
+            medio_pago: userData.medioPago || '',
+            rol: 'user' // Rol por defecto
+          };
+          
+          console.log('Enviando datos de registro al backend:', backendPayload);
+          
+          const response = await axios.post(`${apiConfig.API_BASE_URL}/registrarUsuario`, backendPayload);
+          
+          console.log('Respuesta del backend:', response);
+          
+          if (response.data && typeof response.data === 'string') {
+            if (response.data.includes('exitosamente')) {
+              return { success: true };
+            } else if (response.data.includes('Ya existe')) {
+              throw new Error('Email ya registrado');
+            } else if (response.data.includes('nickname')) {
+              throw new Error('El nombre de usuario (nickname) es obligatorio.');
+            } else {
+              throw new Error(response.data);
+            }
+          } else {
+            throw new Error(response.data?.message || 'Error durante el registro');
+          }
+          
+        } catch (error) {
+          console.error('Error de registro con el backend:', error);
+          
+          if (error.response) {
+            const status = error.response.status;
+            const data = error.response.data;
+            
+            if (status === 400) {
+              if (typeof data === 'string') {
+                if (data.includes('Ya existe')) {
+                  throw new Error('Email ya registrado');
+                } else if (data.includes('nickname')) {
+                  throw new Error('El nombre de usuario (nickname) es obligatorio.');
+                } else {
+                  throw new Error(data || 'Datos incorrectos');
+                }
+              } else {
+                throw new Error('Datos incorrectos. Verifica que todos los campos estén completos.');
+              }
+            } else if (status === 403) {
+              throw new Error('No tienes permisos para realizar esta acción.');
+            } else if (status === 409) {
+              throw new Error('El usuario ya existe en el sistema.');
+            } else if (status === 500) {
+              throw new Error('Error interno del servidor. Intenta nuevamente más tarde.');
+            } else {
+              throw new Error(`Error del servidor (${status}): ${data || 'Error desconocido'}`);
+            }
+          } else if (error.request) {
+            throw new Error('Sin conexión al servidor. Verifica tu conexión a internet.');
+          } else {
+            throw new Error(error.message || 'Error de red');
+          }
         }
       }
     } catch (error) {
@@ -296,33 +351,87 @@ export const authService = {
   
   completeProfile: async (email, profileData) => {
     try {
-      try {
-        const response = await axios.put(`${apiConfig.API_BASE_URL}/usuarios/perfil`, {
-          email: email,
-          nombre: profileData.name,
-          ...('direccion' in profileData ? { direccion: profileData.direccion } : {}),
-          ...('avatar' in profileData ? { avatar: profileData.avatar } : {}),
-          ...('medioPago' in profileData ? { medioPago: profileData.medioPago } : {})
-        });
-        return response.data && response.data.success;
-      } catch (error) {
-        console.error('Error al completar perfil con el backend:', error);
-        const pendingUsersStr = await AsyncStorage.getItem(PENDING_USERS_KEY);
-        const pendingUsers = pendingUsersStr ? JSON.parse(pendingUsersStr) : {};
-        if (pendingUsers[email]) {
-          pendingUsers[email] = {
-            ...pendingUsers[email],
-            ...profileData,
-            profileCompleted: true
-          };
-          await AsyncStorage.setItem(PENDING_USERS_KEY, JSON.stringify(pendingUsers));
-          return true;
+      console.log('Completando perfil:', { email, profileData });
+      
+      
+      if (profileData.password) {
+        try {
+          const params = new URLSearchParams();
+          params.append('mail', email);
+          params.append('nombre', profileData.name || email.split('@')[0]);
+          params.append('password', profileData.password);
+          
+          console.log('Enviando datos al backend:', params.toString());
+          
+          const response = await axios.post(
+            `${apiConfig.API_BASE_URL}/completarRegistroUsuario`,
+            params.toString(),
+            { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
+          );
+          
+          console.log('Respuesta del backend:', response.data);
+          
+          if (response.data && typeof response.data === 'string') {
+            if (response.data.includes('exitosamente')) {
+              return true;
+            } else {
+              throw new Error(response.data);
+            }
+          }
+          
+          return false;
+        } catch (error) {
+          console.error('Error al completar registro con el backend:', error);
+          
+          if (error.response) {
+            const status = error.response.status;
+            const data = error.response.data;
+            
+            if (status === 400) {
+              throw new Error(data || 'Datos incorrectos');
+            } else if (status === 500) {
+              throw new Error('Error interno del servidor. Intenta nuevamente más tarde.');
+            } else {
+              throw new Error(`Error del servidor (${status}): ${data || 'Error desconocido'}`);
+            }
+          } else if (error.request) {
+            throw new Error('Sin conexión al servidor. Verifica tu conexión a internet.');
+          } else {
+            throw new Error(error.message || 'Error de red');
+          }
         }
-        return false;
+      } else {
+        
+        try {
+          const response = await axios.put(`${apiConfig.API_BASE_URL}/usuarios/perfil`, {
+            email: email,
+            nombre: profileData.name,
+            ...('direccion' in profileData ? { direccion: profileData.direccion } : {}),
+            ...('avatar' in profileData ? { avatar: profileData.avatar } : {}),
+            ...('medioPago' in profileData ? { medioPago: profileData.medioPago } : {})
+          });
+          return response.data && response.data.success;
+        } catch (error) {
+          console.error('Error al completar perfil con el backend:', error);
+          
+          // Fallback local
+          const pendingUsersStr = await AsyncStorage.getItem(PENDING_USERS_KEY);
+          const pendingUsers = pendingUsersStr ? JSON.parse(pendingUsersStr) : {};
+          if (pendingUsers[email]) {
+            pendingUsers[email] = {
+              ...pendingUsers[email],
+              ...profileData,
+              profileCompleted: true
+            };
+            await AsyncStorage.setItem(PENDING_USERS_KEY, JSON.stringify(pendingUsers));
+            return true;
+          }
+          return false;
+        }
       }
     } catch (error) {
       console.error('Error al completar perfil:', error);
-      return false;
+      throw error;
     }
   },
   

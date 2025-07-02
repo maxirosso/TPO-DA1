@@ -2,12 +2,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import NetInfo from '@react-native-community/netinfo';
 import apiConfig from '../config/api.config';
 
-// Configuración base 
-const API_TIMEOUT = 30000; 
-
 class ApiService {
   constructor() {
-    this.timeout = API_TIMEOUT;
+    this.timeout = apiConfig.TIMEOUT;
     this.defaultHeaders = {
       'Content-Type': 'application/json',
       'Accept': 'application/json',

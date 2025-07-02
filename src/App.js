@@ -128,7 +128,7 @@ const AppContent = () => {
   useEffect(() => {
     const bootstrapAsync = async () => {
       try {
-        // Cargar favoritos desde almacenamiento
+        
         dispatch(loadFavorites());
         
         const isAuthenticated = await authService.isAuthenticated();
@@ -136,7 +136,7 @@ const AppContent = () => {
           const token = await AsyncStorage.getItem('user_token');
           setUserToken(token);
           
-          // Cargar datos de usuario desde almacenamiento
+          
           const storedUser = await authService.getCurrentUser();
           if (storedUser) {
             setCurrentUser(storedUser);
@@ -149,7 +149,7 @@ const AppContent = () => {
       }
     };
 
-    // Mostrar pantalla de bienvenida por 3 segundos
+    
     const splashTimer = setTimeout(() => {
       setShowSplash(false);
     }, 3000);
@@ -189,12 +189,12 @@ const AppContent = () => {
 };
 
 const App = () => {
-  // Configurar manejo de errores al inicializar la app
+  
   React.useEffect(() => {
-    // Configuración global de errores
+    
     configureErrorHandling();
     
-    // Silenciar errores específicos que sabemos que no son críticos
+    
     silenceSpecificErrors([
       'Text strings must be rendered within a <Text> component',
       'Warning: componentWillReceiveProps has been renamed',
@@ -203,7 +203,7 @@ const App = () => {
     ]);
     
     if (__DEV__) {
-      console.log('🚀 ChefNet App inicializada con manejo de errores configurado');
+      console.log('ChefNet App inicializada con manejo de errores configurado');
     }
   }, []);
 

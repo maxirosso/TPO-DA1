@@ -24,7 +24,7 @@ class EmailVerificationService {
       });
       return response.data && response.data.success;
     } catch (error) {
-      console.error('Error storing verification code in backend:', error);
+      console.error('Error al guardar la verificacion del codigo en el backend:', error);
       
       try {
         const existingCodesStr = await AsyncStorage.getItem(VERIFICATION_CODES_KEY);
@@ -37,10 +37,10 @@ class EmailVerificationService {
         
         await AsyncStorage.setItem(VERIFICATION_CODES_KEY, JSON.stringify(existingCodes));
         
-        console.log(`Verification code stored locally for ${email}: ${code}`);
+        console.log(`Codigo de verificacion guardado localmente para ${email}: ${code}`);
         return true;
       } catch (localError) {
-        console.error('Local fallback error:', localError);
+        console.error('Local error:', localError);
         return false;
       }
     }
@@ -54,7 +54,7 @@ class EmailVerificationService {
       });
       return response.data && response.data.success;
     } catch (error) {
-      console.error('Error verifying code with backend:', error);
+      console.error('Error de codigo de verificacion del backend:', error);
       
       try {
         const codesStr = await AsyncStorage.getItem(VERIFICATION_CODES_KEY);
@@ -78,7 +78,7 @@ class EmailVerificationService {
         
         return true;
       } catch (localError) {
-        console.error('Local fallback error:', localError);
+        console.error('Local error:', localError);
         return false;
       }
     }
@@ -91,7 +91,7 @@ class EmailVerificationService {
       });
       return response.data && response.data.success;
     } catch (error) {
-      console.error('Error marking email as verified in backend:', error);
+      console.error('Error al marcar el email como verificado en el backend:', error);
       
       try {
         const verifiedEmailsStr = await AsyncStorage.getItem(VERIFIED_EMAILS_KEY);
@@ -104,7 +104,7 @@ class EmailVerificationService {
         
         return true;
       } catch (localError) {
-        console.error('Local fallback error:', localError);
+        console.error('Local error:', localError);
         return false;
       }
     }
@@ -115,7 +115,7 @@ class EmailVerificationService {
       const response = await axios.get(`${API_BASE_URL}/auth/email-verified?email=${email}`);
       return response.data && response.data.verified;
     } catch (error) {
-      console.error('Error checking if email is verified with backend:', error);
+      console.error('Error al chequear si el email es validado con el backend:', error);
       
       try {
         const verifiedEmailsStr = await AsyncStorage.getItem(VERIFIED_EMAILS_KEY);
@@ -124,7 +124,7 @@ class EmailVerificationService {
         const verifiedEmails = JSON.parse(verifiedEmailsStr);
         return verifiedEmails.includes(email);
       } catch (localError) {
-        console.error('Local fallback error:', localError);
+        console.error('Local error:', localError);
         return false;
       }
     }
@@ -138,7 +138,7 @@ class EmailVerificationService {
       });
       return response.data && response.data.success;
     } catch (error) {
-      console.error('Error sending email through backend:', error);
+      console.error('Error al enviar el email a traves backend:', error);
       
       try {
         const url = 'https://api.emailjs.com/api/v1.0/email/send';
@@ -163,14 +163,14 @@ class EmailVerificationService {
         });
 
         if (response.status === 200) {
-          console.log('Email successfully sent through EmailJS!');
+          console.log('Email enviado exitosamente!');
           return true;
         } else {
-          console.error('Failed to send email through EmailJS:', response.statusText);
+          console.error('Error al enviar el email:', response.statusText);
           return false;
         }
       } catch (localError) {
-        console.error('Local fallback error:', localError);
+        console.error('Local error:', localError);
         return false;
       }
     }
@@ -183,11 +183,11 @@ class EmailVerificationService {
       });
       return response.data && response.data.success;
     } catch (error) {
-      console.error('Error starting verification from backend:', error);
+      console.error('Error al comenzar la verificacion desde el backend:', error);
       
       try {
         const code = this.generateVerificationCode();
-        console.log(`Generated local verification code for ${email}: ${code}`);
+        console.log(`Generando codigo local de verificacion para  ${email}: ${code}`);
         
         const stored = await this.storeVerificationCode(email, code);
         
@@ -197,7 +197,7 @@ class EmailVerificationService {
         
         return false;
       } catch (localError) {
-        console.error('Local fallback error:', localError);
+        console.error('Local error:', localError);
         return false;
       }
     }

@@ -24,7 +24,7 @@ const PendingRecipesScreen = ({ navigation }) => {
   const [stats, setStats] = useState({ total: 0, pending: 0, completed: 0 });
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [filter, setFilter] = useState('all'); // 'all', 'pending', 'completed'
+  const [filter, setFilter] = useState('all'); 
   const [error, setError] = useState(null);
 
   const loadPendingRecipes = async () => {

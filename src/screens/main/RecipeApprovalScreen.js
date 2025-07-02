@@ -23,7 +23,7 @@ const RecipeApprovalScreen = ({ navigation }) => {
   const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
-    // Check if user is admin
+    // chequear si el usuario es admin
     if (!user || !(user.rol === 'admin' || user.tipo === 'empresa')) {
       Alert.alert(
         'Acceso Denegado',
@@ -363,4 +363,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default RecipeApprovalScreen; 
+export default RecipeApprovalScreen;

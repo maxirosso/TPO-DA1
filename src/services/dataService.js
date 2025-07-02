@@ -77,7 +77,6 @@ export function mapBackendRecipe(receta) {
 }
 
 function mapBackendCourse(curso) {
-  console.log('=== MAPPING BACKEND COURSE ===');
   console.log('Curso recibido:', curso);
   
   let status = 'active';
@@ -198,7 +197,7 @@ function mapBackendCronograma(cronograma) {
 class DataService {
   constructor() {
     this.useBackend = true;
-    this.cacheTimeout = 5 * 60 * 1000; // 5 minutos
+    this.cacheTimeout = 5 * 60 * 1000; 
   }
 
   async checkBackendAvailability() {
@@ -268,7 +267,7 @@ class DataService {
 
   async getAllRecipes() {
     try {
-      console.log('📲 Solicitando todas las recetas al backend...');
+      console.log('Solicitando todas las recetas al backend');
       const response = await api.recipes.getAll(); 
       console.log(`Total de recetas recibidas: ${response.data?.length || 0}`);
       
@@ -286,7 +285,7 @@ class DataService {
 
   async getLatestRecipes() {
     try {
-      console.log('Solicitando últimas recetas al backend (ordenadas por ID descendente)...');
+      console.log('Solicitando últimas recetas al backend (ordenadas por ID descendente)');
       const result = await api.recipes.getLatest();
       console.log(`Recetas recibidas del backend: ${result.data?.length || 0}`);
       
@@ -296,11 +295,11 @@ class DataService {
         console.log('Detalle de las recetas recibidas:');
         recipes.forEach(recipe => {
           console.log(`Receta: ${recipe.title || recipe.nombreReceta}`);
-          console.log(`   ID: ${recipe.id || recipe.idReceta}`);
-          console.log(`   Autorizada: ${recipe.autorizada === true ? 'Sí' : 'No'}`);
-          console.log(`   Fecha: ${recipe.date || recipe.fecha || 'No especificada'}`);
-          console.log(`   Categoría: ${recipe.category || 'Sin categoría'}`);
-          console.log(`   Autor: ${recipe.author || 'Desconocido'}`);
+          console.log(`ID: ${recipe.id || recipe.idReceta}`);
+          console.log(`Autorizada: ${recipe.autorizada === true ? 'Sí' : 'No'}`);
+          console.log(`Fecha: ${recipe.date || recipe.fecha || 'No especificada'}`);
+          console.log(`Categoría: ${recipe.category || 'Sin categoría'}`);
+          console.log(`Autor: ${recipe.author || 'Desconocido'}`);
         });
       } else {
         console.log('No se recibieron recetas del backend');
@@ -334,21 +333,21 @@ class DataService {
       } else {
         backendOrden = 'alfabetico';
       }
-      console.log(`Searching recipes by name "${nombrePlato}" with order "${backendOrden}"`);
+      console.log(`Buscando recetas por el nombre "${nombrePlato}" con la orden "${backendOrden}"`);
       const result = await api.recipes.getByName(nombrePlato, backendOrden);
       
       if (result && result.data) {
         const mappedRecipes = result.data.map(mapBackendRecipe) || [];
-        console.log(`Found ${mappedRecipes.length} recipes with name containing "${nombrePlato}" in order:`, 
+        console.log(`Encontrada ${mappedRecipes.length} recetas con el nombre "${nombrePlato}" en orden:`, 
           mappedRecipes.map(r => r.title));
         return mappedRecipes;
       }
       
-      console.log(`No recipes found with name containing "${nombrePlato}"`);
+      console.log(`No hay recetas encontradas con el nombre "${nombrePlato}"`);
       return [];
     } catch (error) {
       if (error.response && error.response.status === 404) {
-        console.log(`No recipes found with name containing "${nombrePlato}"`);
+        console.log(`No hay recetas encontradas con el nombre "${nombrePlato}"`);
         return [];
       }
       console.log('Error al buscar recetas por nombre:', error.message);
@@ -405,10 +404,10 @@ class DataService {
       } else {
         backendOrden = 'alfabetico';
       }
-      console.log(`Searching recipes by user "${usuario}" with order "${backendOrden}"`);
+      console.log(`Buscando recetas del usuario "${usuario}" con el orden "${backendOrden}"`);
       const result = await api.recipes.getByUserProfile(usuario, backendOrden);
       const mappedRecipes = result.data.map(mapBackendRecipe) || [];
-      console.log(`Found ${mappedRecipes.length} recipes by user "${usuario}"`);
+      console.log(`Encontradas ${mappedRecipes.length} recetas del usuario "${usuario}"`);
       return mappedRecipes;
     } catch (error) {
       console.log('Error al buscar recetas por usuario:', error.message);
@@ -421,11 +420,11 @@ class DataService {
   }
 
   async getUserRecipes(idUsuario) {
-    try {
-      console.log(`Getting all recipes for user ID: ${idUsuario}`);
+    try { 
+      console.log(`Obteniendo todas las recetas del ID usuario: ${idUsuario}`);
       const result = await api.recipes.getByUser(idUsuario);
       const mappedRecipes = result.data.map(mapBackendRecipe) || [];
-      console.log(`Found ${mappedRecipes.length} recipes for user ${idUsuario} (including pending)`);
+      console.log(`Encontradas ${mappedRecipes.length} recetas del usuario ${idUsuario} (incluyendo pendientes)`);
       return mappedRecipes;
     } catch (error) {
       console.log('Error al obtener recetas del usuario:', error.message);
@@ -435,9 +434,9 @@ class DataService {
 
   async deleteUserRecipe(idReceta, idUsuario) {
     try {
-      console.log(`Deleting recipe ${idReceta} for user ${idUsuario}`);
+      console.log(`Eliminando la receta ${idReceta} para el usuario ${idUsuario}`);
       const result = await api.recipes.delete(idReceta, idUsuario);
-      console.log('Recipe deleted successfully:', result);
+      console.log('Receta eliminada correctamente:', result);
       return { success: true, message: result.data || 'Receta eliminada correctamente' };
     } catch (error) {
       console.log('Error al eliminar receta:', error.message);
@@ -447,7 +446,7 @@ class DataService {
 
   async createRecipe(recipeData) {
     try {
-      console.log('Creating recipe with data:', recipeData);
+      console.log('Creando la receta:', recipeData);
       
       if (this.useBackend) {
         
@@ -500,21 +499,21 @@ class DataService {
           })
         };
         
-        console.log('Formatted recipe data:', formattedData);
+        console.log('Receta formateada:', formattedData);
         
         try {
           const response = await api.recipes.create(formattedData);
-          console.log('Recipe created successfully:', response);
+          console.log('Receta creada correctamente:', response);
           return response;
         } catch (primaryError) {
-          console.log('Primary create endpoint failed:', primaryError);
+          console.log('Fallo el endpoint creado al comienzo:', primaryError);
           const altResponse = await api.recipes.createAlternative(formattedData);
-          console.log('Recipe created with alternative endpoint:', altResponse);
+          console.log('Receta creada con un endpoint alternativo:', altResponse);
           return altResponse;
         }
       }
     } catch (error) {
-      console.log('Failed to create recipe on backend:', error);
+      console.log('Error al crear una receta en el backend:', error);
     }
 
     const newRecipe = {
@@ -582,19 +581,17 @@ class DataService {
         return [];
       }
     } catch (error) {
-      // Solo mostrar logs detallados en desarrollo
       if (__DEV__) {
-        console.log('Información de error en getUserCourses para debugging:');
-        console.log('- Error message:', error.message);
+        console.log('Error:', error.message);
         
         if (error.response) {
           const status = error.response.status;
-          console.log(`- Status HTTP: ${status}`);
+          console.log(`Status HTTP: ${status}`);
           
           if (status === 404) {
-            console.log('- Usuario no encontrado como alumno - probablemente no está registrado como alumno');
+            console.log('Usuario no encontrado como alumno. Probablemente no está registrado como alumno');
           } else if (status === 500) {
-            console.log('- Error del servidor - revisar logs del backend');
+            console.log('Error del servidor, revisar logs del backend');
           }
         }
       }
@@ -615,7 +612,7 @@ class DataService {
 
   async enrollInCourse(idAlumno, idCronograma) {
     try {
-      console.log('=== INSCRIBIRSE CURSO DEBUG DATASERVICE ===');
+      console.log('REALIZAR INSCRIPCION');
       console.log('idAlumno:', idAlumno);
       console.log('idCronograma:', idCronograma);
       console.log('API Base URL:', api.baseURL);
@@ -624,11 +621,10 @@ class DataService {
       console.log('Inscripción exitosa:', result);
       return result.data;
     } catch (error) {
-      // Solo mostrar logs detallados en desarrollo
       if (__DEV__) {
-        console.log('Error al inscribirse en el curso para debugging:');
-        console.log('- Error:', error.message);
-        console.log('- Status:', error.response?.status);
+        console.log('Error al inscribirse en el curso:');
+        console.log('Error:', error.message);
+        console.log('Status:', error.response?.status);
       }
       throw error;
     }
@@ -636,7 +632,7 @@ class DataService {
 
   async cancelEnrollment(idInscripcion, reintegroEnTarjeta) {
     try {
-      console.log('=== CANCELAR INSCRIPCION DEBUG DATASERVICE ===');
+      console.log('CANCELAR INSCRIPCION');
       console.log('idInscripcion:', idInscripcion);
       console.log('reintegroEnTarjeta:', reintegroEnTarjeta);
       console.log('API Base URL:', api.baseURL);
@@ -645,11 +641,10 @@ class DataService {
       console.log('Resultado exitoso:', result);
       return result.data;
     } catch (error) {
-      // Solo mostrar logs detallados en desarrollo
       if (__DEV__) {
-        console.log('Error al cancelar inscripción para debugging:');
-        console.log('- Error:', error.message);
-        console.log('- Status:', error.response?.status);
+        console.log('Error al cancelar inscripción:');
+        console.log('Error:', error.message);
+        console.log('Status:', error.response?.status);
       }
       throw error;
     }
@@ -665,7 +660,7 @@ class DataService {
         }
       }
     } catch (error) {
-      console.log('Login failed:', error);
+      console.log('Error de login:', error);
     }
 
     const mockUser = {
@@ -687,7 +682,7 @@ class DataService {
         return await api.auth.register(userData);
       }
     } catch (error) {
-      console.log('Registration failed:', error);
+      console.log('Error de registro:', error);
     }
 
    
@@ -714,7 +709,7 @@ class DataService {
               await api.recipes.create(recipe);
               recipe.status = 'synced';
             } catch (error) {
-              console.log('Failed to sync recipe:', error);
+              console.log('Fallo al sincronizar una receta:', error);
             }
           }
         }
@@ -731,7 +726,7 @@ class DataService {
               await api.courses.enroll(enrollment.idAlumno, enrollment.idCronograma);
               enrollment.status = 'synced';
             } catch (error) {
-              console.log('Failed to sync enrollment:', error);
+              console.log('Fallo al sincronizar una inscripcion:', error);
             }
           }
         }
@@ -745,7 +740,7 @@ class DataService {
           try {
             await api.auth.register(user);
           } catch (error) {
-            console.log('Failed to sync user registration:', error);
+            console.log('Fallo al sincronizar un registro de usuario:', error);
             syncedUsers.push(user); 
           }
         }
@@ -753,7 +748,7 @@ class DataService {
       }
 
     } catch (error) {
-      console.log('Sync error:', error);
+      console.log('Error de sincronizacion:', error);
     }
   }
 
@@ -897,7 +892,7 @@ class DataService {
 
   async approveRecipe(idReceta, approve = true) {
     if (!this.useBackend) {
-      throw new Error('Function requires backend connection');
+      throw new Error('La funcion requiere de conexion con el backend');
     }
     
     try {
@@ -906,14 +901,14 @@ class DataService {
       console.log('DataService.approveRecipe response:', response);
       return response;
     } catch (error) {
-      console.error('Error approving recipe:', error);
+      console.error('Error al aprobar la receta:', error);
       throw error;
     }
   }
 
   async updateUserRecipe(recipeId, recipeData, userId) {
     try {
-      console.log(`Updating recipe ${recipeId} for user ${userId}`, recipeData);
+      console.log(`Actualizando la receta ${recipeId} para el usuario ${userId}`, recipeData);
       
       const formattedData = {
         nombreReceta: recipeData.title || recipeData.nombreReceta,
@@ -981,52 +976,52 @@ class DataService {
       
       console.log('Datos formateados para actualización:', JSON.stringify(formattedData, null, 2));
       const result = await api.recipes.updateWithSteps(recipeId, formattedData);
-      console.log('Recipe updated successfully:', result);
+      console.log('Receta actualizada correctamente:', result);
       return { success: true, data: result.data || 'Receta actualizada correctamente' };
     } catch (error) {
-      console.log('Error updating recipe:', error.message);
+      console.log('No se pudo actualizar la receta:', error.message);
       return { success: false, message: error.message || 'No se pudo actualizar la receta' };
     }
   }
 
   async getPendingRecipes() {
     if (!this.useBackend) {
-      throw new Error('Function requires backend connection');
+      throw new Error('La funcion requiere de conexion con el backend');
     }
     
     try {
       const response = await api.recipes.getPendingRecipes();
       return response.data.map(mapBackendRecipe) || [];
     } catch (error) {
-      console.error('Error getting pending recipes:', error);
+      console.error('Error al obtener las recetas pendientes:', error);
       throw error;
     }
   }
 
   async createEmpresaUser(userData) {
     if (!this.useBackend) {
-      throw new Error('Function requires backend connection');
+      throw new Error('La funcion requiere de conexion con el backend');
     }
     
     try {
       const response = await api.auth.createEmpresaUser(userData);
       return response.data;
     } catch (error) {
-      console.error('Error creating empresa user:', error);
+      console.error('Error al crear el user empresa:', error);
       throw error;
     }
   }
 
   async createAdminUser(userData) {
     if (!this.useBackend) {
-      throw new Error('Function requires backend connection');
+      throw new Error('La funcion requiere de conexion con el backend');
     }
     
     try {
       const response = await api.auth.createAdminUser(userData);
       return response.data;
     } catch (error) {
-      console.error('Error creating admin user:', error);
+      console.error('Error al crear el user admin:', error);
       throw error;
     }
   }
@@ -1036,7 +1031,7 @@ class DataService {
       const result = await api.users.updateProfile(userData);
       return result.data;
     } catch (error) {
-      console.log('Error updating user profile:', error.message);
+      console.log('Error al actualizar el perfil de user:', error.message);
       throw error;
     }
   }
@@ -1046,7 +1041,7 @@ class DataService {
       const result = await api.auth.upgradeToStudent(idUsuario, studentData);
       return result.data;
     } catch (error) {
-      console.log('Error upgrading to student:', error.message);
+      console.log('Error al upgrade un alumno:', error.message);
       throw error;
     }
   }
@@ -1056,7 +1051,7 @@ class DataService {
       const result = await api.auth.registerVisitor(email, alias);
       return result.data;
     } catch (error) {
-      console.log('Error registering visitor:', error.message);
+      console.log('Error al registrar un vistante:', error.message);
       throw error;
     }
   }
@@ -1066,11 +1061,11 @@ class DataService {
       const result = await api.auth.registerVisitorStage1(email, alias);
       return result.data;
     } catch (error) {
-      console.log('Error registering visitor stage 1:', error.message);
+      console.log('Error al registrar un visitante etapa 1:', error.message);
       
       if (error.response && error.response.data) {
         const errorData = error.response.data;
-        console.log('Backend error data:', errorData);
+        console.log('Backend error:', errorData);
         
         const enhancedError = new Error(errorData.error || error.message);
         enhancedError.aliasUnavailable = errorData.aliasUnavailable;
@@ -1090,7 +1085,7 @@ class DataService {
       const result = await api.auth.verifyVisitorCode(email, codigo);
       return result.data;
     } catch (error) {
-      console.log('Error verifying visitor code:', error.message);
+      console.log('Error al verificar el codigo de visitor:', error.message);
       throw error;
     }
   }
@@ -1100,7 +1095,7 @@ class DataService {
       const result = await api.auth.resendVisitorCode(email);
       return result.data;
     } catch (error) {
-      console.log('Error resending visitor code:', error.message);
+      console.log('Error al reenviar el visitor code:', error.message);
       throw error;
     }
   }
@@ -1126,7 +1121,7 @@ class DataService {
       const response = await api.auth.verifyUserCode(email, codigo);
       return response.data;
     } catch (error) {
-      console.log('Error verifying user code:', error.message);
+      console.log('Error al verificar el codigo de user:', error.message);
       throw error;
     }
   }
@@ -1136,7 +1131,7 @@ class DataService {
       const result = await api.auth.completeUserRegistration(email, nombre, password);
       return result.data;
     } catch (error) {
-      console.log('Error completing user registration:', error.message);
+      console.log('Error al completar la registracion del user:', error.message);
       throw error;
     }
   }
@@ -1146,7 +1141,7 @@ class DataService {
       const result = await api.auth.resendUserCode(email);
       return result.data;
     } catch (error) {
-      console.log('Error resending user code:', error.message);
+      console.log('Error al reenviar el user code:', error.message);
       throw error;
     }
   }
@@ -1166,7 +1161,7 @@ class DataService {
       const result = await api.auth.resetPassword(email);
       return result.data;
     } catch (error) {
-      console.log('Error resetting password:', error.message);
+      console.log('Error al resetear la password:', error.message);
       throw error;
     }
   }
@@ -1243,7 +1238,6 @@ class DataService {
         console.log('Detalles del error del backend:', backendError);
       }
       
-      console.log('Backend falló, recurriendo a localStorage');
       const recipeToAdd = { 
         ...recipe, 
         id: recipe.id || recipe.idReceta, 
@@ -1254,11 +1248,11 @@ class DataService {
       
       const updatedList = [...existingList, recipeToAdd];
       await AsyncStorage.setItem('pending_recipes_list', JSON.stringify(updatedList));
-      console.log('Receta agregada a la lista pendiente local (respaldo)');
+      console.log('Receta agregada a la lista pendiente local ');
       
       return { 
         success: true, 
-        message: 'Receta agregada a tu lista de pendientes (sincronizada)' 
+        message: 'Receta agregada a tu lista de pendientes' 
       };
       
     } catch (error) {
@@ -1269,7 +1263,7 @@ class DataService {
 
   async removeRecipeFromPendingList(idReceta) {
     try {
-      console.log('Eliminando PERMANENTEMENTE la receta de la lista pendiente:', idReceta);
+      console.log('Eliminando permanentemente la receta de la lista pendiente:', idReceta);
       
       let backendSuccess = false;
       
@@ -1384,7 +1378,7 @@ class DataService {
 
   async forceRemoveFromLocalStorage(idReceta) {
     try {
-      console.log('FORZANDO eliminación de receta del almacenamiento local:', idReceta);
+      console.log('Forzando eliminación de receta del almacenamiento local:', idReceta);
       
       const stored = await AsyncStorage.getItem('pending_recipes_list');
       let localRecipes = stored ? JSON.parse(stored) : [];
@@ -1419,7 +1413,7 @@ class DataService {
         completed: r.completed
       })));
       
-      console.log(`Eliminación FORZADA completa. Eliminadas: ${localRecipes.length - cleanedList.length}, Restantes: ${cleanedList.length}`);
+      console.log(`Eliminación forzada completa. Eliminadas: ${localRecipes.length - cleanedList.length}, Restantes: ${cleanedList.length}`);
       
       return true;
     } catch (error) {
@@ -1430,7 +1424,6 @@ class DataService {
 
   async getPendingRecipesList() {
     try {
-      console.log('Getting pending recipes list...');
       
       let backendRecipes = [];
       let backendAvailable = false;
@@ -1444,17 +1437,17 @@ class DataService {
           currentUser = JSON.parse(userData);
         }
       } catch (error) {
-        console.log('Error getting current user:', error.message);
+        console.log('Error al obtener el user actual:', error.message);
       }
 
       try {
-        console.log('Getting recipes from backend with user ID:', currentUser?.idUsuario || 'none');
+        console.log('Obteniendo las recetas del backend con el ID de user:', currentUser?.idUsuario || 'ninguna');
         
         const result = await api.recipeList.getWithUser(currentUser?.idUsuario);
         
-        console.log('Backend response for get:', result);
-        console.log('Backend response type:', typeof result);
-        console.log('Backend response keys:', result ? Object.keys(result) : 'null');
+        console.log('Respuesta del backend para eliminar:', result);
+        console.log('Tipo de respuesta del backend:', typeof result);
+        console.log('Claves de respuesta del backend:', result ? Object.keys(result) : 'null');
         
         let backendData = null;
         if (Array.isArray(result)) {
@@ -1465,7 +1458,7 @@ class DataService {
           backendData = result.recetas;
         } else if (result && typeof result === 'object' && !result.error) {
           backendData = [];
-          console.log('Backend returned object without data array, treating as empty list');
+          console.log('Backend retorno un objeto con un array vacio');
         }
         
         if (backendData !== null) {
@@ -1485,12 +1478,12 @@ class DataService {
               };
             });
           backendAvailable = true;
-          console.log(`Backend returned ${backendRecipes.length} recipes (filtered ${backendData.length - backendRecipes.length} permanently removed)`);
+          console.log(`Backend retorno ${backendRecipes.length} recetas (filtradas ${backendData.length - backendRecipes.length} permanentemente eliminadas)`);
         } else {
-          console.log('Backend response format not recognized as success:', result);
+          console.log('El formato de la Respuesta del Backend no es correcta:', result);
         }
       } catch (backendError) {
-        console.log('Backend not available:', backendError.message);
+        console.log('Backend no disponible:', backendError.message);
       }
       
      
@@ -1509,7 +1502,7 @@ class DataService {
         return !permanentlyRemoved.includes(recipeId);
       });
       
-      console.log(`localStorage contains ${localRecipes.length} recipes`);
+      console.log(`localStorage contiene ${localRecipes.length} recetas`);
       
       if (backendAvailable) {
        
@@ -1524,7 +1517,6 @@ class DataService {
         
         if (cleanedLocalRecipes.length !== localRecipes.length) {
           await AsyncStorage.setItem('pending_recipes_list', JSON.stringify(cleanedLocalRecipes));
-          console.log(`Cleaned ${localRecipes.length - cleanedLocalRecipes.length} orphaned recipes from localStorage`);
         }
         
         
@@ -1544,14 +1536,13 @@ class DataService {
           };
         });
         
-        console.log(`${mergedRecipes.length} recipes merged (STRICT: backend-only + localStorage states)`);
         return mergedRecipes;
       } else {
-        console.log(`${localRecipes.length} recipes loaded from localStorage (fallback)`);
+        console.log(`${localRecipes.length} recetas cargadas desde el localStorage`);
         return localRecipes;
       }
     } catch (error) {
-      console.error('Error getting pending recipes list:', error);
+      console.error('Error al obtener la lista de recetas pendientes:', error);
       return [];
     }
   }
@@ -1568,19 +1559,17 @@ class DataService {
       
       if (cleanedLocalRecipes.length !== localRecipes.length) {
         await AsyncStorage.setItem('pending_recipes_list', JSON.stringify(cleanedLocalRecipes));
-        console.log(`Cleaned up ${localRecipes.length - cleanedLocalRecipes.length} orphaned recipes from localStorage`);
       }
     } catch (error) {
-      console.error('Error cleaning up orphaned recipes:', error);
+      console.error('Error al limpiar las recipes:', error);
     }
   }
 
   
   async markRecipeAsCompleted(idReceta, completed = true) {
     try {
-      console.log(`Marking recipe ${completed ? 'completed' : 'uncompleted'}:`, idReceta);
-      
-      
+      console.log(`Marcando la receta como ${completed ? 'completed' : 'uncompleted'}:`, idReceta);
+  
       let currentUser = null;
       try {
         const userData = await AsyncStorage.getItem('user_data');
@@ -1588,17 +1577,16 @@ class DataService {
           currentUser = JSON.parse(userData);
         }
       } catch (error) {
-        console.log('Error getting current user:', error.message);
+        console.log('Error al obtener el user actual:', error.message);
       }
 
      
       try {
-        console.log('Marking completion in backend with user ID:', currentUser?.idUsuario || 'none');
+        console.log('Marcando la finalizacion en el backend con el user ID:', currentUser?.idUsuario || 'ninguno');
         
         const result = await api.recipeList.markAsCompleted(idReceta, completed, currentUser?.idUsuario);
         
-        console.log('Backend response for mark completion:', result);
-        console.log('Backend response type:', typeof result);
+        console.log('Respuesta del Backend:', typeof result);
         
        
         const isBackendSuccess = result && (
@@ -1609,24 +1597,20 @@ class DataService {
         );
         
         if (isBackendSuccess) {
-          console.log('Recipe completion status updated in backend');
-          
-          
+          console.log('Estado de finalizacion de la receta actualizada correctamente');
+        
           return { 
             success: true, 
             message: completed ? 'Receta marcada como completada' : 'Receta marcada como pendiente' 
           };
         } else {
-          console.log('Backend response not recognized as success:', result);
+          console.log('Reespuesta de error del backend:', result);
         }
       } catch (backendError) {
-        console.log('Backend failed for mark completion:', backendError.message);
-        console.log('Backend error details:', backendError);
+        console.log('Detalles del error del backend:', backendError);
       }
 
-      
-      console.log('Marking completion in localStorage as fallback');
-      
+          
       const storedList = await AsyncStorage.getItem('pending_recipes_list');
       const localList = storedList ? JSON.parse(storedList) : [];
       
@@ -1637,7 +1621,7 @@ class DataService {
         
         if (recipeIdStr === targetId) {
           recipeFound = true;
-          console.log('Found recipe to mark in localStorage:', recipe.title || recipe.nombreReceta);
+          console.log('Receta encontrada para marcar en localStorage:', recipe.title || recipe.nombreReceta);
           return { 
             ...recipe, 
             completed, 
@@ -1649,17 +1633,17 @@ class DataService {
       
       if (recipeFound) {
         await AsyncStorage.setItem('pending_recipes_list', JSON.stringify(updatedList));
-        console.log(`Recipe completion state updated in localStorage`);
+        console.log(`El estado de finalizacion de la receta se ha actualizado en localStorage`);
         return { 
           success: true, 
           message: `${completed ? 'Receta marcada como completada' : 'Receta marcada como pendiente'} (offline)` 
         };
       } else {
-        console.log('Recipe not found for marking');
+        console.log('Receta no encontrada en tu lista');
         return { success: false, message: 'Receta no encontrada en tu lista' };
       }
     } catch (error) {
-      console.error('Error marking recipe as completed:', error);
+      console.error('Error al marcar la receta como completada:', error);
       return { success: false, message: 'Error al actualizar el estado de la receta' };
     }
   }
@@ -1677,7 +1661,7 @@ class DataService {
         completed: completedCount
       };
     } catch (error) {
-      console.error('Error getting pending recipes count:', error);
+      console.error('Error al obtener el pending recipes count:', error);
       return { total: 0, pending: 0, completed: 0 };
     }
   }
@@ -1691,10 +1675,10 @@ class DataService {
       if (!currentList.includes(recipeId)) {
         currentList.push(recipeId);
         await AsyncStorage.setItem('permanently_removed_recipes', JSON.stringify(currentList));
-        console.log(`Recipe ${recipeId} added to permanently removed list`);
+        console.log(`Receta ${recipeId} agregada a la lista de permanentemente eliminada`);
       }
     } catch (error) {
-      console.error('Error adding to permanently removed list:', error);
+      console.error('Error al agregar a la lista de permanentemente eliminada:', error);
     }
   }
 
@@ -1704,7 +1688,7 @@ class DataService {
       const stored = await AsyncStorage.getItem('permanently_removed_recipes');
       return stored ? JSON.parse(stored) : [];
     } catch (error) {
-      console.error('Error getting permanently removed list:', error);
+      console.error('Error al obtener la lista de permanentemente eliminada:', error);
       return [];
     }
   }
@@ -1713,9 +1697,8 @@ class DataService {
   async clearPermanentlyRemovedList() {
     try {
       await AsyncStorage.removeItem('permanently_removed_recipes');
-      console.log('Permanently removed list cleared');
     } catch (error) {
-      console.error('Error clearing permanently removed list:', error);
+      console.error('Error al limpiar la lista de permanentemente eliminada:', error);
     }
   }
 
@@ -1725,21 +1708,19 @@ class DataService {
       await AsyncStorage.removeItem('pending_recipes_list');
       await AsyncStorage.removeItem('permanently_removed_recipes');
       await AsyncStorage.removeItem('cache_pending_recipes');
-      console.log('🧹 All localStorage for pending recipes cleared');
     } catch (error) {
-      console.error('Error clearing localStorage:', error);
+      console.error('Error al limpiar el localStorage:', error);
     }
   }
 
   
   async testBackendConnection() {
     try {
-      console.log('Testing backend connection...');
       const result = await api.utils.checkConnection();
-      console.log('Backend connection successful:', result);
+      console.log('Backend conectado correctamente:', result);
       return { success: true, message: 'Backend conectado correctamente' };
     } catch (error) {
-      console.error('Backend connection failed:', error);
+      console.error('Backend conexion fallida:', error);
       return { success: false, message: `Backend no disponible: ${error.message}` };
     }
   }
@@ -1747,33 +1728,28 @@ class DataService {
 
   async debugRecipeListState() {
     try {
-      console.log('=== DEBUG: Recipe List State ===');
-      
       
       let backendRecipes = [];
       try {
         const result = await api.recipeList.get();
         backendRecipes = result?.data || [];
-        console.log('Backend recipes:', backendRecipes.length);
+        console.log('Backend recetas:', backendRecipes.length);
       } catch (error) {
-        console.log('Backend unavailable:', error.message);
+        console.log('Backend no disponible:', error.message);
       }
       
       
       const storedList = await AsyncStorage.getItem('pending_recipes_list');
       const localRecipes = storedList ? JSON.parse(storedList) : [];
-      console.log('Local storage recipes:', localRecipes.length);
+      console.log('Local storage recetas:', localRecipes.length);
       
       
       const permanentlyRemoved = await this.getPermanentlyRemovedList();
-      console.log('Permanently removed recipes:', permanentlyRemoved.length, permanentlyRemoved);
+      console.log('Recetas eliminadas permanentemente:', permanentlyRemoved.length, permanentlyRemoved);
       
      
       const mergedList = await this.getPendingRecipesList();
-      console.log('Final merged list:', mergedList.length);
-      
-      console.log('=== END DEBUG ===');
-      
+          
       return {
         backend: backendRecipes.length,
         localStorage: localRecipes.length,
@@ -1782,7 +1758,7 @@ class DataService {
         permanentlyRemovedIds: permanentlyRemoved
       };
     } catch (error) {
-      console.error('Error in debug method:', error);
+      console.error('Error:', error);
       return null;
     }
   }
@@ -1790,22 +1766,17 @@ class DataService {
   
   async resetRecipeListState() {
     try {
-      console.log('Resetting recipe list state...');
-      
-     
       await this.clearAllLocalStorage();
       
-      console.log('Recipe list state reset complete');
+      console.log('Estado de la Lista de recetas reiniciado completamente');
       return { success: true, message: 'Estado de lista de recetas reiniciado' };
     } catch (error) {
-      console.error('Error resetting recipe list state:', error);
+      console.error('Error al reiniciar estado:', error);
       return { success: false, message: 'Error al reiniciar estado' };
     }
   }
 
-  async debugConnection() {
-    console.log('=== DEBUG DE CONEXIÓN ===');
-    
+  async debugConnection() {    
     try {
       const baseUrl = api.baseURL;
       console.log('URL base de la API:', baseUrl);
@@ -1823,7 +1794,7 @@ class DataService {
         message: 'Conexión exitosa'
       };
     } catch (error) {
-      console.error('Error en debug de conexión:', error);
+      console.error('Error de conexión:', error);
       return {
         success: false,
         error: error.message,
@@ -1833,16 +1804,12 @@ class DataService {
   }
 
   async registerAttendance(userId, courseId) {
-    console.log('=== REGISTRAR ASISTENCIA REAL ===');
     console.log('UserId (idAlumno):', userId);
     console.log('CourseId (idCronograma):', courseId);
     console.log('API Base URL:', api.baseURL);
     console.log('Endpoint completo:', `${api.baseURL}/registrarAsistencia`);
     
     try {
-      console.log('Registrando asistencia en backend...');
-      
-      // Verificar que los parámetros sean válidos
       if (!userId || !courseId) {
         throw new Error(`Parámetros inválidos - userId: ${userId}, courseId: ${courseId}`);
       }
@@ -1852,9 +1819,8 @@ class DataService {
         idCronograma: courseId.toString()
       });
       
-      console.log('uerpo de la petición:', requestBody.toString());
+      console.log('Petición:', requestBody.toString());
       
-      // Llamar al endpoint real del backend
       const response = await fetch(`${api.baseURL}/registrarAsistencia`, {
         method: 'POST',
         headers: {
@@ -1873,7 +1839,6 @@ class DataService {
           console.log('Error response texto:', errorText);
         }
         
-        // Analizar el tipo de error
         let errorMessage = `Error ${response.status}`;
         if (errorText.includes('Alumno no encontrado')) {
           errorMessage = 'Usuario no encontrado en el sistema';
@@ -1898,27 +1863,24 @@ class DataService {
       };
       
     } catch (error) {
-      // Solo mostrar logs detallados en desarrollo
       if (__DEV__) {
         console.log('Información de error para debugging:');
-        console.log('- Error completo:', error.name + ': ' + error.message);
-        console.log('- Stack trace disponible en debugging');
+        console.log('Error completo:', error.name + ': ' + error.message);
+        console.log('Stack trace disponible en debugging');
       }
       
-      // En lugar de siempre retornar éxito, vamos a propagar algunos errores importantes
       if (error.message?.includes('no encontrado') || 
           error.message?.includes('inválidos') ||
           error.message?.includes('not found')) {
         
         if (__DEV__) {
-          console.log('🚨 Error crítico - propagando al usuario');
+          console.log('Error crítico - propagando al usuario');
         }
-        throw error; // Propagar errores críticos
+        throw error; 
       }
       
-      // Solo para errores de red/conexión, usar modo offline
       if (__DEV__) {
-        console.log('🔄 Intentando modo offline...');
+        console.log('Intentando modo offline...');
       }
       
       try {
@@ -1937,10 +1899,9 @@ class DataService {
         await AsyncStorage.setItem('pending_attendance', JSON.stringify(attendanceList));
         
         if (__DEV__) {
-          console.log('💾 Asistencia guardada offline para sincronización posterior');
+          console.log('Asistencia guardada offline para sincronización posterior');
         }
         
-        // Retornar éxito para errores de red
         return {
           success: true,
           message: 'Asistencia registrada (se sincronizará cuando haya conexión)',
@@ -1949,10 +1910,9 @@ class DataService {
         };
       } catch (storageError) {
         if (__DEV__) {
-          console.log('💥 Error guardando asistencia offline:', storageError.message);
+          console.log('Error guardando asistencia offline:', storageError.message);
         }
         
-        // Si también falla el offline, propagar el error original
         throw new Error(`Error de conexión y almacenamiento offline falló: ${error.message}`);
       }
     }

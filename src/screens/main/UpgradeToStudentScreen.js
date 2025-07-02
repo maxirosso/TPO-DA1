@@ -20,7 +20,7 @@ import dataService from '../../services/dataService';
 import { AuthContext } from '../../context/AuthContext';
 
 const UpgradeToStudentScreen = ({ navigation, route }) => {
-  const { user, setUser, exitVisitorMode } = useContext(AuthContext);
+  const { user, setUser, exitVisitorMode, signOut } = useContext(AuthContext);
   const { userId, userEmail } = route.params || {};
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
@@ -175,26 +175,19 @@ const UpgradeToStudentScreen = ({ navigation, route }) => {
       console.log('Sending upgrade request with identifier:', identifierToUse);
       const result = await dataService.upgradeToStudent(identifierToUse, formData);
       
-      if (user) {
-        const updatedUser = {
-          ...user,
-          tipo: 'alumno'
-        };
-        setUser(updatedUser);
-      }
-      
-      exitVisitorMode();
+      // Limpiar sesión actual para que tenga que hacer login nuevamente
+      await signOut();
       
       Alert.alert(
         '¡Felicidades!',
-        'Has sido upgradado a alumno exitosamente. Ahora puedes acceder a cursos premium.',
+        'Has sido upgradado a alumno exitosamente. Ahora puedes iniciar sesión con tu nueva cuenta de alumno.',
         [
           {
-            text: 'Continuar',
+            text: 'Ir a Login',
             onPress: () => {
               navigation.reset({
                 index: 0,
-                routes: [{ name: 'HomeTab' }],
+                routes: [{ name: 'Login' }],
               });
             }
           }

@@ -14,8 +14,8 @@ import Metrics from '../../themes/metrics';
 const Button = ({
   title,
   onPress,
-  type = 'primary', // primary, secondary, outline
-  size = 'medium', // small, medium, large
+  type = 'primary', 
+  size = 'medium', 
   iconName,
   iconPosition = 'left',
   isLoading = false,
@@ -28,7 +28,6 @@ const Button = ({
   const getButtonStyles = () => {
     let buttonStyles = [styles.button];
     
-    // Type styles
     if (type === 'primary') {
       buttonStyles.push(styles.primaryButton);
     } else if (type === 'secondary') {
@@ -37,19 +36,16 @@ const Button = ({
       buttonStyles.push(styles.outlineButton);
     }
     
-    // Size styles
     if (size === 'small') {
       buttonStyles.push(styles.smallButton);
     } else if (size === 'large') {
       buttonStyles.push(styles.largeButton);
     }
     
-    // Full width
     if (fullWidth) {
       buttonStyles.push(styles.fullWidth);
     }
     
-    // Disabled state
     if (disabled || isLoading) {
       buttonStyles.push(styles.disabledButton);
     }
@@ -60,21 +56,18 @@ const Button = ({
   const getTextStyles = () => {
     let textStyles = [styles.text];
     
-    // Type text styles
     if (type === 'primary' || type === 'secondary') {
       textStyles.push(styles.primaryText);
     } else if (type === 'outline') {
       textStyles.push(styles.outlineText);
     }
     
-    // Size text styles
     if (size === 'small') {
       textStyles.push(styles.smallText);
     } else if (size === 'large') {
       textStyles.push(styles.largeText);
     }
     
-    // Disabled text
     if (disabled) {
       textStyles.push(styles.disabledText);
     }
@@ -194,3 +187,4 @@ const styles = StyleSheet.create({
 });
 
 export default Button;
+

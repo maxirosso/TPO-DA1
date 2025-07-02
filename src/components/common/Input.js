@@ -11,7 +11,6 @@ import Icon from 'react-native-vector-icons/Feather';
 import Colors from '../../themes/colors';
 import Metrics from '../../themes/metrics';
 
-//forwardRef para pasar las referencias correctamente
 const Input = forwardRef((props, ref) => {
   const {
     label,
@@ -38,7 +37,6 @@ const Input = forwardRef((props, ref) => {
     ...rest
   } = props;
 
-  // Simplificación del interruptor de seguridad para la resolución de problemas
   const renderRightIcon = () => {
     if (rightComponent) {
       return rightComponent;
@@ -188,7 +186,6 @@ const styles = StyleSheet.create({
   },
 });
 
-// Establecer el nombre para mostrar con fines de depuración
 Input.displayName = 'Input';
 
 export default Input;

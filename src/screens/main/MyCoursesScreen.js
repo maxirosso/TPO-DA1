@@ -32,8 +32,8 @@ const MyCoursesScreen = ({ navigation }) => {
 
   useFocusEffect(
     useCallback(() => {
-      console.log('MyCoursesScreen focused - Recargando cursos...');
-      loadCourses(false); // false = no mostrar loading screen
+
+      loadCourses(false); 
     }, [])
   );
 
@@ -90,7 +90,7 @@ const MyCoursesScreen = ({ navigation }) => {
       console.log('Cursos del usuario recibidos:', userCourses.length);
       
       if (userCourses.length === 0) {
-        console.log('=== DEBUG: No hay cursos ===');
+        console.log(' DEBUG: No hay cursos ');
         console.log('Ejecutando debug de conexión...');
         const debugResult = await dataService.debugConnection();
         console.log('Resultado debug:', debugResult);
@@ -139,7 +139,7 @@ const MyCoursesScreen = ({ navigation }) => {
   };
 
   const getFilteredCourses = () => {
-    console.log('=== FILTRANDO CURSOS ===');
+    console.log('FILTRANDO CURSOS');
     console.log('Tab activo:', activeTab);
     console.log('Cursos inscritos:', enrolledCourses);
     console.log('Cursos próximos:', upcomingCourses);
@@ -195,7 +195,7 @@ const MyCoursesScreen = ({ navigation }) => {
   };
 
   const handleCancelCourse = (course) => {
-    console.log('=== CANCELAR CURSO DEBUG ===');
+    console.log('CANCELAR CURSO');
     console.log('Course data:', course);
     console.log('idInscripcion:', course.idInscripcion);
     

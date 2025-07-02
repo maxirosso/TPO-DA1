@@ -31,8 +31,8 @@ const AppSettingsScreen = ({ route, navigation }) => {
     language: user.preferences?.language || 'es',
     autoSync: user.preferences?.autoSync || true,
     offlineMode: user.preferences?.offlineMode || false,
-    dataUsage: user.preferences?.dataUsage || 'wifi', // wifi, cellular, both
-    cacheSize: user.preferences?.cacheSize || 'medium', // small, medium, large
+    dataUsage: user.preferences?.dataUsage || 'wifi', 
+    cacheSize: user.preferences?.cacheSize || 'medium', 
   });
 
   const [loading, setLoading] = useState(false);
@@ -619,4 +619,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default AppSettingsScreen; 
+export default AppSettingsScreen;

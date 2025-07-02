@@ -17,7 +17,6 @@ const SplashScreen = () => {
     <SafeAreaView style={styles.container}>
       <StatusBar backgroundColor="#4ECDC4" barStyle="light-content" />
       <View style={styles.content}>
-        {/* Icono de Gorro de Chef */}
         <View style={styles.iconContainer}>
           <Image 
             source={require('../../assets/images/chef_hat.png')}
@@ -26,12 +25,10 @@ const SplashScreen = () => {
           />
         </View>
         
-        {/* Título de la App */}
         <View style={styles.titleContainer}>
           <Text style={styles.appTitle}>ChefNet</Text>
         </View>
         
-        {/* Indicador de Carga */}
         <View style={styles.spinnerContainer}>
           <ActivityIndicator size="large" color="#FFFFFF" />
         </View>
@@ -75,4 +72,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default SplashScreen; 
+export default SplashScreen;

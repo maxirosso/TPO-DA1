@@ -29,10 +29,9 @@ const QRScannerScreen = ({ navigation, route }) => {
   
   const device = useCameraDevice('back');
 
-  // Agregar debugging para entender el estado del dispositivo
-  console.log('=== QR SCANNER DEBUG ===');
-  console.log('Device disponible:', device ? 'SÍ' : 'NO');
-  console.log('Device info:', device);
+  
+  console.log('dispositivo disponible:', device ? 'SÍ' : 'NO');
+  console.log('info del dispositivo:', device);
   console.log('HasPermission:', hasPermission);
   console.log('IsActive:', isActive);
 
@@ -56,7 +55,7 @@ const QRScannerScreen = ({ navigation, route }) => {
 
   const checkCameraPermission = async () => {
     try {
-      // Usar la nueva API de VisionCamera v4
+      // Usar la nueva API VisionCamera 
       const cameraPermission = await Camera.getCameraPermissionStatus();
       console.log('Estado de permiso de cámara:', cameraPermission);
       
@@ -89,50 +88,47 @@ const QRScannerScreen = ({ navigation, route }) => {
         throw new Error('Curso no identificado');
       }
       
-      // Registrar asistencia real en la base de datos
-      console.log('🎯 Registrando asistencia real en BD...');
+
       const result = await dataService.registerAttendance(userId, courseId);
       
-      console.log('Resultado registro asistencia:', result);
-      
-      // Desactivar la cámara
+
       setIsActive(false);
       
       // Mostrar mensaje de éxito
       Alert.alert(
-        '✅ ¡Asistencia Registrada!',
-        `Tu asistencia ha sido registrada exitosamente en la base de datos para esta sesión del curso.\n\n🎉 ¡Perfecto! Ya estás presente en la clase de hoy.`,
+        '¡Asistencia Registrada!',
+        `Tu asistencia ha sido registrada exitosamente en la base de datos para esta sesión del curso.\n\n ¡Perfecto! Ya estás presente en la clase de hoy.`,
         [
           {
             text: 'Excelente',
             onPress: () => {
-              // Navegar de vuelta y forzar recarga de cursos
+              
               navigation.goBack();
-              // El useFocusEffect en MyCoursesScreen se encargará de recargar automáticamente
+              
             }
           }
         ]
       );
       
     } catch (error) {
-      // Solo mostrar logs detallados en desarrollo
+      
       if (__DEV__) {
-        console.log('Información del error para debugging:', error.message);
+        console.log('Información del error:', error.message);
       }
       
-      // En caso de cualquier error, también mostrar éxito (el dataService maneja el offline)
+      
       setIsActive(false);
       
       Alert.alert(
-        '✅ ¡Asistencia Registrada!',
+        '¡Asistencia Registrada!',
         `Tu asistencia ha sido registrada exitosamente para esta sesión del curso.\n\n🎉 ¡Perfecto! Ya estás presente en la clase de hoy.`,
         [
           {
             text: 'Excelente',
             onPress: () => {
-              // Navegar de vuelta y forzar recarga de cursos
+              
               navigation.goBack();
-              // El useFocusEffect en MyCoursesScreen se encargará de recargar automáticamente
+              
             }
           }
         ]
@@ -213,12 +209,7 @@ const QRScannerScreen = ({ navigation, route }) => {
     );
   }
 
-  // Debug adicional para renderizado
-  console.log('=== RENDER DEBUG ===');
-  console.log('Renderizando cámara - Device:', !!device);
-  console.log('isActive:', isActive);
-  console.log('hasPermission:', hasPermission);
-  console.log('Condición final cámara:', !!(device && isActive && hasPermission));
+  
 
   return (
     <View style={styles.container}>

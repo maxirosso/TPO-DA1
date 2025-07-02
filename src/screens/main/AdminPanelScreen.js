@@ -82,7 +82,6 @@ const AdminPanelScreen = ({ navigation }) => {
     try {
       await dataService.approveRecipe(recipeId, approve);
       
-      // Remove from pending list
       const updatedRecipes = pendingRecipes.filter(recipe => recipe.id !== recipeId);
       setPendingRecipes(updatedRecipes);
       
@@ -345,4 +344,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default AdminPanelScreen; 
+export default AdminPanelScreen;

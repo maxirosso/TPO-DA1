@@ -22,7 +22,7 @@ import Metrics from '../../themes/metrics';
 const CourseEnrollmentScreen = ({ navigation, route }) => {
   const { course, location } = route.params || {};
   
-  const [paymentMethod, setPaymentMethod] = useState('saved_card'); // 'saved_card', 'new_card', 'otro'
+  const [paymentMethod, setPaymentMethod] = useState('saved_card'); 
   const [cardNumber, setCardNumber] = useState('');
   const [expiryDate, setExpiryDate] = useState('');
   const [cvv, setCvv] = useState('');
@@ -30,7 +30,7 @@ const CourseEnrollmentScreen = ({ navigation, route }) => {
   const [saveCard, setSaveCard] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   
-  // Mock saved card
+  // datos de prueba para la tarjeta guardada
   const savedCard = {
     last4: '5678',
     brand: 'visa',

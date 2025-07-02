@@ -37,7 +37,7 @@ const ProfileScreen = ({ navigation }) => {
     location: '',
     recipeCount: 0,
     joinDate: '',
-    accountType: 'user', // visitor, user, student
+    accountType: 'user',
     preferences: {
       notifications: true,
       emailUpdates: true,

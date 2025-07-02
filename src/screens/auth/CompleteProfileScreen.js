@@ -151,7 +151,7 @@ const CompleteProfileScreen = ({ navigation, route }) => {
             />
             
             <Input
-              label="Confirmar Contraseña"
+              label="Contraseña"
               value={password}
               onChangeText={setPassword}
               placeholder="Mínimo 6 caracteres"

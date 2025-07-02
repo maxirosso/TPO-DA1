@@ -83,7 +83,10 @@ const SignupScreen = ({ navigation }) => {
   const handleSignUp = async () => {
     Keyboard.dismiss();
     
-    if (!email || !username || !password) {
+    // Para usuarios regulares y alumnos, no requerir contraseña en este paso
+    const isRegularUserOrStudent = activeTab === 'regularUser' || activeTab === 'student';
+    
+    if (!email || !username || (!isRegularUserOrStudent && !password)) {
       Alert.alert('Campos incompletos', 'Por favor, completa todos los campos requeridos.');
       return;
     }
@@ -103,7 +106,8 @@ const SignupScreen = ({ navigation }) => {
       return;
     }
     
-    if (password.length < 6) {
+    // Solo validar contraseña si no es usuario regular o alumno
+    if (!isRegularUserOrStudent && password.length < 6) {
       Alert.alert('Contraseña débil', 'La contraseña debe tener al menos 6 caracteres.');
       return;
     }
@@ -128,7 +132,7 @@ const SignupScreen = ({ navigation }) => {
       const result = await signUp({
         email,
         username: username.trim(),
-        password,
+        password: isRegularUserOrStudent ? null : password,
         userType: activeTab === 'regularUser' ? 'regular' : 'student'
       });
       
@@ -243,9 +247,15 @@ const SignupScreen = ({ navigation }) => {
                 onChangeText={handleUsernameChange}
                 placeholder="Elige un nombre de usuario único"
                 autoCapitalize="none"
-                returnKeyType="next"
-                blurOnSubmit={false}
-                onSubmitEditing={() => passwordInputRef.current?.focus()}
+                returnKeyType={activeTab === 'regularUser' || activeTab === 'student' ? "done" : "next"}
+                blurOnSubmit={activeTab === 'regularUser' || activeTab === 'student'}
+                onSubmitEditing={() => {
+                  if (activeTab === 'regularUser' || activeTab === 'student') {
+                    handleSignUp();
+                  } else {
+                    passwordInputRef.current?.focus();
+                  }
+                }}
                 error={usernameError}
               />
               
@@ -264,17 +274,20 @@ const SignupScreen = ({ navigation }) => {
                 </View>
               )}
               
-              <Input
-                ref={passwordInputRef}
-                label="Contraseña"
-                value={password}
-                onChangeText={setPassword}
-                placeholder="Mínimo 6 caracteres"
-                secureTextEntry
-                returnKeyType="done"
-                blurOnSubmit={true}
-                onSubmitEditing={handleSignUp}
-              />
+              {/* Solo mostrar campo de contraseña para otros tipos de usuario */}
+              {activeTab !== 'regularUser' && activeTab !== 'student' && (
+                <Input
+                  ref={passwordInputRef}
+                  label="Contraseña"
+                  value={password}
+                  onChangeText={setPassword}
+                  placeholder="Mínimo 6 caracteres"
+                  secureTextEntry
+                  returnKeyType="done"
+                  blurOnSubmit={true}
+                  onSubmitEditing={handleSignUp}
+                />
+              )}
               
               <View style={styles.termsContainer}>
                 <TouchableOpacity
