@@ -98,9 +98,7 @@ const VerificationScreen = ({ navigation, route }) => {
         setActiveInput(activeInput - 1);
         inputRefs[activeInput - 1].current.focus();
       }
-    } else if (key === 'espacio') {
-      return;
-    } else if (key === 'return') {
+    } else if (key === 'return' || key === '✓') {
       if (verificationCode.every(digit => digit !== '')) {
         handleVerify();
       }
@@ -238,7 +236,7 @@ const VerificationScreen = ({ navigation, route }) => {
             key={key}
             style={[
               styles.keyboardKey,
-              ['⌫', 'espacio', 'return', '123'].includes(key) && styles.functionKey
+              ['⌫', 'return', '✓'].includes(key) && styles.functionKey
             ]}
             onPress={() => handleKeyboardPress(key)}
           >
@@ -320,41 +318,29 @@ const VerificationScreen = ({ navigation, route }) => {
         />
         
         <View style={styles.keyboard}>
-          {renderKeyboardRow(['Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P'])}
-          <View style={styles.keyboardMiddleRow}>
-            {renderKeyboardRow(['A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L'])}
-          </View>
+          {renderKeyboardRow(['1', '2', '3'])}
+          {renderKeyboardRow(['4', '5', '6'])}
+          {renderKeyboardRow(['7', '8', '9'])}
           <View style={styles.keyboardBottomRow}>
-            <TouchableOpacity
-              style={[styles.keyboardKey, styles.functionKey]}
-              onPress={() => handleKeyboardPress('123')}
-            >
-              <Text style={styles.keyText}>123</Text>
-            </TouchableOpacity>
-            
-            <View style={styles.letterKeysContainer}>
-              {renderKeyboardRow(['Z', 'X', 'C', 'V', 'B', 'N', 'M'])}
-            </View>
-            
             <TouchableOpacity
               style={[styles.keyboardKey, styles.functionKey]}
               onPress={() => handleKeyboardPress('⌫')}
             >
               <Text style={styles.keyText}>⌫</Text>
             </TouchableOpacity>
-          </View>
-          <View style={styles.keyboardLastRow}>
+            
             <TouchableOpacity
-              style={[styles.keyboardKey, styles.functionKey, { flex: 1, marginHorizontal: 4 }]}
-              onPress={() => handleKeyboardPress('espacio')}
+              style={[styles.keyboardKey, { flex: 1, marginHorizontal: 4 }]}
+              onPress={() => handleKeyboardPress('0')}
             >
-              <Text style={styles.keyText}>espacio</Text>
+              <Text style={styles.keyText}>0</Text>
             </TouchableOpacity>
+            
             <TouchableOpacity
-              style={[styles.keyboardKey, styles.functionKey, { flex: 1, marginHorizontal: 4 }]}
+              style={[styles.keyboardKey, styles.functionKey]}
               onPress={() => handleKeyboardPress('return')}
             >
-              <Text style={styles.keyText}>return</Text>
+              <Text style={styles.keyText}>✓</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -483,42 +469,30 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: 8,
   },
-  keyboardMiddleRow: {
-    paddingHorizontal: 10,
-  },
   keyboardBottomRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 4,
   },
-  letterKeysContainer: {
-    flex: 1,
-    flexDirection: 'row',
-    justifyContent: 'center',
-    paddingHorizontal: 8,
-  },
-  keyboardLastRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 8,
-  },
   keyboardKey: {
     backgroundColor: Colors.card,
-    borderRadius: 6,
-    padding: 12,
-    margin: 2,
+    borderRadius: 8,
+    padding: 16,
+    margin: 4,
     alignItems: 'center',
     justifyContent: 'center',
-    minWidth: width / 12,
+    minWidth: width / 4,
+    minHeight: 50,
   },
   functionKey: {
     backgroundColor: Colors.keyboardFunctionKey,
     paddingHorizontal: 12,
   },
   keyText: {
-    fontSize: Metrics.smallFontSize,
+    fontSize: Metrics.largeFontSize,
     color: Colors.textDark,
+    fontWeight: '500',
   },
 });
 

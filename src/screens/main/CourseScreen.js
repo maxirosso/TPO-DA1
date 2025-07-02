@@ -44,6 +44,13 @@ const CourseScreen = ({ navigation }) => {
   }, []);
 
   useEffect(() => {
+    const unsubscribe = navigation.addListener('focus', () => {
+      loadCourses();
+    });
+    return unsubscribe;
+  }, [navigation]);
+
+  useEffect(() => {
     filterCourses();
   }, [selectedCategory, allCourses, enrolledCourses]);
 
@@ -108,42 +115,14 @@ const CourseScreen = ({ navigation }) => {
   const loadUserAccountBalance = async (userId) => {
     setIsLoadingBalance(true);
     try {
-      console.log('🏦 Cargando cuenta corriente para usuario:', userId);
-      
       const alumnoData = await dataService.getAlumnoById(userId);
-      console.log('📊 Datos del alumno recibidos:', alumnoData);
-      
       if (alumnoData && (alumnoData.accountBalance !== undefined || alumnoData.cuentaCorriente !== undefined)) {
         const balance = alumnoData.accountBalance !== undefined ? alumnoData.accountBalance : alumnoData.cuentaCorriente;
-        console.log('Cuenta corriente cargada desde backend:', balance);
         setAccountBalance(Number(balance) || 0);
         return;
-      } 
-      
-      console.log('📱 Intentando cargar desde AsyncStorage...');
-      const userData = await AsyncStorage.getItem('user_data');
-      if (userData) {
-        const parsed = JSON.parse(userData);
-        console.log('Datos de usuario en AsyncStorage:', parsed);
-        
-        if (parsed.studentInfo && parsed.studentInfo.accountBalance !== undefined) {
-          console.log('Cuenta corriente desde AsyncStorage (accountBalance):', parsed.studentInfo.accountBalance);
-          setAccountBalance(Number(parsed.studentInfo.accountBalance) || 0);
-        } else if (parsed.studentInfo && parsed.studentInfo.cuentaCorriente !== undefined) {
-          console.log('Cuenta corriente desde AsyncStorage (cuentaCorriente):', parsed.studentInfo.cuentaCorriente);
-          setAccountBalance(Number(parsed.studentInfo.cuentaCorriente) || 0);
-        } else {
-          console.log('No se encontró información de cuenta corriente en AsyncStorage');
-          console.log('Estructura de parsed:', JSON.stringify(parsed, null, 2));
-          setAccountBalance(0);
-        }
-      } else {
-        console.log('No hay datos de usuario en AsyncStorage');
-        setAccountBalance(0);
       }
+      setAccountBalance(0);
     } catch (error) {
-      console.error('Error cargando cuenta corriente:', error);
-      console.error('Stack del error:', error.stack);
       setAccountBalance(0);
     } finally {
       setIsLoadingBalance(false);
@@ -615,17 +594,11 @@ const CourseScreen = ({ navigation }) => {
         />
       </LinearGradient>
       
-      <ScrollView 
-        style={styles.content} 
-        showsVerticalScrollIndicator={false}
-      >
-        {filteredCourses.length > 0 ? (
-          filteredCourses.map((course, index) => (
-            <View key={`course-${course.id || course.idCurso || course.idCronograma || index}-${index}`}>
-              {renderCourseCard({ item: course })}
-            </View>
-          ))
-        ) : (
+      <FlatList
+        data={filteredCourses}
+        renderItem={renderCourseCard}
+        keyExtractor={(course, index) => `course-${course.id || course.idCurso || course.idCronograma || index}-${index}`}
+        ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <Icon name="book-open" size={48} color={Colors.textLight} />
             <Text style={styles.emptyTitle}>
@@ -643,10 +616,13 @@ const CourseScreen = ({ navigation }) => {
               }
             </Text>
           </View>
-        )}
-        
-        <View style={styles.bottomPadding} />
-      </ScrollView>
+        }
+        contentContainerStyle={{ paddingBottom: Metrics.xxLargeSpacing }}
+        onEndReached={loadCourses}
+        onEndReachedThreshold={0.1}
+        showsVerticalScrollIndicator={false}
+        style={styles.content}
+      />
 
       {renderLocationModal()}
       {renderCancelModal()}
@@ -808,9 +784,6 @@ const styles = StyleSheet.create({
     color: Colors.textMedium,
     textAlign: 'center',
     lineHeight: Metrics.mediumLineHeight,
-  },
-  bottomPadding: {
-    height: Metrics.xxLargeSpacing,
   },
   modalOverlay: {
     flex: 1,

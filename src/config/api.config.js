@@ -25,7 +25,7 @@ export const changeApiUrl = async (newUrl) => {
   if (newUrl && newUrl !== API_BASE_URL) {
     API_BASE_URL = newUrl;
     await AsyncStorage.setItem('custom_api_url', newUrl);
-    
+
     // Reiniciar la app en desarrollo (si está disponible)
     if (__DEV__ && DevSettings.reload) {
       DevSettings.reload();
@@ -49,12 +49,12 @@ export const getSavedApiUrl = async () => {
 export const initializeApiUrl = async () => {
   // Verificar si hay una URL guardada
   const savedUrl = await getSavedApiUrl();
-  
+
   if (savedUrl) {
     API_BASE_URL = savedUrl;
     return;
   }
-  
+
   // URL predeterminada basada en entorno
   if (__DEV__) {
     if (Platform.OS === 'android') {
